@@ -1,0 +1,7 @@
+# Ohati Version Control Ignore Rules
+ohati_config.php
+cpanel_config.php
+ohati.db
+uploads/*
+!uploads/.htaccess
+ohati.zip

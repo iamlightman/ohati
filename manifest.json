@@ -1,0 +1,22 @@
+{
+  "name": "Ohati Marketplace",
+  "short_name": "Ohati",
+  "description": "Find, Compare, and Book trusted event vendors for weddings, corporate meetings, and celebrations in Ghana.",
+  "start_url": "index.php",
+  "display": "standalone",
+  "background_color": "#0F1923",
+  "theme_color": "#1B2B4B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

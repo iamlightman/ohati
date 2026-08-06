@@ -1,0 +1,29 @@
+{
+  "name": "ohati-mobile",
+  "version": "1.0.0",
+  "description": "Ohati Event Vendor Marketplace Mobile App",
+  "main": "index.php",
+  "scripts": {
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios"
+  },
+  "keywords": [
+    "ohati",
+    "marketplace",
+    "events",
+    "ghana",
+    "capacitor",
+    "mobile"
+  ],
+  "author": "Ohati Team",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.1"
+  }
+}

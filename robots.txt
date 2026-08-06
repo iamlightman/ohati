@@ -1,0 +1,20 @@
+# Robots.txt for Ohati - Event Vendor Marketplace Ghana
+User-agent: *
+Allow: /
+Allow: /index.php
+Allow: /search.php
+Allow: /detail.php
+Allow: /planner.php
+Allow: /sitemap.php
+
+# Disallow Internal Scripts & Admin Panels
+Disallow: /admin/
+Disallow: /scratch/
+Disallow: /api.php
+Disallow: /payment_api.php
+Disallow: /db.php
+Disallow: /ohati_config.php
+
+# Sitemap URLs for Google Search Indexing
+Sitemap: https://ohati.com/sitemap.xml
+Sitemap: https://ohati.com/sitemap.php

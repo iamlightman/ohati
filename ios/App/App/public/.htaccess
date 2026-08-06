@@ -1,0 +1,24 @@
+# ── OHATI SECURITY & ENHANCED PROTECTION RULES ───────────────────────
+
+# 1. Disable Directory Index Browsing
+Options -Indexes
+
+# 2. Block Direct Access to Sensitive Config, Database, Log, and Backup Files
+<FilesMatch "\.(db|sql|gz|tar|env|log|ini|conf|bak|sh|txt)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^(ohati_config\.php|capacitor\.config\.json|package\.json|package-lock\.json|\.gitignore)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# 3. Enhanced HTTP Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(self), camera=(self), microphone=(self)"
+</IfModule>

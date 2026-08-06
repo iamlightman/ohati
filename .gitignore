@@ -5,3 +5,4 @@ ohati.db
 uploads/*
 !uploads/.htaccess
 ohati.zip
+node_modules/

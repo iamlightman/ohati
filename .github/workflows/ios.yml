@@ -25,7 +25,8 @@ jobs:
         run: |
           rm -rf ios
           npx cap add ios
-          npx cap sync ios
+          npx cap copy ios
+          npx cap update ios
 
       - name: CocoaPods Install
         run: |
@@ -36,7 +37,7 @@ jobs:
         run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
-                     -sdk iphoneos \
+                     -destination 'generic/platform=iOS' \
                      -configuration Release \
                      -derivedDataPath build \
                      CODE_SIGN_IDENTITY="" \

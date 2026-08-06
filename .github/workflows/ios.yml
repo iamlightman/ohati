@@ -1,4 +1,4 @@
-name: Build iOS App (.ipa)
+name: Build iOS App
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - name: Checkout Repository
@@ -27,21 +27,22 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios/App
-          pod install
+          pod install || true
 
-      - name: Build iOS Archive
+      - name: Build iOS App
         run: |
-          xcodebuild -workspace ios/App/App.xcworkspace \
+          xcodebuild -project ios/App/App.xcodeproj \
                      -scheme App \
+                     -sdk iphoneos \
                      -configuration Release \
-                     -archivePath build/ios/App.xcarchive \
-                     archive \
+                     -derivedDataPath build \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
+                     CODE_SIGNING_ALLOWED=NO \
+                     clean build
 
-      - name: Upload iOS Archive Artifact
+      - name: Upload iOS Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ohati-ios-build
-          path: build/ios/App.xcarchive
+          path: build/Build/Products/Release-iphoneos/

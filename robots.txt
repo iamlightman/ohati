@@ -6,6 +6,12 @@ Allow: /search.php
 Allow: /detail.php
 Allow: /planner.php
 Allow: /sitemap.php
+Allow: /sitemap.xml
+Allow: /privacy_policy.php
+Allow: /terms.php
+Allow: /help.php
+Allow: /vendor-register.php
+Allow: /.well-known/assetlinks.json
 
 # Disallow Internal Scripts & Admin Panels
 Disallow: /admin/
@@ -15,6 +21,14 @@ Disallow: /payment_api.php
 Disallow: /db.php
 Disallow: /ohati_config.php
 
-# Sitemap URLs for Google Search Indexing
+# Googlebot & Googlebot-Mobile Specific Rules for Deep App Indexing
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Mobile
+Allow: /
+
+# Sitemap URLs for Google Search & App Indexing
 Sitemap: https://ohati.com/sitemap.xml
 Sitemap: https://ohati.com/sitemap.php
+

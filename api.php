@@ -378,67 +378,108 @@ switch ($action) {
 case 'register':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     check_idempotency_lock('register', 3);
-    if (!rate_limit('register', 3, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many attempts. Try again later.']); exit; }
+    if (!rate_limit('register', 5, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many registration attempts. Please wait 5 minutes before trying again.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $name = clean($input['name'] ?? '');
-    $email = isset($input['email']) ? filter_var(trim($input['email']), FILTER_VALIDATE_EMAIL) : '';
+    $raw_email = trim($input['email'] ?? '');
+    $email = !empty($raw_email) ? filter_var($raw_email, FILTER_VALIDATE_EMAIL) : '';
     $phone = clean($input['phone'] ?? '');
     $password = $input['password'] ?? '';
     $role = in_array($input['role'] ?? '', ['customer','vendor']) ? $input['role'] : 'customer';
-    if (empty($name) || (empty($email) && empty($phone)) || strlen($password) < 8) {
-        http_response_code(400); echo json_encode(['error'=>'Name, email or phone, and password (8+ chars) are required.']); exit;
+
+    // Detailed input validation
+    if (empty($name)) {
+        http_response_code(400); echo json_encode(['error'=>'Full name is required to create an account.']); exit;
     }
-    // Check duplicates
-    if ($email) { $dup = $pdo->prepare("SELECT id FROM users WHERE email = ?"); $dup->execute([$email]); if ($dup->fetch()) { http_response_code(409); echo json_encode(['error'=>'Email already registered.']); exit; } }
-    if ($phone) { $dup = $pdo->prepare("SELECT id FROM users WHERE phone = ?"); $dup->execute([$phone]); if ($dup->fetch()) { http_response_code(409); echo json_encode(['error'=>'Phone already registered.']); exit; } }
-    $hash = password_hash($password, PASSWORD_BCRYPT);
-    $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
-    
-    // Check pending referral link code
-    $used_ref = clean($input['ref'] ?? $_GET['ref'] ?? $_SESSION['pending_ref'] ?? '');
-    $referrer_id = 0;
-    if (!empty($used_ref)) {
-        $r_chk = $pdo->prepare("SELECT id FROM users WHERE referral_code = ? OR referral_code = ?");
-        $r_chk->execute([$used_ref, strtoupper($used_ref)]);
-        $referrer_id = intval($r_chk->fetchColumn() ?: 0);
+    if (!empty($raw_email) && !$email) {
+        http_response_code(400); echo json_encode(['error'=>'Please enter a valid email address (e.g. name@example.com).']); exit;
+    }
+    if (empty($email) && empty($phone)) {
+        http_response_code(400); echo json_encode(['error'=>'Either a valid email address or phone number is required.']); exit;
+    }
+    if (strlen($password) < 8) {
+        http_response_code(400); echo json_encode(['error'=>'Password must be at least 8 characters long.']); exit;
     }
 
-    $stmt = $pdo->prepare("INSERT INTO users (name,email,phone,password_hash,role,email_verified,referral_code,referred_by) VALUES (?,?,?,?,?,0,?,?)");
-    $stmt->execute([$name, $email ?: null, $phone ?: null, $hash, $role, $my_ref_code, $referrer_id]);
-    $uid = $pdo->lastInsertId();
+    try {
+        $pdo->beginTransaction();
 
-    // Reward referrer if valid
-    if ($referrer_id > 0 && $referrer_id !== intval($uid)) {
-        try {
-            $rew_stmt = $pdo->prepare("SELECT val_value FROM system_settings WHERE key_name = 'referral_reward_amount'");
-            $rew_stmt->execute();
-            $reward_val = floatval($rew_stmt->fetchColumn() ?: 10.0);
+        // Check duplicate email
+        if ($email) { 
+            $dup = $pdo->prepare("SELECT id FROM users WHERE email = ?"); 
+            $dup->execute([$email]); 
+            if ($dup->fetch()) { 
+                $pdo->rollBack();
+                http_response_code(409); 
+                echo json_encode(['error'=>"The email address '$email' is already registered on Ohati. Please log in instead."]); 
+                exit; 
+            } 
+        }
 
-            $pdo->prepare("INSERT INTO referrals (referrer_id, referred_id, referral_code, reward_amount, status, payout_status) VALUES (?, ?, ?, ?, 'completed', 'pending')")->execute([$referrer_id, $uid, $used_ref, $reward_val]);
-            $pdo->prepare("UPDATE users SET referral_balance = referral_balance + ? WHERE id = ?")->execute([$reward_val, $referrer_id]);
+        // Check duplicate phone
+        if ($phone) { 
+            $dup = $pdo->prepare("SELECT id FROM users WHERE phone = ?"); 
+            $dup->execute([$phone]); 
+            if ($dup->fetch()) { 
+                $pdo->rollBack();
+                http_response_code(409); 
+                echo json_encode(['error'=>"The phone number '$phone' is already registered on Ohati. Please log in instead."]); 
+                exit; 
+            } 
+        }
 
-            // Add in-app notification to referrer
-            $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Referral Bonus Earned! 🎉', ?, 'gift')")
-                ->execute([$referrer_id, "Great news! $name joined Ohati using your referral link. You earned GH₵ " . number_format($reward_val, 2) . "!"]);
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
+        
+        $used_ref = clean($input['ref'] ?? $_GET['ref'] ?? $_SESSION['pending_ref'] ?? '');
+        $referrer_id = 0;
+        if (!empty($used_ref)) {
+            $r_chk = $pdo->prepare("SELECT id FROM users WHERE referral_code = ? OR referral_code = ?");
+            $r_chk->execute([$used_ref, strtoupper($used_ref)]);
+            $referrer_id = intval($r_chk->fetchColumn() ?: 0);
+        }
 
-            // Dual Email + SMS Notification to referrer
+        $stmt = $pdo->prepare("INSERT INTO users (name,email,phone,password_hash,role,email_verified,referral_code,referred_by) VALUES (?,?,?,?,?,0,?,?)");
+        $stmt->execute([$name, $email ?: null, $phone ?: null, $hash, $role, $my_ref_code, $referrer_id]);
+        $uid = $pdo->lastInsertId();
+
+        if ($referrer_id > 0 && $referrer_id !== intval($uid)) {
             try {
-                $ref_user_stmt = $pdo->prepare("SELECT email, phone, name FROM users WHERE id = ?");
-                $ref_user_stmt->execute([$referrer_id]);
-                $ref_user = $ref_user_stmt->fetch();
-                if ($ref_user) {
-                    send_dual_notification(
-                        $ref_user['phone'] ?? '',
-                        $ref_user['email'] ?? '',
-                        "Referral Bonus Earned! 🎉",
-                        "Hello " . ($ref_user['name'] ?? 'User') . ", great news! $name joined Ohati using your referral link. You have earned GH₵ " . number_format($reward_val, 2) . "!"
-                    );
-                }
-            } catch (Exception $eRefNotif) {}
-        } catch (Exception $e) {}
+                $rew_stmt = $pdo->prepare("SELECT val_value FROM system_settings WHERE key_name = 'referral_reward_amount'");
+                $rew_stmt->execute();
+                $reward_val = floatval($rew_stmt->fetchColumn() ?: 10.0);
+
+                $pdo->prepare("INSERT INTO referrals (referrer_id, referred_id, referral_code, reward_amount, status, payout_status) VALUES (?, ?, ?, ?, 'completed', 'pending')")->execute([$referrer_id, $uid, $used_ref, $reward_val]);
+                $pdo->prepare("UPDATE users SET referral_balance = referral_balance + ? WHERE id = ?")->execute([$reward_val, $referrer_id]);
+
+                $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Referral Bonus Earned! 🎉', ?, 'gift')")
+                    ->execute([$referrer_id, "Great news! $name joined Ohati using your referral link. You earned GH₵ " . number_format($reward_val, 2) . "!"]);
+
+                try {
+                    $ref_user_stmt = $pdo->prepare("SELECT email, phone, name FROM users WHERE id = ?");
+                    $ref_user_stmt->execute([$referrer_id]);
+                    $ref_user = $ref_user_stmt->fetch();
+                    if ($ref_user) {
+                        send_dual_notification(
+                            $ref_user['phone'] ?? '',
+                            $ref_user['email'] ?? '',
+                            "Referral Bonus Earned! 🎉",
+                            "Hello " . ($ref_user['name'] ?? 'User') . ", great news! $name joined Ohati using your referral link. You have earned GH₵ " . number_format($reward_val, 2) . "!"
+                        );
+                    }
+                } catch (Exception $eRefNotif) {}
+            } catch (Exception $e) {}
+        }
+
+        $pdo->commit();
+    } catch (Exception $eReg) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(['error' => 'Registration failed: ' . $eReg->getMessage()]);
+        exit;
     }
 
-    // Also dispatch Admin Email Notification to ohatiwebsite@gmail.com
+    // Also dispatch Admin Email Notification
     try {
         send_admin_activity_notification(
             "New " . ucfirst($role) . " Registration (" . htmlspecialchars($name) . ")",
@@ -1058,6 +1099,83 @@ case 'update_profile':
     // Update session
     foreach ($allowed_profile_fields as $f) { if (isset($input[$f])) $_SESSION['user'][$f] = clean($input[$f]); }
     echo json_encode(['success'=>true,'user'=>$_SESSION['user']]);
+    break;
+
+case 'get_notification_preferences':
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    try {
+        $stmt = $pdo->prepare("SELECT email_notif, sms_notif, push_notif, promo_notif FROM users WHERE id = ?");
+        $stmt->execute([$uid]);
+        $prefs = $stmt->fetch();
+        echo json_encode([
+            'success' => true,
+            'preferences' => [
+                'email_notif' => intval($prefs['email_notif'] ?? 1) === 1,
+                'sms_notif' => intval($prefs['sms_notif'] ?? 1) === 1,
+                'push_notif' => intval($prefs['push_notif'] ?? 1) === 1,
+                'promo_notif' => intval($prefs['promo_notif'] ?? 1) === 1,
+            ]
+        ]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => true, 'preferences' => ['email_notif' => true, 'sms_notif' => true, 'push_notif' => true, 'promo_notif' => true]]);
+    }
+    break;
+
+case 'update_notification_preferences':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $email_n = isset($input['email_notif']) ? ($input['email_notif'] ? 1 : 0) : 1;
+    $sms_n = isset($input['sms_notif']) ? ($input['sms_notif'] ? 1 : 0) : 1;
+    $push_n = isset($input['push_notif']) ? ($input['push_notif'] ? 1 : 0) : 1;
+    $promo_n = isset($input['promo_notif']) ? ($input['promo_notif'] ? 1 : 0) : 1;
+
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN email_notif INT DEFAULT 1");
+        $pdo->exec("ALTER TABLE users ADD COLUMN sms_notif INT DEFAULT 1");
+        $pdo->exec("ALTER TABLE users ADD COLUMN push_notif INT DEFAULT 1");
+        $pdo->exec("ALTER TABLE users ADD COLUMN promo_notif INT DEFAULT 1");
+    } catch(Exception $eIgn) {}
+
+    $stmt = $pdo->prepare("UPDATE users SET email_notif = ?, sms_notif = ?, push_notif = ?, promo_notif = ? WHERE id = ?");
+    $stmt->execute([$email_n, $sms_n, $push_n, $promo_n, $uid]);
+
+    echo json_encode(['success' => true, 'message' => 'Notification preferences updated successfully.']);
+    break;
+
+case 'request_account_deletion':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    $input = json_decode(file_get_contents('php://input'), true);
+    $reason = clean($input['reason'] ?? 'User requested account deletion');
+
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN deletion_requested_at DATETIME NULL");
+        $pdo->exec("ALTER TABLE users ADD COLUMN deletion_reason VARCHAR(255) NULL");
+        $pdo->exec("ALTER TABLE users ADD COLUMN account_status VARCHAR(50) DEFAULT 'active'");
+    } catch(Exception $eIgn) {}
+
+    // Inactivate account and set deletion request flag for admin review & fraud prevention
+    $stmt = $pdo->prepare("UPDATE users SET account_status = 'inactive', deletion_requested_at = NOW(), deletion_reason = ? WHERE id = ?");
+    $stmt->execute([$reason, $uid]);
+
+    // Send notification to admin
+    try {
+        send_admin_activity_notification(
+            "Account Deletion Requested (" . htmlspecialchars($_SESSION['user']['name'] ?? 'User') . ")",
+            "<p>User ID <strong>#$uid</strong> (" . htmlspecialchars($_SESSION['user']['email'] ?? $_SESSION['user']['phone'] ?? '') . ") requested deletion.</p><p>Account has been set to <strong>Inactive</strong> for admin fraud review.</p><p>Reason: " . htmlspecialchars($reason) . "</p>"
+        );
+    } catch (Exception $eAdmin) {}
+
+    // Sign out user
+    unset($_SESSION['user']);
+    session_destroy();
+
+    echo json_encode(['success' => true, 'message' => 'Your account deletion request has been received. Your account has been inactivated and signed out.']);
     break;
 
 

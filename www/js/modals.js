@@ -2,22 +2,73 @@
 
 // ── Push Notifications ─────────────────────────────────────────────────
 let notifTimeout = null;
-function showPushNotification(title, desc) {
+let notifTouchStartY = 0;
+let notifTouchStartX = 0;
+
+function showPushNotification(title, desc, type = 'info') {
     const el = document.getElementById('in-app-push-notif');
     const t = document.getElementById('notif-title');
     const d = document.getElementById('notif-desc');
+    const iconEl = document.getElementById('notif-icon');
     if (!el || !t || !d) return;
-    t.textContent = title;
-    d.textContent = desc;
+
+    t.textContent = title || 'Notice';
+    d.textContent = desc || '';
+
+    // Apply type styles and icons
+    el.classList.remove('notif-error', 'notif-success', 'notif-warning', 'notif-info');
+    el.classList.add('notif-' + type);
+
+    if (iconEl) {
+        let iconClass = 'fa-solid fa-bell';
+        if (type === 'error') iconClass = 'fa-solid fa-circle-exclamation';
+        else if (type === 'success') iconClass = 'fa-solid fa-circle-check';
+        else if (type === 'warning') iconClass = 'fa-solid fa-triangle-exclamation';
+        iconEl.className = iconClass;
+    }
+
+    el.style.transform = '';
+    el.style.opacity = '1';
     el.classList.add('active');
 
-    // Trigger device haptic vibration ringing for incoming notifications & alerts
+    // Attach swipe handlers if not already added
+    if (!el.dataset.swipeInitialized) {
+        el.dataset.swipeInitialized = 'true';
+        el.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches[0]) {
+                notifTouchStartY = e.touches[0].clientY;
+                notifTouchStartX = e.touches[0].clientX;
+            }
+        }, { passive: true });
+
+        el.addEventListener('touchmove', (e) => {
+            if (!e.touches || !e.touches[0]) return;
+            const diffY = e.touches[0].clientY - notifTouchStartY;
+            const diffX = Math.abs(e.touches[0].clientX - notifTouchStartX);
+            if (diffY < 0 || diffX > 30) {
+                el.style.transform = `translateY(${Math.min(0, diffY)}px)`;
+                el.style.opacity = `${Math.max(0, 1 - Math.abs(diffY) / 100)}`;
+            }
+        }, { passive: true });
+
+        el.addEventListener('touchend', (e) => {
+            if (el.style.transform) {
+                dismissPushNotification();
+            }
+        });
+    }
+
+    // Trigger device haptic vibration for notifications
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate([200, 100, 200]); } catch (e) {}
+        try {
+            if (type === 'error') navigator.vibrate([300, 100, 300]);
+            else navigator.vibrate([150, 80, 150]);
+        } catch (e) {}
     }
 
     if (notifTimeout) clearTimeout(notifTimeout);
-    notifTimeout = setTimeout(() => el.classList.remove('active'), 4500);
+    // 5 Seconds auto-dismiss
+    notifTimeout = setTimeout(() => dismissPushNotification(), 5000);
 }
 
 window.requestDeviceNotificationPermission = function() {
@@ -32,7 +83,13 @@ window.requestDeviceNotificationPermission = function() {
 
 function dismissPushNotification() {
     const el = document.getElementById('in-app-push-notif');
-    if (el) el.classList.remove('active');
+    if (el) {
+        el.classList.remove('active');
+        setTimeout(() => {
+            el.style.transform = '';
+            el.style.opacity = '';
+        }, 300);
+    }
     if (notifTimeout) { clearTimeout(notifTimeout); notifTimeout = null; }
 }
 

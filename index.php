@@ -182,6 +182,19 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
     <link rel="icon" type="image/png" href="img/app_icon.png">
     <link rel="apple-touch-icon" href="img/app_icon.png">
 
+    <!-- Canonical URL -->
+    <link rel="canonical" href="<?= $meta_url ?>">
+
+    <!-- Android App Deep Indexing & Google Play Link Tags -->
+    <link rel="alternate" href="android-app://com.ohati.app/https/ohati.com/" />
+    <meta property="al:android:url" content="android-app://com.ohati.app/https/ohati.com/">
+    <meta property="al:android:package" content="com.ohati.app">
+    <meta property="al:android:app_name" content="Ohati">
+    <meta property="al:web:url" content="<?= $meta_url ?>">
+    <meta name="twitter:app:name:googleplay" content="Ohati">
+    <meta name="twitter:app:id:googleplay" content="com.ohati.app">
+    <meta name="twitter:app:url:googleplay" content="https://play.google.com/store/apps/details?id=com.ohati.app">
+
     <!-- SEO & Link Preview Meta Tags (Open Graph / Twitter) -->
     <meta property="og:title" content="<?= $page_title ?>">
     <meta property="og:description" content="<?= $meta_desc ?>">
@@ -219,8 +232,10 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
         {
           "@type": "SoftwareApplication",
           "name": "Ohati",
-          "operatingSystem": "iOS, Android, Web",
+          "operatingSystem": "Android, iOS, Web",
           "applicationCategory": "BusinessApplication",
+          "downloadUrl": "https://play.google.com/store/apps/details?id=com.ohati.app",
+          "installUrl": "https://play.google.com/store/apps/details?id=com.ohati.app",
           "aggregateRating": {
             "@type": "AggregateRating",
             "ratingValue": "4.9",
@@ -232,6 +247,16 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
             "priceCurrency": "GHS"
           },
           "description": "Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure escrow payments."
+        },
+        {
+          "@type": "WebSite",
+          "name": "Ohati",
+          "url": "<?= $base_url ?>",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "<?= $base_url ?>/search.php?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
         },
         {
           "@type": "Organization",

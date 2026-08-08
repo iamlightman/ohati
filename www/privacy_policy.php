@@ -1,6 +1,6 @@
 <?php
-// privacy_policy.php — Official Ohati Ghana Privacy Policy & Data Safety Document
-$page_title = "Privacy Policy — Ohati Ghana";
+// privacy_policy.php — Official Ohati Privacy Policy & Data Safety Document
+$page_title = "Privacy Policy — Ohati";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,14 +31,14 @@ $page_title = "Privacy Policy — Ohati Ghana";
     <div class="container">
         <div class="logo-wrap">
             <img src="img/app_icon.png" alt="Ohati Logo">
-            <span class="brand">OHATI GHANA</span>
+            <span class="brand">OHATI</span>
         </div>
 
         <span class="badge"><i class="fa-solid fa-shield-halved"></i> App Store & Play Store Compliant</span>
         <h1>Privacy Policy & Data Safety</h1>
         <div class="last-updated">Last Updated: July 29, 2026</div>
 
-        <p>Welcome to <strong>Ohati Ghana</strong>. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, store, and safeguard your data when you visit our website or use our mobile applications (Android and iOS).</p>
+        <p>Welcome to <strong>Ohati</strong>. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, store, and safeguard your data when you visit our website or use our mobile applications (Android and iOS).</p>
 
         <h2>1. Information We Collect</h2>
         <p>We collect information that you voluntarily provide to us when registering on Ohati, booking event professionals, submitting vendor verification applications, or contacting customer support:</p>
@@ -59,7 +59,7 @@ $page_title = "Privacy Policy — Ohati Ghana";
             <li>To continuously improve app performance, stability, and security posture.</li>
         </ul>
 
-        <h2>3. Account Deletion & Right to be Forgotten</h2>
+        <h2 id="account-deletion">3. Account Deletion & Right to be Forgotten</h2>
         <p>You have full control over your personal data. You can delete your Ohati account at any time directly inside the mobile app or web app:</p>
         <ul>
             <li>In-App Account Deletion: Go to <strong>Profile & Settings &rarr; Account & Privacy &rarr; Delete Account</strong>.</li>

@@ -59,7 +59,7 @@ $page_title = "Privacy Policy — Ohati";
             <li>To continuously improve app performance, stability, and security posture.</li>
         </ul>
 
-        <h2>3. Account Deletion & Right to be Forgotten</h2>
+        <h2 id="account-deletion">3. Account Deletion & Right to be Forgotten</h2>
         <p>You have full control over your personal data. You can delete your Ohati account at any time directly inside the mobile app or web app:</p>
         <ul>
             <li>In-App Account Deletion: Go to <strong>Profile & Settings &rarr; Account & Privacy &rarr; Delete Account</strong>.</li>

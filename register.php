@@ -239,12 +239,18 @@ if (isset($_SESSION['user'])) {
                         .catch(e => {
                             err.textContent = e.message;
                             err.style.display = 'block';
+                            if (typeof showPushNotification === 'function') {
+                                showPushNotification('Registration Warning', e.message, 'warning');
+                            }
                             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Create Account'; }
                         });
                 })
                 .catch(e => {
                     err.textContent = e.message;
                     err.style.display = 'block';
+                    if (typeof showPushNotification === 'function') {
+                        showPushNotification('Registration Failed', e.message, 'error');
+                    }
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.origText || 'Create Account'; }
                 });
         }

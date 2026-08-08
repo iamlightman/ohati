@@ -39,11 +39,11 @@ const state = {
         search: ''
     },
     globalReviews: [
-        { id: 1, name: "Abena Boateng", rating: 5, comment: "Wedmi made finding my wedding decorator so simple. Royal Gold & Ivory theme was executed to perfection!", views: 476000, likes: 287000, liked: false, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150" },
-        { id: 2, name: "Kwame Mensah", rating: 5, comment: "Exceptional photography choices. We booked Wedmi's verified photographers and our wedding album is absolute gold!", views: 421000, likes: 254000, liked: false, avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150" },
-        { id: 3, name: "Adjoa Sarfo", rating: 4, comment: "Great customer support and easy booking. Highly recommend the budget planning tools for keeping us on track.", views: 389000, likes: 212000, liked: false, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150" },
-        { id: 4, name: "Yaw Osei", rating: 5, comment: "I got the best catering deal through this platform. The verified badges really gave us peace of mind.", views: 453000, likes: 271000, liked: false, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150" },
-        { id: 5, name: "Kofi Boadu", rating: 5, comment: "Smooth communication with DJs and MCs. Booking traditional marriage services was extremely seamless.", views: 312000, likes: 184000, liked: false, avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150" }
+        { id: 1, name: "Abena Boateng", rating: 5, comment: "Wedmi made finding my wedding decorator so simple. Royal Gold & Ivory theme was executed to perfection!", views: 476000, likes: 287000, liked: false, avatar: DEFAULT_USER_AVATAR },
+        { id: 2, name: "Kwame Mensah", rating: 5, comment: "Exceptional photography choices. We booked Wedmi's verified photographers and our wedding album is absolute gold!", views: 421000, likes: 254000, liked: false, avatar: DEFAULT_USER_AVATAR },
+        { id: 3, name: "Adjoa Sarfo", rating: 4, comment: "Great customer support and easy booking. Highly recommend the budget planning tools for keeping us on track.", views: 389000, likes: 212000, liked: false, avatar: DEFAULT_USER_AVATAR },
+        { id: 4, name: "Yaw Osei", rating: 5, comment: "I got the best catering deal through this platform. The verified badges really gave us peace of mind.", views: 453000, likes: 271000, liked: false, avatar: DEFAULT_USER_AVATAR },
+        { id: 5, name: "Kofi Boadu", rating: 5, comment: "Smooth communication with DJs and MCs. Booking traditional marriage services was extremely seamless.", views: 312000, likes: 184000, liked: false, avatar: DEFAULT_USER_AVATAR }
     ]
 };
 
@@ -3057,10 +3057,10 @@ function updateUserSessionUI() {
     if (state.currentUser) {
         if (nameEl) nameEl.innerText = state.currentUser.name;
         if (emailEl) emailEl.innerText = state.currentUser.email || '';
-        if (avatarEl) avatarEl.src = state.currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150';
+        if (avatarEl) avatarEl.src = state.currentUser.avatar || DEFAULT_USER_AVATAR;
         
         if (homeGreeting) homeGreeting.innerHTML = `Maba, ${state.currentUser.name.split(' ')[0]} ✨`;
-        if (homeAvatar) homeAvatar.src = state.currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150';
+        if (homeAvatar) homeAvatar.src = state.currentUser.avatar || DEFAULT_USER_AVATAR;
         
         const signInItem = document.getElementById('sidebar-signin-item');
         if (signInItem) {
@@ -3070,10 +3070,10 @@ function updateUserSessionUI() {
     } else {
         if (nameEl) nameEl.innerText = "Guest User";
         if (emailEl) emailEl.innerText = "Not signed in";
-        if (avatarEl) avatarEl.src = 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=150';
+        if (avatarEl) avatarEl.src = DEFAULT_USER_AVATAR;
         
         if (homeGreeting) homeGreeting.innerText = "Maba, Guest ✨";
-        if (homeAvatar) homeAvatar.src = 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=150';
+        if (homeAvatar) homeAvatar.src = DEFAULT_USER_AVATAR;
         
         const signInItem = document.getElementById('sidebar-signin-item');
         if (signInItem) {
@@ -3098,7 +3098,7 @@ function openProfileModal() {
     const clientName = state.currentUser ? state.currentUser.name : '';
     const clientEmail = state.currentUser ? state.currentUser.email : '';
     
-    const defaultAvatar = 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=150';
+    const defaultAvatar = DEFAULT_USER_AVATAR;
     const currentAvatar = state.currentUser && state.currentUser.avatar ? state.currentUser.avatar : defaultAvatar;
     
     // Globally accessible profile image upload handler

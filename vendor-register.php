@@ -563,7 +563,12 @@ session_start();
                 }
                 await submitVendorApplicationData(pm, payout);
             }).catch(e => {
-                alert('Registration error: ' + (e.message || e));
+                const errMsg = e.message || e || 'Registration error occurred';
+                if (typeof showPushNotification === 'function') {
+                    showPushNotification('Registration Error', errMsg, 'error');
+                } else {
+                    alert('Registration Error: ' + errMsg);
+                }
             });
         }
 

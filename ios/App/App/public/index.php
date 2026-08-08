@@ -262,7 +262,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
         <!-- ===== SPLASH / LOADING SCREEN ===== -->
         <div id="screen-loading" class="splash-screen">
             <div class="splash-inner">
-                <img src="img/logo white transparent.png" alt="Ohati Logo" class="splash-logo-img" id="splash-logo">
+                <img src="img/new_icon_ohati.png" alt="Ohati Logo" class="splash-logo-img" id="splash-logo">
                 <div class="splash-loader-container">
                     <div class="splash-loader-bar"></div>
                     <div class="splash-loader-text">LOADING...</div>

@@ -27,7 +27,23 @@ echo '    <changefreq>daily</changefreq>' . "\n";
 echo '    <priority>0.9</priority>' . "\n";
 echo '  </url>' . "\n";
 
-// 3. Dynamic Vendor Directory Pages
+// 3. Static Public Pages
+$static_pages = [
+    '/vendor-register.php' => ['freq' => 'weekly', 'prio' => '0.8'],
+    '/privacy_policy.php' => ['freq' => 'monthly', 'prio' => '0.5'],
+    '/terms.php' => ['freq' => 'monthly', 'prio' => '0.5'],
+    '/help.php' => ['freq' => 'monthly', 'prio' => '0.6'],
+];
+foreach ($static_pages as $page => $meta) {
+    echo '  <url>' . "\n";
+    echo '    <loc>' . htmlspecialchars($base_url . $page) . '</loc>' . "\n";
+    echo '    <lastmod>' . date('Y-m-d') . '</lastmod>' . "\n";
+    echo '    <changefreq>' . $meta['freq'] . '</changefreq>' . "\n";
+    echo '    <priority>' . $meta['prio'] . '</priority>' . "\n";
+    echo '  </url>' . "\n";
+}
+
+// 4. Dynamic Vendor Directory Pages
 try {
     $stmt = $pdo->query("SELECT id, updated_at FROM vendors ORDER BY id DESC");
     while ($v = $stmt->fetch(PDO::FETCH_ASSOC)) {

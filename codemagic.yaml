@@ -28,6 +28,11 @@ workflows:
             echo "Applying App Store Privacy Permissions to Info.plist..."
             cp ios_templates/Info.plist ios/App/App/Info.plist
           fi
+          if [ -d "ios_templates/Assets.xcassets/AppIcon.appiconset" ]; then
+            echo "Applying official Ohati App Icon to Xcode Assets..."
+            mkdir -p ios/App/App/Assets.xcassets/AppIcon.appiconset
+            cp -r ios_templates/Assets.xcassets/AppIcon.appiconset/* ios/App/App/Assets.xcassets/AppIcon.appiconset/
+          fi
           npx @capacitor/cli sync ios
       - name: Install CocoaPods dependencies
         script: |
@@ -84,6 +89,10 @@ workflows:
           fi
           if [ -f "ios_templates/Info.plist" ]; then
             cp ios_templates/Info.plist ios/App/App/Info.plist
+          fi
+          if [ -d "ios_templates/Assets.xcassets/AppIcon.appiconset" ]; then
+            mkdir -p ios/App/App/Assets.xcassets/AppIcon.appiconset
+            cp -r ios_templates/Assets.xcassets/AppIcon.appiconset/* ios/App/App/Assets.xcassets/AppIcon.appiconset/
           fi
           npx @capacitor/cli sync ios
       - name: Install CocoaPods dependencies

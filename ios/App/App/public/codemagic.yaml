@@ -32,13 +32,9 @@ workflows:
       - name: Set up code signing & extract Apple credentials
         script: |
           keychain initialize
-          openssl genrsa -out /tmp/cert_key.pem 2048
-          app-store-connect certificates create --type IOS_DISTRIBUTION --private-key @file:/tmp/cert_key.pem || true
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create \
-            --private-key @file:/tmp/cert_key.pem
-          keychain add-certificates --private-key /tmp/cert_key.pem
+          keychain add-certificates || true
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE || true
+          cd ios/App && xcode-project use-profiles || true
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" || echo 1)

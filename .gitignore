@@ -7,5 +7,9 @@ uploads/*
 *.zip
 *.jks
 *.p8
+*.key
+*.cer
+*.p12
+*.certSigningRequest
 *.mobileprovision
 node_modules/

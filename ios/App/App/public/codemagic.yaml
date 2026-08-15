@@ -29,14 +29,13 @@ workflows:
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install
-      - name: Set up code signing & apply provisioning profile
+      - name: Set up code signing & extract Apple credentials
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          cd ios/App && xcode-project use-profiles || true
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" || echo 1)
@@ -47,21 +46,58 @@ workflows:
         script: |
           PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
           PROFILE_PATH=$(find "$PROFILES_HOME" -name "*.mobileprovision" | head -n 1)
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
-          echo "Using Provisioning Profile UUID: $PROFILE_UUID"
           
+          # Extract metadata from provisioning profile
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print TeamIdentifier:0" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          
+          echo "Apple Team ID: $TEAM_ID"
+          echo "Profile Name: $PROFILE_NAME"
+          echo "Profile UUID: $PROFILE_UUID"
+
+          # Dynamically create ExportOptions.plist with exact Team ID and Provisioning Profile
+          cat <<EOF > /tmp/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>$TEAM_ID</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>$BUNDLE_ID</key>
+                  <string>$PROFILE_UUID</string>
+              </dict>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>uploadSymbols</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+
           mkdir -p build/ios/ipa
+          
+          # Build Archive with explicit Team ID and Profile Specifier
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -configuration Release \
                      -archivePath build/ios/App.xcarchive \
                      archive \
+                     DEVELOPMENT_TEAM="$TEAM_ID" \
                      PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+                     CODE_SIGN_IDENTITY="Apple Distribution" \
                      CODE_SIGN_STYLE="Manual"
 
+          # Export signed IPA
           xcodebuild -exportArchive \
                      -archivePath build/ios/App.xcarchive \
-                     -exportOptionsPlist ios_templates/ExportOptions.plist \
+                     -exportOptionsPlist /tmp/ExportOptions.plist \
                      -exportPath build/ios/ipa
     artifacts:
       - build/ios/ipa/*.ipa

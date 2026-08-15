@@ -51,7 +51,7 @@
 	<string>Ohati requires camera access so you can take profile photos, capture identity documents for KYC verification, and upload event portfolio images.</string>
 	
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Ohati requires microphone access to enable voice and video calls between event hosts and vendor professionals.</string>
+	<string>Ohati requires microphone access to enable voice notes and voice calls between event hosts and vendor professionals.</string>
 	
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ohati requires photo library access so you can select and upload event photos, package showcases, and payment receipts.</string>

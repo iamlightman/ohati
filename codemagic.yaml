@@ -4,17 +4,22 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m1
     integrations:
-      app_store_connect: ohati_app_store_connect_key # Connected in Codemagic UI Settings
+      app_store_connect: ohati_app_store_connect_key
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.ohati.app
       vars:
         BUNDLE_ID: "com.ohati.app"
       node: 20.x
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Set up code signing & create provisioning profile
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" || echo 1)

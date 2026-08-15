@@ -29,9 +29,10 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm install
+          chmod -R +x node_modules/.bin || true
       - name: Sync Capacitor web assets to iOS
         script: |
-          npx cap sync ios
+          npx @capacitor/cli sync ios
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install
@@ -60,9 +61,10 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm install
+          chmod -R +x node_modules/.bin || true
       - name: Sync Capacitor web assets to iOS
         script: |
-          npx cap sync ios
+          npx @capacitor/cli sync ios
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install

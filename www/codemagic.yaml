@@ -44,11 +44,18 @@ workflows:
           xcode-project use-profiles --project "ios/App/App.xcodeproj"
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 2)
-          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 2 ]; then
-            LATEST_BUILD_NUMBER=2
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 3)
+          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 3 ]; then
+            LATEST_BUILD_NUMBER=3
           fi
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          
+          # If Codemagic $BUILD_NUMBER is higher, use it
+          CM_COUNTER=${BUILD_NUMBER:-1}
+          if [ "$CM_COUNTER" -ge "$NEW_BUILD_NUMBER" ]; then
+            NEW_BUILD_NUMBER=$((CM_COUNTER + 1))
+          fi
+          
           echo "Setting iOS Build Number to: $NEW_BUILD_NUMBER"
           
           # Set CFBundleVersion directly in Info.plist

@@ -1,12 +1,53 @@
 workflows:
-  ios-capacitor-workflow:
-    name: Ohati iOS App Store Signed Build
+  ios-app-store-production:
+    name: Ohati iOS App Store & TestFlight Production Build
+    max_build_duration: 30
+    instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: ohati_app_store_connect_key # Connected in Codemagic UI Settings
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ohati.app
+      vars:
+        BUNDLE_ID: "com.ohati.app"
+      node: 20.x
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Auto-increment iOS Build Number from App Store Connect
+        script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" || echo 1)
+          NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          cd ios/App && agvtool new-version -all $NEW_BUILD_NUMBER
+          echo "Updated iOS Build Number to: $NEW_BUILD_NUMBER"
+      - name: Install npm dependencies
+        script: |
+          npm install
+      - name: Sync Capacitor web assets to iOS
+        script: |
+          npx cap sync ios
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App && pod install
+      - name: Build and Export Signed IPA for App Store
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  ios-adhoc-testing:
+    name: Ohati iOS Ad-Hoc Internal Build
     max_build_duration: 30
     instance_type: mac_mini_m1
     environment:
-      ios_signing:
-        distribution_type: ad_hoc # Options: app_store, ad_hoc, development, enterprise
-        bundle_identifier: com.ohati.app
       node: 20.x
       xcode: latest
       cocoapods: default
@@ -20,23 +61,14 @@ workflows:
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install
-      - name: Set up build directory
-        script: |
-          mkdir -p build/ios/ipa
-      - name: Build iOS Archive
+      - name: Build iOS Archive & Workspace
         script: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -configuration Release \
                      -archivePath build/ios/App.xcarchive \
+                     CODE_SIGNING_ALLOWED=NO \
                      archive
-      - name: Export Signed IPA
-        script: |
-          xcodebuild -exportArchive \
-                     -archivePath build/ios/App.xcarchive \
-                     -exportOptionsPlist ios/App/App/ExportOptions.plist \
-                     -exportPath build/ios/ipa
     artifacts:
-      - build/ios/ipa/*.ipa
       - build/ios/App.xcarchive
       - ios/App/App.xcworkspace

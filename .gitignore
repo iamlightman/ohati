@@ -6,4 +6,6 @@ uploads/*
 !uploads/.htaccess
 *.zip
 *.jks
+*.p8
+*.mobileprovision
 node_modules/

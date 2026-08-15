@@ -1,12 +1,9 @@
 workflows:
   ios-capacitor-workflow:
-    name: Ohati iOS App Store Signed Build
+    name: Ohati iOS App Store Build
     max_build_duration: 30
     instance_type: mac_mini_m1
     environment:
-      ios_signing:
-        distribution_type: ad_hoc # Options: app_store, ad_hoc, development, enterprise
-        bundle_identifier: com.ohati.app
       node: 20.x
       xcode: latest
       cocoapods: default
@@ -23,20 +20,14 @@ workflows:
       - name: Set up build directory
         script: |
           mkdir -p build/ios/ipa
-      - name: Build iOS Archive
+      - name: Build iOS Archive & Workspace
         script: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -configuration Release \
                      -archivePath build/ios/App.xcarchive \
+                     CODE_SIGNING_ALLOWED=NO \
                      archive
-      - name: Export Signed IPA
-        script: |
-          xcodebuild -exportArchive \
-                     -archivePath build/ios/App.xcarchive \
-                     -exportOptionsPlist ios/App/App/ExportOptions.plist \
-                     -exportPath build/ios/ipa
     artifacts:
-      - build/ios/ipa/*.ipa
       - build/ios/App.xcarchive
       - ios/App/App.xcworkspace

@@ -26,6 +26,9 @@ workflows:
             cp ios_templates/Info.plist ios/App/App/Info.plist
           fi
           npx @capacitor/cli sync ios
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App && pod install
       - name: Set up code signing & apply provisioning profile
         script: |
           keychain initialize
@@ -40,9 +43,6 @@ workflows:
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
           cd ios/App && agvtool new-version -all $NEW_BUILD_NUMBER
           echo "Updated iOS Build Number to: $NEW_BUILD_NUMBER"
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App && pod install
       - name: Build and Export Signed IPA for App Store
         script: |
           xcode-project build-ipa \

@@ -12,6 +12,20 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Install npm dependencies & Initialize iOS project
+        script: |
+          npm install
+          chmod -R +x node_modules/.bin || true
+          if [ ! -d "ios/App/App.xcodeproj" ]; then
+            echo "Generating fresh native iOS Xcode project..."
+            rm -rf ios
+            npx @capacitor/cli add ios
+          fi
+          if [ -f "ios_templates/Info.plist" ]; then
+            echo "Applying App Store Privacy Permissions to Info.plist..."
+            cp ios_templates/Info.plist ios/App/App/Info.plist
+          fi
+          npx @capacitor/cli sync ios
       - name: Set up code signing & create provisioning profile
         script: |
           keychain initialize
@@ -26,13 +40,6 @@ workflows:
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
           cd ios/App && agvtool new-version -all $NEW_BUILD_NUMBER
           echo "Updated iOS Build Number to: $NEW_BUILD_NUMBER"
-      - name: Install npm dependencies
-        script: |
-          npm install
-          chmod -R +x node_modules/.bin || true
-      - name: Sync Capacitor web assets to iOS
-        script: |
-          npx @capacitor/cli sync ios
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install
@@ -58,12 +65,18 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Install npm dependencies
+      - name: Install npm dependencies & Initialize iOS project
         script: |
           npm install
           chmod -R +x node_modules/.bin || true
-      - name: Sync Capacitor web assets to iOS
-        script: |
+          if [ ! -d "ios/App/App.xcodeproj" ]; then
+            echo "Generating fresh native iOS Xcode project..."
+            rm -rf ios
+            npx @capacitor/cli add ios
+          fi
+          if [ -f "ios_templates/Info.plist" ]; then
+            cp ios_templates/Info.plist ios/App/App/Info.plist
+          fi
           npx @capacitor/cli sync ios
       - name: Install CocoaPods dependencies
         script: |

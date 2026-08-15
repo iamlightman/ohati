@@ -36,7 +36,7 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles --project "ios/App/App.xcodeproj"
+          cd ios/App && xcode-project use-profiles || true
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" || echo 1)
@@ -45,11 +45,27 @@ workflows:
           echo "Updated iOS Build Number to: $NEW_BUILD_NUMBER"
       - name: Build and Export Signed IPA for App Store
         script: |
-          xcode-project build-ipa \
-            --workspace "ios/App/App.xcworkspace" \
-            --scheme "App"
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_PATH=$(find "$PROFILES_HOME" -name "*.mobileprovision" | head -n 1)
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          echo "Using Provisioning Profile UUID: $PROFILE_UUID"
+          
+          mkdir -p build/ios/ipa
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Release \
+                     -archivePath build/ios/App.xcarchive \
+                     archive \
+                     PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+                     CODE_SIGN_STYLE="Manual"
+
+          xcodebuild -exportArchive \
+                     -archivePath build/ios/App.xcarchive \
+                     -exportOptionsPlist ios_templates/ExportOptions.plist \
+                     -exportPath build/ios/ipa
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/ios/App.xcarchive
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:

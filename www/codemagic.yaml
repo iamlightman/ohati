@@ -8,7 +8,7 @@ workflows:
     environment:
       vars:
         BUNDLE_ID: "com.ohati.app"
-      node: 20.x
+      node: latest
       xcode: latest
       cocoapods: default
     scripts:
@@ -53,7 +53,7 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m1
     environment:
-      node: 20.x
+      node: latest
       xcode: latest
       cocoapods: default
     scripts:

@@ -89,6 +89,9 @@ workflows:
                      -archivePath build/ios/App.xcarchive \
                      CODE_SIGNING_ALLOWED=NO \
                      archive
+          mkdir -p build/ios/export
+          zip -r build/ios/export/Ohati-iOS-Native-Project.zip ios/App
     artifacts:
+      - build/ios/export/*.zip
       - build/ios/App.xcarchive
       - ios/App/App.xcworkspace

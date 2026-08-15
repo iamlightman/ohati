@@ -65,8 +65,5 @@
 	
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ohati uses your location to discover nearby verified event vendors, caterers, decorators, and venues across Ghana.</string>
-	
-	<key>NSUserTrackingUsageDescription</key>
-	<string>Ohati uses this identifier to personalize local vendor recommendations and relevant promotion banners.</string>
 </dict>
 </plist>

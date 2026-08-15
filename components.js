@@ -1,5 +1,7 @@
 // components.js - Wedmi App Frontend Controller & Components
 
+const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+
 // 1. Application State
 const state = {
     currentScreen: 'onboarding',
@@ -2563,11 +2565,8 @@ async function renderChatScreen() {
                 </div>
                 <!-- Call Signaling Buttons -->
                 <div style="display: flex; gap: 8px; margin-right: 5px;">
-                    <button class="btn-icon" onclick="triggerChatCall('Audio', '${v.name}')" style="width: 34px; height: 34px; background: rgba(45,90,60,0.06); border-radius: 50%; box-shadow: none; border: 1.5px solid var(--sage-green); color: var(--forest-green); display: flex; align-items: center; justify-content: center;">
+                    <button class="btn-icon" onclick="triggerChatCall('Audio', '${v.name}')" style="width: 34px; height: 34px; background: rgba(45,90,60,0.06); border-radius: 50%; box-shadow: none; border: 1.5px solid var(--sage-green); color: var(--forest-green); display: flex; align-items: center; justify-content: center;" title="Voice Call">
                         <i class="fa-solid fa-phone" style="font-size: 0.8rem;"></i>
-                    </button>
-                    <button class="btn-icon" onclick="triggerChatCall('Video', '${v.name}')" style="width: 34px; height: 34px; background: rgba(45,90,60,0.06); border-radius: 50%; box-shadow: none; border: 1.5px solid var(--sage-green); color: var(--forest-green); display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-video" style="font-size: 0.8rem;"></i>
                     </button>
                 </div>
             </div>
@@ -3483,7 +3482,7 @@ window.submitPlatformReview = function(e) {
         views: randomViews,
         likes: randomLikes,
         liked: false,
-        avatar: state.currentUser && state.currentUser.avatar ? state.currentUser.avatar : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150'
+        avatar: state.currentUser && state.currentUser.avatar ? state.currentUser.avatar : DEFAULT_USER_AVATAR
     };
     
     state.globalReviews.unshift(newRev);

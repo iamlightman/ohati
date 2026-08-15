@@ -2,7 +2,7 @@
 // admin/sidebar.php — Self-Contained Unified Admin Navigation Component
 if (!isset($pending_kyc) && isset($pdo)) {
     try {
-        $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pending_verification' OR kyc_status = 'pending'")->fetchColumn() ?: 0;
+        $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn() ?: 0;
     } catch (Exception $e) {
         $pending_kyc = 0;
     }

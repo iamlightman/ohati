@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
             state.settings = res.settings || {};
             updateAppHeader();
             updateNotifBadgeCount();
+
+            // Start periodic background activity heartbeat for real-time online status
+            if (!window._onlineHeartbeatStarted) {
+                window._onlineHeartbeatStarted = true;
+                setInterval(() => {
+                    if (state.user && state.user.id) {
+                        API.sendHeartbeat().catch(() => {});
+                    }
+                }, 15000);
+            }
             if (typeof checkReferralWebLanding === 'function') checkReferralWebLanding();
             return Promise.allSettled([
                 API.getCategories(),
@@ -222,7 +232,7 @@ function updateAppHeader() {
         if (state.user && state.user.avatar) {
             avatar.src = state.user.avatar;
         } else {
-            avatar.src = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%230F1923'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+            avatar.src = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
         }
     }
 }

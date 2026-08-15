@@ -57,7 +57,8 @@ $stmt = $pdo->query("
            u.kyc_id_front as id_front, u.kyc_selfie as selfie 
     FROM users u 
     JOIN vendors v ON u.id = v.user_id 
-    WHERE u.kyc_status = 'pending_verification' OR u.kyc_status = 'not_started' 
+    WHERE (u.kyc_status = 'pending_verification' OR u.kyc_status = 'pending')
+      AND (u.kyc_id_front != '' OR u.kyc_selfie != '' OR u.kyc_id_back != '')
     ORDER BY u.id DESC
 ");
 $pending = $stmt->fetchAll();

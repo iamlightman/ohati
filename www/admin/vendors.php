@@ -230,7 +230,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $vendors = $stmt->fetchAll();
 
-$pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pending_verification'")->fetchColumn();
+$pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -675,7 +675,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             const kycStatus = v.kyc_status || (v.verified == 1 ? 'verified' : 'not_started');
             const kycBadge = v.verification_badge || 'blue';
             const startingPrice = parseFloat(v.starting_price || 0) > 0 ? ('GH₵ ' + parseFloat(v.starting_price).toFixed(2)) : 'Custom Quotes';
-            const logoUrl = v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150';
+            const logoUrl = v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
 
             let kycBadgeHtml = `<span class="booking-status status-pending" style="font-size:0.7rem; padding:3px 8px; border-radius:12px;">KYC: ${escapeHtml(kycStatus)}</span>`;
             if (kycStatus === 'verified' || v.verified == 1) {

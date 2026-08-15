@@ -369,6 +369,9 @@ function submitRegisterStep2() {
         };
 
         const res = await API.register(regPayload);
+        if (res.auth_token) {
+            localStorage.setItem('ohati_auth_token', res.auth_token);
+        }
         state.user = res.user;
         showPushNotification('Account Created', 'Please verify your details.');
 
@@ -488,6 +491,9 @@ function submitLogin(event) {
     ActionLock.execute(btn, 'Logging in...', async () => {
         try {
             const res = await API.login({ identifier, password });
+            if (res.auth_token) {
+                localStorage.setItem('ohati_auth_token', res.auth_token);
+            }
             state.user = res.user;
             showPushNotification('Welcome', 'Logged in successfully!');
             closeModal();

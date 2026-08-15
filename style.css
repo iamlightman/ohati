@@ -59,6 +59,244 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#0F1923;color:var(--g
 .app-container{width:100%;height:100vh;height:100dvh;background:var(--ivory);position:relative;display:flex;flex-direction:column;overflow:hidden;transition:background var(--anim-mid) ease;}
 @media(min-width:480px){.app-container{width:430px;height:min(900px,100dvh);border-radius:40px;border:10px solid #0F1923;box-shadow:0 30px 80px rgba(0,0,0,0.6);}}
 
+/* HERO BANNER & HANDPICKED STYLING */
+.home-hero-banner {
+    position: relative;
+    width: 100%;
+    min-height: 280px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 24px 24px;
+    padding: 32px 20px 28px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    color: #FFFFFF;
+    box-shadow: 0 12px 32px rgba(8, 23, 41, 0.25);
+    margin-bottom: 24px;
+}
+.home-hero-content {
+    position: relative;
+    z-index: 2;
+}
+.home-hero-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #FFFFFF;
+    margin: 0 0 14px 0;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+.home-hero-title .start-italic {
+    font-style: italic;
+    color: var(--accent, #F2A735);
+}
+.home-hero-divider {
+    width: 44px;
+    height: 3px;
+    background: var(--accent, #F2A735);
+    border-radius: 2px;
+    margin-bottom: 18px;
+}
+.home-hero-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #FFFFFF;
+    border-radius: 30px;
+    padding: 6px 8px 6px 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+}
+.home-hero-search .search-icon {
+    color: #94A3B8;
+    font-size: 1rem;
+    margin-right: 10px;
+}
+.home-hero-search input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.88rem;
+    color: #0F172A;
+    font-weight: 500;
+}
+.home-hero-search input::placeholder {
+    color: #94A3B8;
+}
+.home-hero-search .search-arrow-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--primary, #1B2B4B);
+    color: #FFFFFF;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+.home-hero-search .search-arrow-btn:hover {
+    transform: scale(1.05);
+    background: var(--accent, #F2A735);
+    color: #081729;
+}
+
+/* HANDPICKED SECTION & CARDS */
+.handpicked-section {
+    padding: 0 20px;
+    margin-bottom: 28px;
+}
+.section-header-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.section-subtitle {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--accent, #F2A735);
+    display: block;
+    margin-bottom: 2px;
+}
+.section-main-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary, #1B2B4B);
+    margin: 0;
+}
+.view-all-link {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary, #1B2B4B);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.handpicked-scroller {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+}
+.handpicked-scroller::-webkit-scrollbar { display: none; }
+.handpicked-card {
+    flex: 0 0 210px;
+    background: #FFFFFF;
+    border-radius: 18px;
+    border: 1px solid var(--gray-100, #E2E8F0);
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    cursor: pointer;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.handpicked-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+}
+.handpicked-img-wrapper {
+    position: relative;
+    width: 100%;
+    height: 135px;
+    overflow: hidden;
+}
+.handpicked-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+.handpicked-card:hover .handpicked-cover {
+    transform: scale(1.06);
+}
+.handpicked-fav-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(4px);
+    border: none;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+    z-index: 6;
+}
+.handpicked-fav-btn .active { color: #EF4444; }
+.handpicked-logo-badge {
+    position: absolute;
+    bottom: -12px;
+    left: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #081729;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 2px solid #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 6;
+}
+.handpicked-details {
+    padding: 18px 12px 14px 12px;
+}
+.handpicked-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 0 0 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.handpicked-card-category {
+    font-size: 0.7rem;
+    color: #64748B;
+    display: block;
+    margin-bottom: 6px;
+}
+.handpicked-card-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #F59E0B;
+    margin-bottom: 4px;
+}
+.handpicked-card-rating .reviews-count {
+    color: #94A3B8;
+    font-weight: 400;
+    font-size: 0.68rem;
+}
+.handpicked-card-location {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    color: #64748B;
+}
+
 /* Scrollable Viewport */
 .app-viewport{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;}
 .app-viewport::-webkit-scrollbar{width:3px;}

@@ -149,6 +149,14 @@ function navigateTo(screenId) {
         }
     }
 
+    // Close active modal if switching screens
+    if (typeof closeModal === 'function') {
+        closeModal();
+    }
+
+    // Scroll to top cleanly
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     // Hide all screens
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
 
@@ -215,6 +223,12 @@ function navigateTo(screenId) {
             break;
         case 'report-issue':
             initReportIssueScreen();
+            break;
+        case 'user-jobs':
+            initUserJobsScreen();
+            break;
+        case 'vendor-jobs':
+            initVendorJobsScreen();
             break;
     }
 
@@ -356,7 +370,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <i class="fa-solid ${labelIcon}"></i> ${recLabel}
                         </div>
                         <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
-                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'}" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
+                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
                             <div style="flex:1; min-width:0;">
                                 <h4 style="font-family:'Fraunces',serif; font-size:0.95rem; margin:0 0 2px 0; color:var(--primary); display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     <span>${recVendor.name}</span>
@@ -621,7 +635,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${state.platformReviews.map(r => `
                     <div class="review-card">
                         <div class="review-header">
-                            <img class="review-avatar" src="${r.avatar}" alt="">
+                            <img class="review-avatar" src="${r.avatar || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" alt="">
                             <div>
                                 <div class="review-name">${r.name}</div>
                                 <div class="review-stars">${starsHTML(r.rating, '0.55rem')}</div>
@@ -955,7 +969,7 @@ function viewCustomerProfileModal(customerId) {
     `);
     
     API.getVendorDetails(customerId, true).then(c => {
-        let avatarUrl = c.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80';
+        let avatarUrl = c.logo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>');
         let contactRows = '';
         if (c.phone) {
             contactRows += `
@@ -1050,7 +1064,7 @@ function initDetailScreen() {
                     </button>
                 </div>
                 <div class="detail-vendor-identity">
-                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'}" alt="">
+                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
                     <div class="detail-vendor-name" style="display:flex; align-items:center; gap:6px;">
                         <span>${v.name}</span>
                         ${v.verification_badge === 'gold' ? `<i class="fa-solid fa-circle-check" style="color:#FFD700;" title="Gold Verified"></i>` : ''}
@@ -1302,7 +1316,7 @@ function toggleCompareDetail(vid, e) {
                             <th style="padding:8px 6px;text-align:left;font-size:0.65rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--gray-200);min-width:70px;"></th>
                             ${allVendors.map((cv, i) => `
                                 <th style="padding:8px 6px;text-align:center;border-bottom:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};min-width:90px;cursor:pointer;" onclick="${i > 0 ? 'closeModal(); viewVendorDetails(' + cv.id + ')' : ''}">
-                                    <img src="${cv.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
+                                    <img src="${cv.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
                                     <div style="font-size:0.7rem;font-weight:700;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;">${cv.name}</div>
                                     ${i === 0 ? '<span style="font-size:0.5rem;background:var(--accent);color:var(--primary-dark);padding:1px 6px;border-radius:3px;font-weight:800;text-transform:uppercase;">Current</span>' : ''}
                                 </th>
@@ -1683,7 +1697,8 @@ function initChatScreen() {
             renderChatInbox(inbox);
             
             if (state.activeChatVendorId) {
-                API.getVendorDetails(state.activeChatVendorId, true).then(v => {
+                const role = state.user?.active_role || state.user?.role || 'customer';
+                API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
                     state.activeChatPartner = v;
                     const contentPanel = document.getElementById('chat-desktop-content-panel');
                     if (contentPanel) {
@@ -1699,13 +1714,15 @@ function initChatScreen() {
                             }
                         }
                         const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
+                        const isOnlineDesk = v.is_online || v.availability === 'Online';
+                        const statusTextDesk = isOnlineDesk ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
                         contentPanel.innerHTML = `
                             <div class="chat-screen" data-vendor-id="${v.id}">
                                 <div class="chat-header">
-                                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                                     <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                                         <div class="chat-vendor-name">${nameWithBadge}</div>
-                                        <div class="chat-vendor-status">${v.availability}</div>
+                                        <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
                                     </div>
                                     <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
                                         <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
@@ -1750,6 +1767,16 @@ function initChatScreen() {
                     }).catch(() => {
                         state.pollingHistoryInProgress = false;
                     });
+
+                    // Live Partner Online Status Refresh
+                    const role = state.user?.active_role || state.user?.role || 'customer';
+                    const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
+                    API.getUserStatus(params).then(st => {
+                        const statusEl = document.getElementById('chat-partner-status');
+                        if (statusEl && st) {
+                            statusEl.innerHTML = st.is_online ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (st.online_status || 'Offline');
+                        }
+                    }).catch(() => {});
                 }
             } else {
                 clearInterval(state.chatInterval);
@@ -1760,7 +1787,8 @@ function initChatScreen() {
     } else {
         if (state.activeChatVendorId) {
             screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
-            API.getVendorDetails(state.activeChatVendorId, true).then(v => {
+            const role = state.user?.active_role || state.user?.role || 'customer';
+            API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
                 state.activeChatPartner = v;
                 renderChatShell(v);
                 API.getChatHistory(state.activeChatVendorId).then(history => {
@@ -1778,6 +1806,15 @@ function initChatScreen() {
                                     state.pollingHistoryInProgress = false;
                                     console.error("Error polling chat:", err);
                                 });
+
+                                const role = state.user?.active_role || state.user?.role || 'customer';
+                                const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
+                                API.getUserStatus(params).then(st => {
+                                    const statusEl = document.getElementById('chat-partner-status');
+                                    if (statusEl && st) {
+                                        statusEl.innerHTML = st.is_online ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (st.online_status || 'Offline');
+                                    }
+                                }).catch(() => {});
                             }
                         } else {
                             clearInterval(state.chatInterval);
@@ -1874,11 +1911,12 @@ function renderChatInbox(inbox) {
             }
         }
 
+        const isOnline = item.is_online || item.availability === 'Online';
         return `
             <div class="chat-inbox-item" onclick="openChatWithVendor(${targetId})">
                 <div class="chat-inbox-avatar">
-                    <img src="${targetLogo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="" class="header-logo-img">
-                    ${item.availability === 'Available' ? `<div class="chat-inbox-online"></div>` : ''}
+                    <img src="${targetLogo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" alt="" class="header-logo-img">
+                    ${isOnline ? `<div class="chat-inbox-online" title="Online now"></div>` : ''}
                 </div>
                 <div class="chat-inbox-info">
                     <div class="chat-inbox-name">${nameWithBadge}</div>
@@ -1894,11 +1932,19 @@ function renderChatInbox(inbox) {
 }
 
 function openChatWithVendor(vid) {
+    if (!state.user) {
+        openAuthModal('login');
+        return;
+    }
     state.activeChatVendorId = vid;
     initChatScreen();
 }
 
 function startVendorChat(vid) {
+    if (!state.user) {
+        openAuthModal('login');
+        return;
+    }
     state.activeChatVendorId = vid;
     navigateTo('chat');
 }
@@ -1924,15 +1970,17 @@ function renderChatShell(v) {
         }
     }
     const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
+    const isOnline = v.is_online || v.availability === 'Online';
+    const statusText = isOnline ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
 
     screen.innerHTML = `
         <div class="chat-screen" data-vendor-id="${v.id}">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="closeActiveChat()"><i class="fa-solid fa-chevron-left"></i></button>
-                <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                 <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-name">${nameWithBadge}</div>
-                    <div class="chat-vendor-status">${v.availability}</div>
+                    <div class="chat-vendor-status" id="chat-partner-status">${statusText}</div>
                 </div>
                 <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
                     <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
@@ -2107,8 +2155,7 @@ function handleChatFileSelected(input) {
     const inputBarField = document.getElementById('chat-input-field');
     if (inputBarField) inputBarField.placeholder = "Uploading file...";
 
-    const uploadApiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
-    fetch(uploadApiUrl, {
+    fetch('api.php?action=upload_chat_file', {
         method: 'POST',
         body: formData
     })
@@ -2312,42 +2359,44 @@ function cancelVoiceRecording() {
 }
 
 function togglePreviewPlayback() {
-    const playBtn = document.getElementById('preview-play-btn');
-    if (!playBtn) return;
+    const playBtns = document.querySelectorAll('#preview-play-btn, .preview-play-btn');
+    if (playBtns.length === 0) return;
     
     if (previewAudioInstance && !previewAudioInstance.paused) {
         previewAudioInstance.pause();
-        playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        playBtns.forEach(b => b.innerHTML = '<i class="fa-solid fa-play"></i>');
     } else {
         if (!previewAudioInstance) {
-            if (!recordedAudioUrl) {
+            if (!recordedAudioUrl && recordedAudioBlob) {
                 recordedAudioUrl = URL.createObjectURL(recordedAudioBlob);
             }
+            if (!recordedAudioUrl) return;
             previewAudioInstance = new Audio(recordedAudioUrl);
             
             previewAudioInstance.addEventListener('timeupdate', () => {
-                const progressInput = document.getElementById('preview-progress');
-                const timeLbl = document.getElementById('preview-time-lbl');
-                if (progressInput) {
-                    const pct = (previewAudioInstance.currentTime / previewAudioInstance.duration) * 100;
-                    progressInput.value = isNaN(pct) ? 0 : pct;
-                }
-                if (timeLbl) {
-                    timeLbl.textContent = formatTimeLabel(previewAudioInstance.currentTime);
-                }
+                const progressInputs = document.querySelectorAll('#preview-progress, .preview-progress');
+                const timeLbls = document.querySelectorAll('#preview-time-lbl, .preview-time-lbl');
+                const pct = (previewAudioInstance.currentTime / (previewAudioInstance.duration || recordedAudioDuration || 1)) * 100;
+                progressInputs.forEach(inp => inp.value = isNaN(pct) ? 0 : pct);
+                timeLbls.forEach(lbl => lbl.textContent = formatTimeLabel(previewAudioInstance.currentTime));
             });
             
             previewAudioInstance.addEventListener('ended', () => {
-                playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                const progressInput = document.getElementById('preview-progress');
-                if (progressInput) progressInput.value = 0;
-                const timeLbl = document.getElementById('preview-time-lbl');
-                if (timeLbl) timeLbl.textContent = formatTimeLabel(recordedAudioDuration);
+                const playBtnsEnd = document.querySelectorAll('#preview-play-btn, .preview-play-btn');
+                playBtnsEnd.forEach(b => b.innerHTML = '<i class="fa-solid fa-play"></i>');
+                const progressInputs = document.querySelectorAll('#preview-progress, .preview-progress');
+                progressInputs.forEach(inp => inp.value = 0);
+                const timeLbls = document.querySelectorAll('#preview-time-lbl, .preview-time-lbl');
+                timeLbls.forEach(lbl => lbl.textContent = formatTimeLabel(recordedAudioDuration));
             });
         }
         
-        previewAudioInstance.play();
-        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        previewAudioInstance.play().then(() => {
+            playBtns.forEach(b => b.innerHTML = '<i class="fa-solid fa-pause"></i>');
+        }).catch(err => {
+            console.error("Preview play error:", err);
+            playBtns.forEach(b => b.innerHTML = '<i class="fa-solid fa-play"></i>');
+        });
     }
 }
 
@@ -2402,8 +2451,7 @@ function sendVoiceRecording() {
         bar.innerHTML = `<div style="padding:10px; text-align:center; width:100%; color:var(--gray-500); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Sending voice note...</div>`;
     });
     
-    const voiceNoteApiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
-    fetch(voiceNoteApiUrl, {
+    fetch('api.php?action=upload_chat_file', {
         method: 'POST',
         body: formData
     })
@@ -4177,7 +4225,7 @@ function initCompareScreen() {
                     <div class="compare-vendor-col">
                         <div class="compare-vendor-header" style="position:relative; padding-top:16px;">
                             <button onclick="removeCompareVendor(${v.id}, event)" style="position:absolute; right:4px; top:4px; background:none; border:none; color:var(--error); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; padding:4px;" title="Remove"><i class="fa-solid fa-circle-xmark"></i></button>
-                            <img class="compare-vendor-logo" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="">
+                            <img class="compare-vendor-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
                             <div class="compare-vendor-name">${v.name}</div>
                         </div>
                         <div class="compare-row">
@@ -4331,7 +4379,7 @@ function initProfileScreen() {
 
     screen.innerHTML = `
         <div class="profile-header">
-            <img class="profile-avatar" src="${state.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150'}" alt="">
+            <img class="profile-avatar" src="${state.user.avatar || window.DEFAULT_USER_AVATAR}" alt="">
             <div class="profile-name">${state.user.name}</div>
             <div class="profile-email">${state.user.email || state.user.phone || 'Ohati Planner'}</div>
         </div>
@@ -6431,7 +6479,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
             <!-- Profile Photo Upload -->
             <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
                 <div style="position:relative;">
-                    <img id="profile-edit-avatar-preview" src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
+                    <img id="profile-edit-avatar-preview" src="${u.avatar || window.DEFAULT_USER_AVATAR}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
                     <label style="position:absolute; bottom:0; right:0; background:var(--primary); color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
                         <i class="fa-solid fa-camera"></i>
                         <input type="file" accept="image/*" onchange="handleProfilePhotoSelect(event)" style="display:none;">
@@ -7392,14 +7440,21 @@ let activeChatAudioTime = null;
 
 function handleVoicePlayerClick(btn) {
     const playerDiv = btn.closest('.custom-voice-player');
+    if (!playerDiv) return;
     const audioUrl = playerDiv.getAttribute('data-src');
+    if (!audioUrl) return;
+    
     const progressBar = playerDiv.querySelector('.voice-progress');
     const timeLbl = playerDiv.querySelector('.voice-duration');
     
     if (activeChatAudioInstance && activeChatAudioButton === btn) {
         if (activeChatAudioInstance.paused) {
-            activeChatAudioInstance.play();
-            btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            activeChatAudioInstance.play().then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            }).catch(err => {
+                console.error("Audio playback error:", err);
+                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            });
         } else {
             activeChatAudioInstance.pause();
             btn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -7430,7 +7485,7 @@ function handleVoicePlayerClick(btn) {
     });
 
     activeChatAudioInstance.addEventListener('timeupdate', () => {
-        if (progressBar && activeChatAudioInstance.duration) {
+        if (progressBar && activeChatAudioInstance.duration && activeChatAudioInstance.duration !== Infinity) {
             const pct = (activeChatAudioInstance.currentTime / activeChatAudioInstance.duration) * 100;
             progressBar.value = isNaN(pct) ? 0 : pct;
         }
@@ -7451,8 +7506,12 @@ function handleVoicePlayerClick(btn) {
         activeChatAudioTime = null;
     });
     
-    activeChatAudioInstance.play();
-    btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    activeChatAudioInstance.play().then(() => {
+        btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    }).catch(err => {
+        console.error("Audio play failed:", err);
+        btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    });
 }
 
 function handleVoicePlayerSeek(rangeInput) {
@@ -7463,3 +7522,287 @@ function handleVoicePlayerSeek(rangeInput) {
         activeChatAudioInstance.currentTime = (parseFloat(rangeInput.value) / 100) * activeChatAudioInstance.duration;
     }
 }
+
+// ── EVENT JOBS MARKETPLACE SCREEN INITIALIZERS ─────────────────────────
+async function initUserJobsScreen() {
+    const container = document.getElementById('screen-user-jobs');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="padding:20px; max-width:1100px; margin:0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+                <div>
+                    <h2 style="margin:0; color:var(--primary, #1B2B4B); font-size:1.4rem;"><i class="fa-solid fa-briefcase" style="color:var(--accent, #F2A735); margin-right:8px;"></i>My Event Jobs</h2>
+                    <span style="color:var(--gray-600); font-size:0.88rem;">Manage your posted jobs, proposals, and hired vendors.</span>
+                </div>
+                <button class="btn btn-primary" onclick="JobsModule.openPostJobModal()"><i class="fa-solid fa-plus" style="margin-right:6px;"></i> Post New Job</button>
+            </div>
+
+            <div id="user-jobs-stats-container" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:24px;">
+                <div class="stat-card" style="background:#fff; border:1px solid var(--gray-200); padding:14px; border-radius:12px; text-align:center;">
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);" id="uj-stat-posted">0</div>
+                    <div style="font-size:0.78rem; color:var(--gray-600); font-weight:600;">Total Jobs Posted</div>
+                </div>
+                <div class="stat-card" style="background:#fff; border:1px solid var(--gray-200); padding:14px; border-radius:12px; text-align:center;">
+                    <div style="font-size:1.5rem; font-weight:800; color:#2563EB;" id="uj-stat-active">0</div>
+                    <div style="font-size:0.78rem; color:var(--gray-600); font-weight:600;">Active Jobs</div>
+                </div>
+                <div class="stat-card" style="background:#fff; border:1px solid var(--gray-200); padding:14px; border-radius:12px; text-align:center;">
+                    <div style="font-size:1.5rem; font-weight:800; color:#D97706;" id="uj-stat-apps">0</div>
+                    <div style="font-size:0.78rem; color:var(--gray-600); font-weight:600;">Applications Received</div>
+                </div>
+                <div class="stat-card" style="background:#fff; border:1px solid var(--gray-200); padding:14px; border-radius:12px; text-align:center;">
+                    <div style="font-size:1.5rem; font-weight:800; color:#16A34A;" id="uj-stat-hired">0</div>
+                    <div style="font-size:0.78rem; color:var(--gray-600); font-weight:600;">Hired Vendors</div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; border-bottom:2px solid var(--gray-200); margin-bottom:20px; overflow-x:auto;">
+                <button class="tab-btn active" onclick="switchUserJobsTab('active', this)" style="padding:10px 16px; font-weight:700; border:none; background:none; cursor:pointer; color:var(--primary); border-bottom:3px solid var(--accent);">Active Jobs</button>
+                <button class="tab-btn" onclick="switchUserJobsTab('drafts', this)" style="padding:10px 16px; font-weight:600; border:none; background:none; cursor:pointer; color:var(--gray-500);">Drafts</button>
+                <button class="tab-btn" onclick="switchUserJobsTab('closed', this)" style="padding:10px 16px; font-weight:600; border:none; background:none; cursor:pointer; color:var(--gray-500);">Closed / Hired</button>
+            </div>
+
+            <div id="user-jobs-list-container">${renderSkeletonCardsHTML(4)}</div>
+        </div>
+    `;
+
+    try {
+        const res = await API.get('job_get_user_dashboard');
+        if (res && res.success) {
+            document.getElementById('uj-stat-posted').innerText = res.stats.total_posted || 0;
+            document.getElementById('uj-stat-active').innerText = res.stats.active_count || 0;
+            document.getElementById('uj-stat-apps').innerText = res.stats.total_applications || 0;
+            document.getElementById('uj-stat-hired').innerText = res.stats.total_hired || 0;
+
+            window._userJobsData = res.jobs;
+            renderUserJobsTab('active');
+        }
+    } catch (e) {
+        console.error('Failed to load user jobs dashboard:', e);
+    }
+}
+
+function switchUserJobsTab(tabKey, btnElem) {
+    document.querySelectorAll('#screen-user-jobs .tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.color = 'var(--gray-500)';
+        b.style.borderBottom = 'none';
+        b.style.fontWeight = '600';
+    });
+    if (btnElem) {
+        btnElem.classList.add('active');
+        btnElem.style.color = 'var(--primary)';
+        btnElem.style.borderBottom = '3px solid var(--accent)';
+        btnElem.style.fontWeight = '700';
+    }
+    renderUserJobsTab(tabKey);
+}
+
+function renderUserJobsTab(tabKey) {
+    const listContainer = document.getElementById('user-jobs-list-container');
+    if (!listContainer) return;
+
+    const jobs = (window._userJobsData && window._userJobsData[tabKey]) ? window._userJobsData[tabKey] : [];
+
+    if (jobs.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align:center; padding:40px 20px; background:#fff; border-radius:12px; border:1px solid var(--gray-200);">
+                <i class="fa-solid fa-briefcase" style="font-size:2.5rem; color:var(--gray-400); margin-bottom:10px;"></i>
+                <h4 style="margin:0; color:var(--primary);">No ${tabKey} jobs found</h4>
+                <p style="color:var(--gray-500); font-size:0.88rem; margin:6px 0 16px;">Post an event job to start receiving proposals from top vendors.</p>
+                <button class="btn btn-primary btn-sm" onclick="JobsModule.openPostJobModal()"><i class="fa-solid fa-plus"></i> Post a Job</button>
+            </div>
+        `;
+        return;
+    }
+
+    listContainer.innerHTML = jobs.map(j => `
+        <div class="job-card" style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                <div>
+                    <span class="badge" style="background:rgba(27,43,75,0.08); color:var(--primary); padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">${escapeHtml(j.category)}</span>
+                    ${j.is_urgent == 1 ? `<span class="badge" style="background:#FEE2E2; color:#DC2626; padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700; margin-left:6px;"><i class="fa-solid fa-bolt"></i> URGENT</span>` : ''}
+                    <h3 style="margin:6px 0 2px; font-size:1.1rem; color:var(--primary);">${escapeHtml(j.title)}</h3>
+                    <span style="font-size:0.8rem; color:var(--gray-500);"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(j.location || 'Accra')} • Posted ${escapeHtml(j.created_at || 'Recently')}</span>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">GHS ${number_format(j.budget, 2)}</div>
+                    <span style="font-size:0.75rem; color:var(--gray-500);">${j.negotiable == 1 ? 'Negotiable' : 'Fixed Budget'}</span>
+                </div>
+            </div>
+
+            <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.4; margin:0;">
+                ${escapeHtml(j.description.substring(0, 160))}${j.description.length > 160 ? '...' : ''}
+            </p>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--gray-200); padding-top:12px; margin-top:4px;">
+                <div style="font-size:0.8rem; color:var(--gray-600); display:flex; gap:14px;">
+                    <span><i class="fa-solid fa-users" style="color:var(--accent);"></i> <strong>${j.applications_count}</strong> Proposals</span>
+                    <span><i class="fa-solid fa-eye" style="color:var(--gray-400);"></i> ${j.views_count} Views</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-outline btn-sm" onclick="JobsModule.openProposalsInboxModal(${j.id}, '${escapeHtml(j.title)}')"><i class="fa-solid fa-inbox"></i> View Proposals (${j.applications_count})</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function initVendorJobsScreen() {
+    const container = document.getElementById('screen-vendor-jobs');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="padding:20px; max-width:1100px; margin:0 auto;">
+            <div style="margin-bottom:20px;">
+                <h2 style="margin:0; color:var(--primary, #1B2B4B); font-size:1.4rem;"><i class="fa-solid fa-briefcase" style="color:var(--accent, #F2A735); margin-right:8px;"></i>Event Jobs Marketplace</h2>
+                <span style="color:var(--gray-600); font-size:0.88rem;">Browse open event job postings and submit competitive quotes.</span>
+            </div>
+
+            <!-- Search & Filter Bar -->
+            <div style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:14px; margin-bottom:20px; display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:center;">
+                <div style="position:relative;">
+                    <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--gray-400);"></i>
+                    <input type="text" id="vj-search-input" placeholder="Search event jobs by title, skills, location..." onkeyup="if(event.key==='Enter') fetchMarketplaceJobs()" style="width:100%; padding:10px 10px 10px 36px; border:1px solid var(--gray-300); border-radius:8px;">
+                </div>
+                <select id="vj-category-select" onchange="fetchMarketplaceJobs()" style="padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                    <option value="">All Categories</option>
+                    ${(JobsModule.currentCategories || []).map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('')}
+                </select>
+                <button class="btn btn-primary" onclick="fetchMarketplaceJobs()"><i class="fa-solid fa-search"></i> Search</button>
+            </div>
+
+            <div style="display:flex; gap:10px; border-bottom:2px solid var(--gray-200); margin-bottom:20px; overflow-x:auto;">
+                <button class="tab-btn active" onclick="switchVendorJobsTab('available', this)" style="padding:10px 16px; font-weight:700; border:none; background:none; cursor:pointer; color:var(--primary); border-bottom:3px solid var(--accent);">Available Jobs</button>
+                <button class="tab-btn" onclick="switchVendorJobsTab('applied', this)" style="padding:10px 16px; font-weight:600; border:none; background:none; cursor:pointer; color:var(--gray-500);">My Proposals</button>
+                <button class="tab-btn" onclick="switchVendorJobsTab('shortlisted', this)" style="padding:10px 16px; font-weight:600; border:none; background:none; cursor:pointer; color:var(--gray-500);">Shortlisted</button>
+                <button class="tab-btn" onclick="switchVendorJobsTab('hired', this)" style="padding:10px 16px; font-weight:600; border:none; background:none; cursor:pointer; color:var(--gray-500);">Hired Jobs</button>
+            </div>
+
+            <div id="vendor-jobs-list-container">${renderSkeletonCardsHTML(6)}</div>
+        </div>
+    `;
+
+    fetchMarketplaceJobs();
+}
+
+async function fetchMarketplaceJobs() {
+    const q = document.getElementById('vj-search-input') ? document.getElementById('vj-search-input').value.trim() : '';
+    const cat = document.getElementById('vj-category-select') ? document.getElementById('vj-category-select').value : '';
+
+    const listContainer = document.getElementById('vendor-jobs-list-container');
+    if (listContainer) listContainer.innerHTML = renderSkeletonCardsHTML(4);
+
+    try {
+        const res = await API.get(`job_get_list&q=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`);
+        if (res && res.success) {
+            window._vendorJobsData = { available: res.jobs || [] };
+            renderVendorJobsTab('available');
+        }
+    } catch (e) {
+        console.error('Error fetching jobs:', e);
+    }
+}
+
+function switchVendorJobsTab(tabKey, btnElem) {
+    document.querySelectorAll('#screen-vendor-jobs .tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.color = 'var(--gray-500)';
+        b.style.borderBottom = 'none';
+        b.style.fontWeight = '600';
+    });
+    if (btnElem) {
+        btnElem.classList.add('active');
+        btnElem.style.color = 'var(--primary)';
+        btnElem.style.borderBottom = '3px solid var(--accent)';
+        btnElem.style.fontWeight = '700';
+    }
+
+    if (tabKey === 'available') {
+        renderVendorJobsTab('available');
+    } else {
+        loadVendorDashboardTab(tabKey);
+    }
+}
+
+async function loadVendorDashboardTab(tabKey) {
+    const listContainer = document.getElementById('vendor-jobs-list-container');
+    if (listContainer) listContainer.innerHTML = renderSkeletonCardsHTML(4);
+
+    try {
+        const res = await API.get('job_get_vendor_dashboard');
+        if (res && res.success) {
+            window._vendorJobsData = res.applications;
+            renderVendorJobsTab(tabKey);
+        }
+    } catch (e) {
+        console.error('Error loading vendor proposals:', e);
+    }
+}
+
+function renderVendorJobsTab(tabKey) {
+    const listContainer = document.getElementById('vendor-jobs-list-container');
+    if (!listContainer) return;
+
+    if (tabKey === 'available') {
+        const jobs = (window._vendorJobsData && window._vendorJobsData.available) ? window._vendorJobsData.available : [];
+        if (jobs.length === 0) {
+            listContainer.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:12px; color:var(--gray-500);"><p>No open jobs matching your filter criteria.</p></div>`;
+            return;
+        }
+
+        listContainer.innerHTML = jobs.map(j => `
+            <div class="job-card" style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <span class="badge" style="background:rgba(27,43,75,0.08); color:var(--primary); padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">${escapeHtml(j.category)}</span>
+                        ${j.is_urgent == 1 ? `<span class="badge" style="background:#FEE2E2; color:#DC2626; padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700; margin-left:6px;"><i class="fa-solid fa-bolt"></i> URGENT</span>` : ''}
+                        <h3 style="margin:6px 0 2px; font-size:1.1rem; color:var(--primary);">${escapeHtml(j.title)}</h3>
+                        <span style="font-size:0.8rem; color:var(--gray-500);"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(j.location || 'Accra')} • Posted by ${escapeHtml(j.user_name || 'Client')}</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">GHS ${number_format(j.budget, 2)}</div>
+                        <span style="font-size:0.75rem; color:var(--gray-500);">${j.negotiable == 1 ? 'Negotiable' : 'Fixed'}</span>
+                    </div>
+                </div>
+
+                <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.4; margin:0;">
+                    ${escapeHtml(j.description.substring(0, 180))}${j.description.length > 180 ? '...' : ''}
+                </p>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--gray-200); padding-top:12px; margin-top:4px;">
+                    <div style="font-size:0.8rem; color:var(--gray-600);">
+                        <span><i class="fa-solid fa-calendar" style="color:var(--accent);"></i> Event Date: ${escapeHtml(j.event_date || 'Flexible')}</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-outline btn-sm" onclick="JobsModule.toggleSaveJob(${j.id}, this)"><i class="${j.is_saved ? 'fa-solid' : 'fa-regular'} fa-bookmark"></i></button>
+                        <button class="btn btn-primary btn-sm" onclick="JobsModule.openApplyModal(${j.id}, '${escapeHtml(j.title)}', ${j.budget})"><i class="fa-solid fa-paper-plane"></i> Apply Now</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        const apps = (window._vendorJobsData && window._vendorJobsData[tabKey]) ? window._vendorJobsData[tabKey] : [];
+        if (apps.length === 0) {
+            listContainer.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:12px; color:var(--gray-500);"><p>No proposals in '${tabKey}'.</p></div>`;
+            return;
+        }
+
+        listContainer.innerHTML = apps.map(a => `
+            <div style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:16px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h4 style="margin:0; font-size:1rem; color:var(--primary);">${escapeHtml(a.job_title || 'Event Job')}</h4>
+                    <span class="badge" style="font-size:0.75rem; padding:4px 8px; border-radius:6px; background:var(--gray-200); color:var(--gray-700); text-transform:capitalize;">${a.status}</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--gray-600); margin-bottom:8px;">
+                    Your Quote: <strong>GHS ${number_format(a.price_quote, 2)}</strong> • Timeline: ${escapeHtml(a.delivery_timeline)}
+                </div>
+                <p style="font-size:0.82rem; color:var(--gray-700); background:var(--gray-100); padding:8px; border-radius:6px; margin:0;">
+                    ${escapeHtml(a.cover_letter)}
+                </p>
+            </div>
+        `).join('');
+    }
+}
+

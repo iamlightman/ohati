@@ -43,7 +43,7 @@ if ($active_role !== 'vendor') {
             <div class="header-right">
                 <button class="header-icon-btn" id="theme-toggle-btn"><i class="fa-solid fa-moon" id="theme-icon"></i></button>
                 <div class="header-user">
-                    <img class="header-avatar" src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=150" alt="" id="header-avatar" onclick="window.location.href='index.php'">
+                    <img class="header-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="" id="header-avatar" onclick="window.location.href='index.php'">
                 </div>
             </div>
         </header>
@@ -416,7 +416,7 @@ if ($active_role !== 'vendor') {
                 } else {
                     body.innerHTML = currentFollowersData.followers.map(u => `
                         <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--gray-100);">
-                            <img src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                            <img src="${u.avatar || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                             <div style="flex:1;">
                                 <div style="font-weight:700; font-size:0.9rem; color:var(--gray-900);">${u.name}</div>
                                 <div style="font-size:0.75rem; color:var(--gray-500);">${u.email || u.phone || 'Ohati Member'}</div>
@@ -434,7 +434,7 @@ if ($active_role !== 'vendor') {
                 } else {
                     body.innerHTML = currentFollowersData.following.map(v => `
                         <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--gray-100);">
-                            <img src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                            <img src="${v.logo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                             <div style="flex:1;">
                                 <div style="font-weight:700; font-size:0.9rem; color:var(--gray-900);">${v.name}</div>
                                 <div style="font-size:0.75rem; color:var(--gray-500);">${v.category || 'Vendor'}</div>

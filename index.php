@@ -222,7 +222,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -350,7 +350,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                     <span class="notif-badge" id="notif-badge" style="display:none;">3</span>
                 </button>
                 <button class="header-avatar-btn" id="header-avatar-btn" aria-label="Profile">
-                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=150" alt="User" id="header-avatar" class="header-avatar">
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="User" id="header-avatar" class="header-avatar">
                 </button>
             </div>
         </header>
@@ -436,7 +436,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
             <aside class="sidebar-panel" id="sidebar-panel" onclick="event.stopPropagation()">
                 <div class="sidebar-header">
                     <div class="sidebar-user-info">
-                        <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=150" alt="Profile" class="sidebar-avatar" id="sidebar-avatar">
+                        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="Profile" class="sidebar-avatar" id="sidebar-avatar">
                         <div>
                             <div class="sidebar-name" id="sidebar-name">Guest</div>
                             <div class="sidebar-email" id="sidebar-email">Not signed in</div>
@@ -575,24 +575,25 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
 
     </div><!-- /app-container -->
 
-    <script src="js/utils.js"></script>
-    <script src="js/helpers.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/action_lock.js"></script>
-    <script src="js/state.js"></script>
-    <script src="js/modals.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/booking.js"></script>
-    <script src="js/vendor.js"></script>
-    <script src="js/chat.js"></script>
-    <script src="js/search.js"></script>
-    <script src="js/review.js"></script>
-    <script src="js/notification.js"></script>
-    <script src="js/payment.js"></script>
-    <script src="js/screens.js"></script>
-    <script src="js/calling.js"></script>
-    <script src="js/jobs.js"></script>
-    <script src="js/app.js"></script>
+    <?php $v_ts = filemtime(__DIR__ . '/js/screens.js'); ?>
+    <script src="js/utils.js?v=<?= $v_ts ?>"></script>
+    <script src="js/helpers.js?v=<?= $v_ts ?>"></script>
+    <script src="js/api.js?v=<?= $v_ts ?>"></script>
+    <script src="js/action_lock.js?v=<?= $v_ts ?>"></script>
+    <script src="js/state.js?v=<?= $v_ts ?>"></script>
+    <script src="js/modals.js?v=<?= $v_ts ?>"></script>
+    <script src="js/auth.js?v=<?= $v_ts ?>"></script>
+    <script src="js/booking.js?v=<?= $v_ts ?>"></script>
+    <script src="js/vendor.js?v=<?= $v_ts ?>"></script>
+    <script src="js/chat.js?v=<?= $v_ts ?>"></script>
+    <script src="js/search.js?v=<?= $v_ts ?>"></script>
+    <script src="js/review.js?v=<?= $v_ts ?>"></script>
+    <script src="js/notification.js?v=<?= $v_ts ?>"></script>
+    <script src="js/payment.js?v=<?= $v_ts ?>"></script>
+    <script src="js/screens.js?v=<?= $v_ts ?>"></script>
+    <script src="js/calling.js?v=<?= $v_ts ?>"></script>
+    <script src="js/jobs.js?v=<?= $v_ts ?>"></script>
+    <script src="js/app.js?v=<?= $v_ts ?>"></script>
 
 </body>
 </html>

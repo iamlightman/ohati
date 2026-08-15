@@ -20,12 +20,24 @@ const API = {
     },
     _pendingRequests: new Map(),
 
+    getAuthHeaders(extra = {}) {
+        const headers = { ...extra };
+        const token = localStorage.getItem('ohati_auth_token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
+    },
+
     async get(action, params = {}) {
         let url = `${this.base}?action=${action}`;
         for (const [k, v] of Object.entries(params)) {
             if (v !== '' && v !== null && v !== undefined) url += `&${k}=${encodeURIComponent(v)}`;
         }
-        const res = await fetch(url);
+        const res = await fetch(url, { 
+            credentials: 'include',
+            headers: this.getAuthHeaders()
+        });
         let json;
         try {
             json = await res.json();
@@ -52,10 +64,11 @@ const API = {
             const csrfToken = (window.state && window.state.csrfToken) ? window.state.csrfToken : (csrfMeta ? csrfMeta.getAttribute('content') : '');
             const res = await fetch(`${this.base}?action=${action}`, {
                 method: 'POST',
-                headers: { 
+                credentials: 'include',
+                headers: this.getAuthHeaders({ 
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken
-                },
+                }),
                 body: JSON.stringify(data)
             });
             let json;
@@ -120,7 +133,9 @@ const API = {
     toggleCompare(vendorId) { return this.post('toggle_compare', { vendor_id: vendorId }); },
     getCompareList() { return this.get('compare_list'); },
 
-    // ── Chat ──
+    // ── Chat & Presence ──
+    sendHeartbeat() { return this.get('heartbeat'); },
+    getUserStatus(params = {}) { return this.get('get_user_status', params); },
     getChatInbox() { return this.get('chat_inbox'); },
     getUnreadChats() { return this.get('get_unread_chats'); },
     getChatHistory(vendorId) { return this.get('chat_history', { vendor_id: vendorId }); },
@@ -142,7 +157,8 @@ const API = {
     recordPayment(data) { return this.post('record_payment', data); },
     getPaymentHistory(bookingId) { return this.get('payment_history', { booking_id: bookingId || '' }); },
     initiatePaystackPayment(bookingId, type) { return this.post('initiate_paystack_payment', { booking_id: bookingId, type }); },
-    verifyPaystackPayment(reference) { return this.post('verify_paystack_payment', { reference }); },
+    verifyPaystackPayment(reference, txId) { return this.post('verify_paystack_payment', { reference, tx_id: txId || '' }); },
+    submitManualPayment(reference, txId) { return this.post('submit_manual_payment', { reference, tx_id: txId || '' }); },
     getVendorWallet() { return this.get('get_vendor_wallet'); },
     requestWithdrawal(amount) { return this.post('request_withdrawal', { amount }); },
     releaseEscrow(escrowId) { return this.post('release_escrow', { escrow_id: escrowId }); },

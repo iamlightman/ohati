@@ -237,6 +237,7 @@ function updateSidebarUI() {
     } else {
         if (nameEl) nameEl.textContent = 'Guest';
         if (emailEl) emailEl.textContent = 'Not signed in';
+        if (avatarEl) avatarEl.src = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
         if (authText) authText.textContent = 'Sign In';
         if (authLink) {
             authLink.onclick = () => { openLoginModal(); toggleSidebar(false); };
@@ -819,24 +820,7 @@ window.submitPlatformReviewForm = function(event) {
 };
 
 function showVideoCallComingSoon() {
-    const html = `
-        <div class="auth-modal-header" style="text-align:center;">
-            <div style="font-size:3rem; color:var(--accent); margin-bottom:12px;"><i class="fa-solid fa-video fa-beat"></i></div>
-            <h2 class="auth-modal-title" style="font-family:'Fraunces', serif;">Video Calling</h2>
-            <p class="auth-modal-subtitle">Enhancing vendor-client interactions</p>
-        </div>
-        <div style="padding:16px 0; text-align:center;">
-            <p style="font-size:0.9rem; color:var(--gray-700); line-height:1.5; margin-bottom:16px;">
-                Our face-to-face video consultation feature is currently in beta testing and is <strong>coming soon</strong> to the Ohati app!
-            </p>
-            <div class="card" style="padding:12px; background:var(--gray-50); border:1px solid var(--gray-100); text-align:left; margin-bottom:16px; border-radius:10px;">
-                <div style="font-weight:700; font-size:0.75rem; color:var(--primary); margin-bottom:4px;">Soon you will be able to:</div>
-                <div style="font-size:0.75rem; color:var(--gray-500); margin-bottom:2px;"><i class="fa-solid fa-check" style="color:var(--success);"></i> Do live video tours of venues</div>
-                <div style="font-size:0.75rem; color:var(--gray-500); margin-bottom:2px;"><i class="fa-solid fa-check" style="color:var(--success);"></i> Conduct vendor interview consultations</div>
-                <div style="font-size:0.75rem; color:var(--gray-500);"><i class="fa-solid fa-check" style="color:var(--success);"></i> Discuss themes and design layouts live</div>
-            </div>
-            <button class="btn btn-primary btn-full" onclick="closeModal()">Got it!</button>
-        </div>
-    `;
-    openModal(html);
+    if (typeof initiateVoiceCall === 'function') {
+        initiateVoiceCall();
+    }
 }

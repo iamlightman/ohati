@@ -2,7 +2,7 @@
 // admin/sidebar.php — Self-Contained Unified Admin Navigation Component
 if (!isset($pending_kyc) && isset($pdo)) {
     try {
-        $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pending_verification' OR kyc_status = 'pending'")->fetchColumn() ?: 0;
+        $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn() ?: 0;
     } catch (Exception $e) {
         $pending_kyc = 0;
     }
@@ -128,6 +128,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
 
         <div class="admin-nav-section">Management</div>
+        <a href="jobs.php" class="admin-nav-item <?= $current_page === 'jobs.php' ? 'active' : '' ?>">
+            <i class="fa-solid fa-list-check"></i> Event Jobs
+        </a>
         <a href="vendors.php" class="admin-nav-item <?= $current_page === 'vendors.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-briefcase"></i> Vendors
         </a>

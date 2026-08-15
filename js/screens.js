@@ -149,6 +149,14 @@ function navigateTo(screenId) {
         }
     }
 
+    // Close active modal if switching screens
+    if (typeof closeModal === 'function') {
+        closeModal();
+    }
+
+    // Scroll to top cleanly
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     // Hide all screens
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
 
@@ -362,7 +370,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <i class="fa-solid ${labelIcon}"></i> ${recLabel}
                         </div>
                         <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
-                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'}" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
+                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
                             <div style="flex:1; min-width:0;">
                                 <h4 style="font-family:'Fraunces',serif; font-size:0.95rem; margin:0 0 2px 0; color:var(--primary); display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     <span>${recVendor.name}</span>
@@ -627,7 +635,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${state.platformReviews.map(r => `
                     <div class="review-card">
                         <div class="review-header">
-                            <img class="review-avatar" src="${r.avatar}" alt="">
+                            <img class="review-avatar" src="${r.avatar || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" alt="">
                             <div>
                                 <div class="review-name">${r.name}</div>
                                 <div class="review-stars">${starsHTML(r.rating, '0.55rem')}</div>
@@ -961,7 +969,7 @@ function viewCustomerProfileModal(customerId) {
     `);
     
     API.getVendorDetails(customerId, true).then(c => {
-        let avatarUrl = c.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80';
+        let avatarUrl = c.logo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>');
         let contactRows = '';
         if (c.phone) {
             contactRows += `
@@ -1056,7 +1064,7 @@ function initDetailScreen() {
                     </button>
                 </div>
                 <div class="detail-vendor-identity">
-                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'}" alt="">
+                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
                     <div class="detail-vendor-name" style="display:flex; align-items:center; gap:6px;">
                         <span>${v.name}</span>
                         ${v.verification_badge === 'gold' ? `<i class="fa-solid fa-circle-check" style="color:#FFD700;" title="Gold Verified"></i>` : ''}
@@ -1308,7 +1316,7 @@ function toggleCompareDetail(vid, e) {
                             <th style="padding:8px 6px;text-align:left;font-size:0.65rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--gray-200);min-width:70px;"></th>
                             ${allVendors.map((cv, i) => `
                                 <th style="padding:8px 6px;text-align:center;border-bottom:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};min-width:90px;cursor:pointer;" onclick="${i > 0 ? 'closeModal(); viewVendorDetails(' + cv.id + ')' : ''}">
-                                    <img src="${cv.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
+                                    <img src="${cv.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
                                     <div style="font-size:0.7rem;font-weight:700;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;">${cv.name}</div>
                                     ${i === 0 ? '<span style="font-size:0.5rem;background:var(--accent);color:var(--primary-dark);padding:1px 6px;border-radius:3px;font-weight:800;text-transform:uppercase;">Current</span>' : ''}
                                 </th>
@@ -1689,7 +1697,8 @@ function initChatScreen() {
             renderChatInbox(inbox);
             
             if (state.activeChatVendorId) {
-                API.getVendorDetails(state.activeChatVendorId, true).then(v => {
+                const role = state.user?.active_role || state.user?.role || 'customer';
+                API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
                     state.activeChatPartner = v;
                     const contentPanel = document.getElementById('chat-desktop-content-panel');
                     if (contentPanel) {
@@ -1705,13 +1714,15 @@ function initChatScreen() {
                             }
                         }
                         const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
+                        const isOnlineDesk = v.is_online || v.availability === 'Online';
+                        const statusTextDesk = isOnlineDesk ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
                         contentPanel.innerHTML = `
                             <div class="chat-screen" data-vendor-id="${v.id}">
                                 <div class="chat-header">
-                                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                                     <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                                         <div class="chat-vendor-name">${nameWithBadge}</div>
-                                        <div class="chat-vendor-status">${v.availability}</div>
+                                        <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
                                     </div>
                                     <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
                                         <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
@@ -1756,6 +1767,16 @@ function initChatScreen() {
                     }).catch(() => {
                         state.pollingHistoryInProgress = false;
                     });
+
+                    // Live Partner Online Status Refresh
+                    const role = state.user?.active_role || state.user?.role || 'customer';
+                    const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
+                    API.getUserStatus(params).then(st => {
+                        const statusEl = document.getElementById('chat-partner-status');
+                        if (statusEl && st) {
+                            statusEl.innerHTML = st.is_online ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (st.online_status || 'Offline');
+                        }
+                    }).catch(() => {});
                 }
             } else {
                 clearInterval(state.chatInterval);
@@ -1766,7 +1787,8 @@ function initChatScreen() {
     } else {
         if (state.activeChatVendorId) {
             screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
-            API.getVendorDetails(state.activeChatVendorId, true).then(v => {
+            const role = state.user?.active_role || state.user?.role || 'customer';
+            API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
                 state.activeChatPartner = v;
                 renderChatShell(v);
                 API.getChatHistory(state.activeChatVendorId).then(history => {
@@ -1784,6 +1806,15 @@ function initChatScreen() {
                                     state.pollingHistoryInProgress = false;
                                     console.error("Error polling chat:", err);
                                 });
+
+                                const role = state.user?.active_role || state.user?.role || 'customer';
+                                const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
+                                API.getUserStatus(params).then(st => {
+                                    const statusEl = document.getElementById('chat-partner-status');
+                                    if (statusEl && st) {
+                                        statusEl.innerHTML = st.is_online ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (st.online_status || 'Offline');
+                                    }
+                                }).catch(() => {});
                             }
                         } else {
                             clearInterval(state.chatInterval);
@@ -1880,11 +1911,12 @@ function renderChatInbox(inbox) {
             }
         }
 
+        const isOnline = item.is_online || item.availability === 'Online';
         return `
             <div class="chat-inbox-item" onclick="openChatWithVendor(${targetId})">
                 <div class="chat-inbox-avatar">
-                    <img src="${targetLogo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="" class="header-logo-img">
-                    ${item.availability === 'Available' ? `<div class="chat-inbox-online"></div>` : ''}
+                    <img src="${targetLogo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" alt="" class="header-logo-img">
+                    ${isOnline ? `<div class="chat-inbox-online" title="Online now"></div>` : ''}
                 </div>
                 <div class="chat-inbox-info">
                     <div class="chat-inbox-name">${nameWithBadge}</div>
@@ -1900,11 +1932,19 @@ function renderChatInbox(inbox) {
 }
 
 function openChatWithVendor(vid) {
+    if (!state.user) {
+        openAuthModal('login');
+        return;
+    }
     state.activeChatVendorId = vid;
     initChatScreen();
 }
 
 function startVendorChat(vid) {
+    if (!state.user) {
+        openAuthModal('login');
+        return;
+    }
     state.activeChatVendorId = vid;
     navigateTo('chat');
 }
@@ -1930,15 +1970,17 @@ function renderChatShell(v) {
         }
     }
     const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
+    const isOnline = v.is_online || v.availability === 'Online';
+    const statusText = isOnline ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
 
     screen.innerHTML = `
         <div class="chat-screen" data-vendor-id="${v.id}">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="closeActiveChat()"><i class="fa-solid fa-chevron-left"></i></button>
-                <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                 <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-name">${nameWithBadge}</div>
-                    <div class="chat-vendor-status">${v.availability}</div>
+                    <div class="chat-vendor-status" id="chat-partner-status">${statusText}</div>
                 </div>
                 <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
                     <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
@@ -2317,42 +2359,44 @@ function cancelVoiceRecording() {
 }
 
 function togglePreviewPlayback() {
-    const playBtn = document.getElementById('preview-play-btn');
-    if (!playBtn) return;
+    const playBtns = document.querySelectorAll('#preview-play-btn, .preview-play-btn');
+    if (playBtns.length === 0) return;
     
     if (previewAudioInstance && !previewAudioInstance.paused) {
         previewAudioInstance.pause();
-        playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        playBtns.forEach(b => b.innerHTML = '<i class="fa-solid fa-play"></i>');
     } else {
         if (!previewAudioInstance) {
-            if (!recordedAudioUrl) {
+            if (!recordedAudioUrl && recordedAudioBlob) {
                 recordedAudioUrl = URL.createObjectURL(recordedAudioBlob);
             }
+            if (!recordedAudioUrl) return;
             previewAudioInstance = new Audio(recordedAudioUrl);
             
             previewAudioInstance.addEventListener('timeupdate', () => {
-                const progressInput = document.getElementById('preview-progress');
-                const timeLbl = document.getElementById('preview-time-lbl');
-                if (progressInput) {
-                    const pct = (previewAudioInstance.currentTime / previewAudioInstance.duration) * 100;
-                    progressInput.value = isNaN(pct) ? 0 : pct;
-                }
-                if (timeLbl) {
-                    timeLbl.textContent = formatTimeLabel(previewAudioInstance.currentTime);
-                }
+                const progressInputs = document.querySelectorAll('#preview-progress, .preview-progress');
+                const timeLbls = document.querySelectorAll('#preview-time-lbl, .preview-time-lbl');
+                const pct = (previewAudioInstance.currentTime / (previewAudioInstance.duration || recordedAudioDuration || 1)) * 100;
+                progressInputs.forEach(inp => inp.value = isNaN(pct) ? 0 : pct);
+                timeLbls.forEach(lbl => lbl.textContent = formatTimeLabel(previewAudioInstance.currentTime));
             });
             
             previewAudioInstance.addEventListener('ended', () => {
-                playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                const progressInput = document.getElementById('preview-progress');
-                if (progressInput) progressInput.value = 0;
-                const timeLbl = document.getElementById('preview-time-lbl');
-                if (timeLbl) timeLbl.textContent = formatTimeLabel(recordedAudioDuration);
+                const playBtnsEnd = document.querySelectorAll('#preview-play-btn, .preview-play-btn');
+                playBtnsEnd.forEach(b => b.innerHTML = '<i class="fa-solid fa-play"></i>');
+                const progressInputs = document.querySelectorAll('#preview-progress, .preview-progress');
+                progressInputs.forEach(inp => inp.value = 0);
+                const timeLbls = document.querySelectorAll('#preview-time-lbl, .preview-time-lbl');
+                timeLbls.forEach(lbl => lbl.textContent = formatTimeLabel(recordedAudioDuration));
             });
         }
         
-        previewAudioInstance.play();
-        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        previewAudioInstance.play().then(() => {
+            playBtns.forEach(b => b.innerHTML = '<i class="fa-solid fa-pause"></i>');
+        }).catch(err => {
+            console.error("Preview play error:", err);
+            playBtns.forEach(b => b.innerHTML = '<i class="fa-solid fa-play"></i>');
+        });
     }
 }
 
@@ -4181,7 +4225,7 @@ function initCompareScreen() {
                     <div class="compare-vendor-col">
                         <div class="compare-vendor-header" style="position:relative; padding-top:16px;">
                             <button onclick="removeCompareVendor(${v.id}, event)" style="position:absolute; right:4px; top:4px; background:none; border:none; color:var(--error); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; padding:4px;" title="Remove"><i class="fa-solid fa-circle-xmark"></i></button>
-                            <img class="compare-vendor-logo" src="${v.logo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80'}" alt="">
+                            <img class="compare-vendor-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
                             <div class="compare-vendor-name">${v.name}</div>
                         </div>
                         <div class="compare-row">
@@ -4335,7 +4379,7 @@ function initProfileScreen() {
 
     screen.innerHTML = `
         <div class="profile-header">
-            <img class="profile-avatar" src="${state.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150'}" alt="">
+            <img class="profile-avatar" src="${state.user.avatar || window.DEFAULT_USER_AVATAR}" alt="">
             <div class="profile-name">${state.user.name}</div>
             <div class="profile-email">${state.user.email || state.user.phone || 'Ohati Planner'}</div>
         </div>
@@ -6435,7 +6479,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
             <!-- Profile Photo Upload -->
             <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
                 <div style="position:relative;">
-                    <img id="profile-edit-avatar-preview" src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
+                    <img id="profile-edit-avatar-preview" src="${u.avatar || window.DEFAULT_USER_AVATAR}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
                     <label style="position:absolute; bottom:0; right:0; background:var(--primary); color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
                         <i class="fa-solid fa-camera"></i>
                         <input type="file" accept="image/*" onchange="handleProfilePhotoSelect(event)" style="display:none;">
@@ -7396,14 +7440,21 @@ let activeChatAudioTime = null;
 
 function handleVoicePlayerClick(btn) {
     const playerDiv = btn.closest('.custom-voice-player');
+    if (!playerDiv) return;
     const audioUrl = playerDiv.getAttribute('data-src');
+    if (!audioUrl) return;
+    
     const progressBar = playerDiv.querySelector('.voice-progress');
     const timeLbl = playerDiv.querySelector('.voice-duration');
     
     if (activeChatAudioInstance && activeChatAudioButton === btn) {
         if (activeChatAudioInstance.paused) {
-            activeChatAudioInstance.play();
-            btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            activeChatAudioInstance.play().then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            }).catch(err => {
+                console.error("Audio playback error:", err);
+                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            });
         } else {
             activeChatAudioInstance.pause();
             btn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -7434,7 +7485,7 @@ function handleVoicePlayerClick(btn) {
     });
 
     activeChatAudioInstance.addEventListener('timeupdate', () => {
-        if (progressBar && activeChatAudioInstance.duration) {
+        if (progressBar && activeChatAudioInstance.duration && activeChatAudioInstance.duration !== Infinity) {
             const pct = (activeChatAudioInstance.currentTime / activeChatAudioInstance.duration) * 100;
             progressBar.value = isNaN(pct) ? 0 : pct;
         }
@@ -7455,8 +7506,12 @@ function handleVoicePlayerClick(btn) {
         activeChatAudioTime = null;
     });
     
-    activeChatAudioInstance.play();
-    btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    activeChatAudioInstance.play().then(() => {
+        btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    }).catch(err => {
+        console.error("Audio play failed:", err);
+        btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    });
 }
 
 function handleVoicePlayerSeek(rangeInput) {

@@ -3,8 +3,8 @@
 # 1. Disable Directory Index Browsing
 Options -Indexes
 
-# 2. Block Direct Access to Sensitive Config, Database, Log, and Backup Files
-<FilesMatch "\.(db|sql|gz|tar|env|log|ini|conf|bak|sh|txt)$">
+# 2. Block Direct Access to Sensitive Config, Database, Log, and Backup Files (Excluding robots.txt & .well-known)
+<FilesMatch "\.(db|sql|gz|tar|env|log|ini|conf|bak|sh)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
@@ -14,7 +14,21 @@ Options -Indexes
     Deny from all
 </FilesMatch>
 
-# 3. Enhanced HTTP Security Headers
+# 3. Allow Access to .well-known/assetlinks.json for Google App Indexing & Pass Authorization Headers to PHP
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+    RewriteRule ^\.well-known/ - [L]
+</IfModule>
+
+<Files "assetlinks.json">
+    Order allow,deny
+    Allow from all
+    Header set Content-Type "application/json"
+</Files>
+
+# 3. Enhanced HTTP Security Headers & SEO Caching
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
@@ -22,3 +36,28 @@ Options -Indexes
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     Header set Permissions-Policy "geolocation=(self), camera=(self), microphone=(self)"
 </IfModule>
+
+# 4. Gzip Compression for Google PageSpeed Optimization
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+# 5. Browser Caching Rules & Automatic Revalidation for Uploads
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType text/css "access plus 1 hour"
+    ExpiresByType application/javascript "access plus 1 hour"
+    ExpiresByType image/x-icon "access plus 1 year"
+</IfModule>
+

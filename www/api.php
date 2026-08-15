@@ -6,14 +6,143 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
-header("Access-Control-Allow-Origin: $origin");
-header('Access-Control-Allow-Credentials: true');
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (!empty($origin)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
-session_start();
 require_once __DIR__ . '/db.php';
+
+function resolve_vendor_logo($category, $current_logo = '') {
+    if (!empty($current_logo) && strpos($current_logo, 'data:image/svg+xml') === false && strpos($current_logo, 'photo-1535713875002') === false) {
+        return $current_logo;
+    }
+    $map = [
+        'Photography' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=400',
+        'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400',
+        'Makeup Artists' => 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=400',
+        'Event Planners' => 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400',
+        'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
+        'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
+        'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=400',
+        'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
+        'DJs' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400',
+        'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=400',
+        'MCs' => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=400',
+        'Florists' => 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=400',
+        'Car Rentals' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400',
+        'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400',
+        'Rental Equipment' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
+        'Juice Bar' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
+        'Chilling Services' => 'img/chill/logo.jpg'
+    ];
+    return $map[$category] ?? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
+}
+
+// Bearer Token & Persistent Authentication Middleware
+$headers = function_exists('getallheaders') ? getallheaders() : [];
+$auth_header = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+$raw_json_init = json_decode(file_get_contents('php://input'), true);
+$raw_input_init = is_array($raw_json_init) ? $raw_json_init : [];
+$token = '';
+
+if (preg_match('/Bearer\s+(.+)/i', $auth_header, $matches)) {
+    $token = trim($matches[1]);
+} else {
+    $token = trim($_GET['auth_token'] ?? $_POST['auth_token'] ?? $raw_input_init['auth_token'] ?? '');
+}
+
+if (!empty($token)) {
+    $token_hash = hash('sha256', $token);
+    try {
+        $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > NOW())");
+        $t_stmt->execute([$token_hash]);
+        $token_uid = $t_stmt->fetchColumn();
+        if ($token_uid) {
+            $u_stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+            $u_stmt->execute([$token_uid]);
+            $token_user = $u_stmt->fetch();
+            if ($token_user) {
+                $_SESSION['user'] = $token_user;
+                $_SESSION['user_id'] = $token_user['id'];
+            }
+        }
+    } catch (Exception $e) {}
+}
+
+function issue_auth_token($pdo, $user_id, $device_name = '') {
+    $token = bin2hex(random_bytes(32));
+    $token_hash = hash('sha256', $token);
+    $expires_at = date('Y-m-d H:i:s', strtotime('+1 year'));
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    try {
+        $stmt = $pdo->prepare("INSERT INTO auth_tokens (user_id, token_hash, device_name, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$user_id, $token_hash, substr($device_name, 0, 250), $ip, $expires_at]);
+        return $token;
+    } catch (Exception $e) {
+        return '';
+    }
+}
+
+// Update real-time user & vendor activity timestamp
+if (isset($_SESSION['user']['id'])) {
+    $uid = intval($_SESSION['user']['id']);
+    if (empty($_SESSION['last_active_time']) || (time() - $_SESSION['last_active_time']) >= 10) {
+        $_SESSION['last_active_time'] = time();
+        $now_str = date('Y-m-d H:i:s');
+        try {
+            $pdo->prepare("UPDATE users SET last_active = ? WHERE id = ?")->execute([$now_str, $uid]);
+            $pdo->prepare("UPDATE vendors SET last_active = ? WHERE user_id = ?")->execute([$now_str, $uid]);
+        } catch (Exception $e) {}
+    }
+}
+
+function get_online_status_info($last_active_str) {
+    if (empty($last_active_str)) {
+        return ['is_online' => false, 'online_status' => 'Offline', 'last_active_formatted' => 'Offline'];
+    }
+    $time_ts = is_numeric($last_active_str) ? intval($last_active_str) : strtotime($last_active_str);
+    if (!$time_ts || $time_ts <= 0) {
+        return ['is_online' => false, 'online_status' => 'Offline', 'last_active_formatted' => 'Offline'];
+    }
+    $diff = time() - $time_ts;
+
+    // Handle future or bad timestamps
+    if ($diff < 0) {
+        $diff = 0;
+    }
+
+    if ($diff <= 180) { // Active within 3 minutes (180 seconds)
+        return [
+            'is_online' => true,
+            'online_status' => 'Online',
+            'last_active_formatted' => 'Active now'
+        ];
+    } else if ($diff < 3600) {
+        $mins = max(1, intval($diff / 60));
+        $str = "Last seen {$mins} " . ($mins == 1 ? "min" : "mins") . " ago";
+        return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+    } else if ($diff < 86400) {
+        $hrs = intval($diff / 3600);
+        $str = "Last seen {$hrs} " . ($hrs == 1 ? "hour" : "hours") . " ago";
+        return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+    } else {
+        $days = floor($diff / 86400);
+        if ($days == 1) {
+            $str = "Last seen yesterday at " . date('g:i A', $time_ts);
+        } else if ($days < 7) {
+            $str = "Last seen " . date('D g:i A', $time_ts);
+        } else {
+            $str = "Last seen " . date('M j, Y', $time_ts);
+        }
+        return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+    }
+}
 
 // Check Maintenance Mode
 try {
@@ -30,6 +159,7 @@ try {
 
 require_once __DIR__ . '/payment_api.php';
 require_once __DIR__ . '/sms_helper.php';
+require_once __DIR__ . '/storage_helper.php';
 
 $raw_json = json_decode(file_get_contents('php://input'), true);
 $raw_input = is_array($raw_json) ? $raw_json : [];
@@ -45,6 +175,12 @@ $payment_actions = [
 ];
 if (in_array($action, $payment_actions)) {
     handle_payment_action($action, $pdo);
+    exit;
+}
+
+require_once __DIR__ . '/jobs_api.php';
+if (strpos($action, 'job_') === 0 || strpos($action, 'admin_job_') === 0) {
+    handle_job_action($action, $pdo);
     exit;
 }
 
@@ -355,7 +491,7 @@ try {
 
 // ── CSRF ENFORCEMENT ────────────────────────────────────────────────────
 // Enforce CSRF on all state-changing POST actions except pre-auth flows
-$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'answer_call', 'reject_call', 'end_call', 'send_ice_candidate'];
+$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrf_exempt_actions)) {
     $headers = function_exists('getallheaders') ? getallheaders() : [];
     $csrf = $headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? $raw_input['csrf_token'] ?? '';
@@ -372,67 +508,110 @@ switch ($action) {
 case 'register':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     check_idempotency_lock('register', 3);
-    if (!rate_limit('register', 3, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many attempts. Try again later.']); exit; }
+    if (!rate_limit('register', 5, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many registration attempts. Please wait 5 minutes before trying again.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $name = clean($input['name'] ?? '');
-    $email = isset($input['email']) ? filter_var(trim($input['email']), FILTER_VALIDATE_EMAIL) : '';
+    $raw_email = strtolower(trim($input['email'] ?? ''));
+    $email = !empty($raw_email) ? filter_var($raw_email, FILTER_VALIDATE_EMAIL) : '';
     $phone = clean($input['phone'] ?? '');
+    $phone_digits = preg_replace('/\D/', '', $phone);
     $password = $input['password'] ?? '';
     $role = in_array($input['role'] ?? '', ['customer','vendor']) ? $input['role'] : 'customer';
-    if (empty($name) || (empty($email) && empty($phone)) || strlen($password) < 8) {
-        http_response_code(400); echo json_encode(['error'=>'Name, email or phone, and password (8+ chars) are required.']); exit;
+
+    // Detailed input validation
+    if (empty($name)) {
+        http_response_code(400); echo json_encode(['error'=>'Full name is required to create an account.']); exit;
     }
-    // Check duplicates
-    if ($email) { $dup = $pdo->prepare("SELECT id FROM users WHERE email = ?"); $dup->execute([$email]); if ($dup->fetch()) { http_response_code(409); echo json_encode(['error'=>'Email already registered.']); exit; } }
-    if ($phone) { $dup = $pdo->prepare("SELECT id FROM users WHERE phone = ?"); $dup->execute([$phone]); if ($dup->fetch()) { http_response_code(409); echo json_encode(['error'=>'Phone already registered.']); exit; } }
-    $hash = password_hash($password, PASSWORD_BCRYPT);
-    $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
-    
-    // Check pending referral link code
-    $used_ref = clean($input['ref'] ?? $_GET['ref'] ?? $_SESSION['pending_ref'] ?? '');
-    $referrer_id = 0;
-    if (!empty($used_ref)) {
-        $r_chk = $pdo->prepare("SELECT id FROM users WHERE referral_code = ? OR referral_code = ?");
-        $r_chk->execute([$used_ref, strtoupper($used_ref)]);
-        $referrer_id = intval($r_chk->fetchColumn() ?: 0);
+    if (!empty($raw_email) && !$email) {
+        http_response_code(400); echo json_encode(['error'=>'Please enter a valid email address (e.g. name@example.com).']); exit;
+    }
+    if (empty($email) && empty($phone)) {
+        http_response_code(400); echo json_encode(['error'=>'Either a valid email address or phone number is required.']); exit;
+    }
+    if (strlen($password) < 8) {
+        http_response_code(400); echo json_encode(['error'=>'Password must be at least 8 characters long.']); exit;
     }
 
-    $stmt = $pdo->prepare("INSERT INTO users (name,email,phone,password_hash,role,email_verified,referral_code,referred_by) VALUES (?,?,?,?,?,0,?,?)");
-    $stmt->execute([$name, $email ?: null, $phone ?: null, $hash, $role, $my_ref_code, $referrer_id]);
-    $uid = $pdo->lastInsertId();
+    try {
+        $pdo->beginTransaction();
 
-    // Reward referrer if valid
-    if ($referrer_id > 0 && $referrer_id !== intval($uid)) {
-        try {
-            $rew_stmt = $pdo->prepare("SELECT val_value FROM system_settings WHERE key_name = 'referral_reward_amount'");
-            $rew_stmt->execute();
-            $reward_val = floatval($rew_stmt->fetchColumn() ?: 10.0);
+        // Check duplicate email (case-insensitive & trimmed)
+        if ($email) { 
+            $dup = $pdo->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)"); 
+            $dup->execute([$email]); 
+            if ($dup->fetch()) { 
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                http_response_code(409); 
+                echo json_encode(['error'=>"The email address '$email' is already registered on Ohati. Please log in or reset your password."]); 
+                exit; 
+            } 
+        }
 
-            $pdo->prepare("INSERT INTO referrals (referrer_id, referred_id, referral_code, reward_amount, status, payout_status) VALUES (?, ?, ?, ?, 'completed', 'pending')")->execute([$referrer_id, $uid, $used_ref, $reward_val]);
-            $pdo->prepare("UPDATE users SET referral_balance = referral_balance + ? WHERE id = ?")->execute([$reward_val, $referrer_id]);
+        // Check duplicate phone (matching raw, formatted, or core 9-digit mobile line)
+        if (!empty($phone_digits) && strlen($phone_digits) >= 8) { 
+            $last9 = substr($phone_digits, -9);
+            $dup = $pdo->prepare("SELECT id FROM users WHERE phone = ? OR phone = ? OR (LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', '')) >= 9 AND SUBSTR(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', ''), -9) = ?)"); 
+            $dup->execute([$phone, '+' . $phone_digits, $last9]); 
+            if ($dup->fetch()) { 
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                http_response_code(409); 
+                echo json_encode(['error'=>"The phone number '$phone' is already registered on Ohati. Please log in or reset your password."]); 
+                exit; 
+            } 
+        }
 
-            // Add in-app notification to referrer
-            $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Referral Bonus Earned! 🎉', ?, 'gift')")
-                ->execute([$referrer_id, "Great news! $name joined Ohati using your referral link. You earned GH₵ " . number_format($reward_val, 2) . "!"]);
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
+        
+        $used_ref = clean($input['ref'] ?? $_GET['ref'] ?? $_SESSION['pending_ref'] ?? '');
+        $referrer_id = 0;
+        if (!empty($used_ref)) {
+            $r_chk = $pdo->prepare("SELECT id FROM users WHERE referral_code = ? OR referral_code = ?");
+            $r_chk->execute([$used_ref, strtoupper($used_ref)]);
+            $referrer_id = intval($r_chk->fetchColumn() ?: 0);
+        }
 
-            // Dual Email + SMS Notification to referrer
+        $stmt = $pdo->prepare("INSERT INTO users (name,email,phone,password_hash,role,email_verified,referral_code,referred_by) VALUES (?,?,?,?,?,0,?,?)");
+        $stmt->execute([$name, $email ?: null, $phone ?: null, $hash, $role, $my_ref_code, $referrer_id]);
+        $uid = $pdo->lastInsertId();
+
+        if ($referrer_id > 0 && $referrer_id !== intval($uid)) {
             try {
-                $ref_user_stmt = $pdo->prepare("SELECT email, phone, name FROM users WHERE id = ?");
-                $ref_user_stmt->execute([$referrer_id]);
-                $ref_user = $ref_user_stmt->fetch();
-                if ($ref_user) {
-                    send_dual_notification(
-                        $ref_user['phone'] ?? '',
-                        $ref_user['email'] ?? '',
-                        "Referral Bonus Earned! 🎉",
-                        "Hello " . ($ref_user['name'] ?? 'User') . ", great news! $name joined Ohati using your referral link. You have earned GH₵ " . number_format($reward_val, 2) . "!"
-                    );
-                }
-            } catch (Exception $eRefNotif) {}
-        } catch (Exception $e) {}
+                $rew_stmt = $pdo->prepare("SELECT val_value FROM system_settings WHERE key_name = 'referral_reward_amount'");
+                $rew_stmt->execute();
+                $reward_val = floatval($rew_stmt->fetchColumn() ?: 10.0);
+
+                $pdo->prepare("INSERT INTO referrals (referrer_id, referred_id, referral_code, reward_amount, status, payout_status) VALUES (?, ?, ?, ?, 'completed', 'pending')")->execute([$referrer_id, $uid, $used_ref, $reward_val]);
+                $pdo->prepare("UPDATE users SET referral_balance = referral_balance + ? WHERE id = ?")->execute([$reward_val, $referrer_id]);
+
+                $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Referral Bonus Earned! 🎉', ?, 'gift')")
+                    ->execute([$referrer_id, "Great news! $name joined Ohati using your referral link. You earned GH₵ " . number_format($reward_val, 2) . "!"]);
+
+                try {
+                    $ref_user_stmt = $pdo->prepare("SELECT email, phone, name FROM users WHERE id = ?");
+                    $ref_user_stmt->execute([$referrer_id]);
+                    $ref_user = $ref_user_stmt->fetch();
+                    if ($ref_user) {
+                        send_dual_notification(
+                            $ref_user['phone'] ?? '',
+                            $ref_user['email'] ?? '',
+                            "Referral Bonus Earned! 🎉",
+                            "Hello " . ($ref_user['name'] ?? 'User') . ", great news! $name joined Ohati using your referral link. You have earned GH₵ " . number_format($reward_val, 2) . "!"
+                        );
+                    }
+                } catch (Exception $eRefNotif) {}
+            } catch (Exception $e) {}
+        }
+
+        $pdo->commit();
+    } catch (Exception $eReg) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(['error' => 'Registration failed: ' . $eReg->getMessage()]);
+        exit;
     }
 
-    // Also dispatch Admin Email Notification to ohatiwebsite@gmail.com
+    // Also dispatch Admin Email Notification
     try {
         send_admin_activity_notification(
             "New " . ucfirst($role) . " Registration (" . htmlspecialchars($name) . ")",
@@ -443,7 +622,8 @@ case 'register':
     $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>'','kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
     $_SESSION['user'] = $user;
     $_SESSION['user']['active_role'] = $role;
-    echo json_encode(['success'=>true,'requires_verification'=>true,'user'=>$user,'csrf'=>csrf_token()]);
+    $auth_token = issue_auth_token($pdo, $uid, $_SERVER['HTTP_USER_AGENT'] ?? 'Mobile/Web');
+    echo json_encode(['success'=>true,'requires_verification'=>true,'user'=>$user,'auth_token'=>$auth_token,'csrf'=>csrf_token()]);
     break;
 
 case 'login':
@@ -454,8 +634,18 @@ case 'login':
     $password = $input['password'] ?? '';
     $otp = $input['otp'] ?? '';
     if (empty($identifier)) { http_response_code(400); echo json_encode(['error'=>'Email or phone is required.']); exit; }
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? OR phone = ?");
-    $stmt->execute([$identifier, $identifier]);
+
+    $id_lower = strtolower(trim($identifier));
+    $id_digits = preg_replace('/\D/', '', $identifier);
+    $last9 = strlen($id_digits) >= 8 ? substr($id_digits, -9) : '';
+
+    if (!empty($last9)) {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE LOWER(email) = ? OR phone = ? OR phone = ? OR (LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', '')) >= 9 AND SUBSTR(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', ''), -9) = ?)");
+        $stmt->execute([$id_lower, $identifier, '+' . $id_digits, $last9]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE LOWER(email) = ? OR phone = ?");
+        $stmt->execute([$id_lower, $identifier]);
+    }
     $user = $stmt->fetch();
     if (!$user) { http_response_code(401); echo json_encode(['error'=>'Account not found.']); exit; }
     if (isset($user['is_active']) && intval($user['is_active']) !== 1) {
@@ -518,7 +708,8 @@ case 'login':
     }
     
     $_SESSION['user'] = $safe_user;
-    echo json_encode(['success'=>true,'user'=>$safe_user,'csrf'=>csrf_token()]);
+    $auth_token = issue_auth_token($pdo, $user['id'], $_SERVER['HTTP_USER_AGENT'] ?? 'Mobile/Web');
+    echo json_encode(['success'=>true,'user'=>$safe_user,'auth_token'=>$auth_token,'csrf'=>csrf_token()]);
     break;
 
 case 'logout':
@@ -936,6 +1127,14 @@ case 'session':
     if ($reviews_json) {
         $reviews = json_decode($reviews_json, true);
     }
+    $default_user_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+    if (is_array($reviews)) {
+        foreach ($reviews as &$r) {
+            if (empty($r['avatar']) || strpos($r['avatar'], 'unsplash.com') !== false || strpos($r['avatar'], 'photo-') !== false) {
+                $r['avatar'] = $default_user_svg;
+            }
+        }
+    }
 
     $locked_fields = ["name", "email", "phone", "dob"];
     try {
@@ -1054,6 +1253,83 @@ case 'update_profile':
     echo json_encode(['success'=>true,'user'=>$_SESSION['user']]);
     break;
 
+case 'get_notification_preferences':
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    try {
+        $stmt = $pdo->prepare("SELECT email_notif, sms_notif, push_notif, promo_notif FROM users WHERE id = ?");
+        $stmt->execute([$uid]);
+        $prefs = $stmt->fetch();
+        echo json_encode([
+            'success' => true,
+            'preferences' => [
+                'email_notif' => intval($prefs['email_notif'] ?? 1) === 1,
+                'sms_notif' => intval($prefs['sms_notif'] ?? 1) === 1,
+                'push_notif' => intval($prefs['push_notif'] ?? 1) === 1,
+                'promo_notif' => intval($prefs['promo_notif'] ?? 1) === 1,
+            ]
+        ]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => true, 'preferences' => ['email_notif' => true, 'sms_notif' => true, 'push_notif' => true, 'promo_notif' => true]]);
+    }
+    break;
+
+case 'update_notification_preferences':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $email_n = isset($input['email_notif']) ? ($input['email_notif'] ? 1 : 0) : 1;
+    $sms_n = isset($input['sms_notif']) ? ($input['sms_notif'] ? 1 : 0) : 1;
+    $push_n = isset($input['push_notif']) ? ($input['push_notif'] ? 1 : 0) : 1;
+    $promo_n = isset($input['promo_notif']) ? ($input['promo_notif'] ? 1 : 0) : 1;
+
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN email_notif INT DEFAULT 1");
+        $pdo->exec("ALTER TABLE users ADD COLUMN sms_notif INT DEFAULT 1");
+        $pdo->exec("ALTER TABLE users ADD COLUMN push_notif INT DEFAULT 1");
+        $pdo->exec("ALTER TABLE users ADD COLUMN promo_notif INT DEFAULT 1");
+    } catch(Exception $eIgn) {}
+
+    $stmt = $pdo->prepare("UPDATE users SET email_notif = ?, sms_notif = ?, push_notif = ?, promo_notif = ? WHERE id = ?");
+    $stmt->execute([$email_n, $sms_n, $push_n, $promo_n, $uid]);
+
+    echo json_encode(['success' => true, 'message' => 'Notification preferences updated successfully.']);
+    break;
+
+case 'request_account_deletion':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    $input = json_decode(file_get_contents('php://input'), true);
+    $reason = clean($input['reason'] ?? 'User requested account deletion');
+
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN deletion_requested_at DATETIME NULL");
+        $pdo->exec("ALTER TABLE users ADD COLUMN deletion_reason VARCHAR(255) NULL");
+        $pdo->exec("ALTER TABLE users ADD COLUMN account_status VARCHAR(50) DEFAULT 'active'");
+    } catch(Exception $eIgn) {}
+
+    // Inactivate account and set deletion request flag for admin review & fraud prevention
+    $stmt = $pdo->prepare("UPDATE users SET account_status = 'inactive', deletion_requested_at = NOW(), deletion_reason = ? WHERE id = ?");
+    $stmt->execute([$reason, $uid]);
+
+    // Send notification to admin
+    try {
+        send_admin_activity_notification(
+            "Account Deletion Requested (" . htmlspecialchars($_SESSION['user']['name'] ?? 'User') . ")",
+            "<p>User ID <strong>#$uid</strong> (" . htmlspecialchars($_SESSION['user']['email'] ?? $_SESSION['user']['phone'] ?? '') . ") requested deletion.</p><p>Account has been set to <strong>Inactive</strong> for admin fraud review.</p><p>Reason: " . htmlspecialchars($reason) . "</p>"
+        );
+    } catch (Exception $eAdmin) {}
+
+    // Sign out user
+    unset($_SESSION['user']);
+    session_destroy();
+
+    echo json_encode(['success' => true, 'message' => 'Your account deletion request has been received. Your account has been inactivated and signed out.']);
+    break;
+
 
 
 
@@ -1137,10 +1413,20 @@ case 'vendors':
 
     $filtered = [];
     foreach ($vendors as &$v) {
+        $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
         $v['packages_pricing'] = json_decode($v['packages_pricing'] ?? '[]', true) ?: [];
         $v['social_links'] = json_decode($v['social_links'] ?? '{}', true) ?: [];
         $v['gallery'] = json_decode($v['gallery'] ?? '[]', true) ?: [];
         $v['is_favorite'] = in_array($v['id'], $_SESSION['favorites']);
+
+        $info = get_online_status_info($v['last_active'] ?? '');
+        $v['is_online'] = $info['is_online'];
+        $v['online_status'] = $info['online_status'];
+        if ($info['is_online']) {
+            $v['availability'] = 'Online';
+        } else if (!empty($info['online_status']) && $info['online_status'] !== 'Offline') {
+            $v['availability'] = $info['online_status'];
+        }
 
         $base = $get_base_price($v['packages_pricing']);
         if ($min_price > 0 && $base < $min_price) {
@@ -1181,7 +1467,7 @@ case 'vendor_details':
                 'user_id' => $u['id'],
                 'name' => $u['name'],
                 'logo' => $u['avatar'],
-                'cover_photo' => $u['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80',
+                'cover_photo' => $u['avatar'] ?: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>",
                 'category' => 'Client',
                 'availability' => 'Online',
                 'location' => 'Accra, Ghana',
@@ -1220,6 +1506,15 @@ case 'vendor_details':
     $stmt->execute([$id, $id]);
     $v = $stmt->fetch();
     if (!$v) { http_response_code(404); echo json_encode(['error'=>'Not found']); exit; }
+    $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
+    $info = get_online_status_info($v['last_active'] ?? '');
+    $v['is_online'] = $info['is_online'];
+    $v['online_status'] = $info['online_status'];
+    if ($info['is_online']) {
+        $v['availability'] = 'Online';
+    } else if (!empty($info['online_status']) && $info['online_status'] !== 'Offline') {
+        $v['availability'] = $info['online_status'];
+    }
     foreach (['packages_pricing','social_links','gallery','team_members','faqs','languages','certifications','awards','working_hours'] as $f) {
         $v[$f] = json_decode($v[$f] ?? '[]', true) ?: [];
     }
@@ -1576,7 +1871,7 @@ case 'submit_platform_review':
         echo json_encode(['error' => 'Name and review content are required.']);
         exit;
     }
-    $avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80';
+    $avatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
     if (isset($_SESSION['user']) && !empty($_SESSION['user']['avatar'])) {
         $avatar = $_SESSION['user']['avatar'];
     }
@@ -1603,24 +1898,69 @@ case 'submit_platform_review':
 
 
 // ── CHAT ───────────────────────────────────────────────────────────────
+case 'heartbeat':
+    if (isset($_SESSION['user']['id'])) {
+        $uid = intval($_SESSION['user']['id']);
+        $now_str = date('Y-m-d H:i:s');
+        try {
+            $pdo->prepare("UPDATE users SET last_active = ? WHERE id = ?")->execute([$now_str, $uid]);
+            $pdo->prepare("UPDATE vendors SET last_active = ? WHERE user_id = ?")->execute([$now_str, $uid]);
+        } catch (Exception $e) {}
+    }
+    echo json_encode(['success' => true, 'timestamp' => time()]);
+    break;
+
+case 'get_user_status':
+    $target_user_id = intval($_GET['user_id'] ?? $_POST['user_id'] ?? 0);
+    $target_vendor_id = intval($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0);
+    $last_active = '';
+    if ($target_vendor_id > 0) {
+        $stmt = $pdo->prepare("SELECT u.last_active FROM vendors v JOIN users u ON v.user_id = u.id WHERE v.id = ?");
+        $stmt->execute([$target_vendor_id]);
+        $last_active = $stmt->fetchColumn() ?: '';
+    } else if ($target_user_id > 0) {
+        $stmt = $pdo->prepare("SELECT last_active FROM users WHERE id = ?");
+        $stmt->execute([$target_user_id]);
+        $last_active = $stmt->fetchColumn() ?: '';
+    }
+    $info = get_online_status_info($last_active);
+    echo json_encode($info);
+    break;
+
 case 'chat_inbox':
     $uid = intval($_SESSION['user']['id'] ?? 0);
     $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? 'customer';
+    $list = [];
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
         $v_stmt->execute([$uid]);
         $vendor_id = $v_stmt->fetchColumn();
         if ($vendor_id) {
-            $stmt = $pdo->prepare("SELECT DISTINCT u.id as customer_id, u.name, u.avatar, 'Customer' as category, 'Online' as availability FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? ORDER BY m.id DESC");
+            $stmt = $pdo->prepare("SELECT DISTINCT u.id as customer_id, u.name, u.avatar, u.last_active, 'Customer' as category FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? ORDER BY m.id DESC");
             $stmt->execute([$vendor_id]);
-        } else {
-            echo json_encode([]); exit;
+            $list = $stmt->fetchAll();
+            foreach ($list as &$item) {
+                $info = get_online_status_info($item['last_active'] ?? '');
+                $item['is_online'] = $info['is_online'];
+                $item['online_status'] = $info['online_status'];
+                $item['availability'] = $info['is_online'] ? 'Online' : $info['online_status'];
+            }
         }
     } else {
-        $stmt = $pdo->prepare("SELECT DISTINCT v.id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge FROM messages m JOIN vendors v ON m.vendor_id = v.id WHERE m.user_id = ? ORDER BY m.id DESC");
+        $stmt = $pdo->prepare("SELECT DISTINCT v.id, v.user_id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge, u.last_active as user_last_active, v.last_active as vendor_last_active FROM messages m JOIN vendors v ON m.vendor_id = v.id LEFT JOIN users u ON v.user_id = u.id WHERE m.user_id = ? ORDER BY m.id DESC");
         $stmt->execute([$uid]);
+        $list = $stmt->fetchAll();
+        foreach ($list as &$item) {
+            $last_active = !empty($item['user_last_active']) ? $item['user_last_active'] : ($item['vendor_last_active'] ?? '');
+            $info = get_online_status_info($last_active);
+            $item['is_online'] = $info['is_online'];
+            $item['online_status'] = $info['online_status'];
+            if ($info['is_online']) {
+                $item['availability'] = 'Online';
+            }
+        }
     }
-    echo json_encode($stmt->fetchAll());
+    echo json_encode($list);
     break;
 
 case 'get_unread_chats':
@@ -1759,7 +2099,8 @@ case 'upload_chat_file':
         'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/webm', 'audio/x-m4a', 'audio/aac', 'audio/3gpp',
         'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
         'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain',
+        'application/octet-stream'
     ];
 
     if (!in_array($mime, $allowed_mimes) && strpos($mime, 'image/') !== 0 && strpos($mime, 'audio/') !== 0 && strpos($mime, 'video/') !== 0) {
@@ -1822,97 +2163,7 @@ case 'upload_chat_file':
     }
     break;
 
-// ── WEBRTC REAL-TIME AUDIO & VIDEO CALLING ──────────────────────────────
-case 'initiate_call':
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    $input = json_decode(file_get_contents('php://input'), true);
-    $receiver_id = intval($input['receiver_id'] ?? 0);
-    $type = in_array($input['type'] ?? '', ['voice', 'video']) ? $input['type'] : 'voice';
-    $sdp_offer = $input['sdp_offer'] ?? '';
-    $caller_id = intval($_SESSION['user']['id'] ?? 0);
 
-    if ($caller_id <= 0 || $receiver_id <= 0) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid caller or receiver']);
-        exit;
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO calls (caller_id, receiver_id, type, status, sdp_offer) VALUES (?, ?, ?, 'dialing', ?)");
-    $stmt->execute([$caller_id, $receiver_id, $type, $sdp_offer]);
-    $call_id = $pdo->lastInsertId();
-
-    echo json_encode(['success' => true, 'call_id' => $call_id]);
-    break;
-
-case 'check_incoming_call':
-    $uid = intval($_SESSION['user']['id'] ?? 0);
-    if ($uid <= 0) { echo json_encode(null); exit; }
-
-    // Check for incoming call in dialing or connected state created within last 60 seconds
-    $stmt = $pdo->prepare("SELECT c.*, u.name as caller_name, u.avatar as caller_avatar FROM calls c JOIN users u ON c.caller_id = u.id WHERE c.receiver_id = ? AND c.status IN ('dialing', 'connected') ORDER BY c.id DESC LIMIT 1");
-    $stmt->execute([$uid]);
-    $call = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    echo json_encode($call ?: null);
-    break;
-
-case 'get_call_details':
-    $call_id = intval($_GET['call_id'] ?? $_POST['call_id'] ?? 0);
-    if ($call_id <= 0) { http_response_code(400); echo json_encode(['error' => 'Call ID required']); exit; }
-
-    $stmt = $pdo->prepare("SELECT c.*, u1.name as caller_name, u1.avatar as caller_avatar, u2.name as receiver_name, u2.avatar as receiver_avatar FROM calls c JOIN users u1 ON c.caller_id = u1.id JOIN users u2 ON c.receiver_id = u2.id WHERE c.id = ?");
-    $stmt->execute([$call_id]);
-    $call = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    echo json_encode($call ?: ['error' => 'Call not found']);
-    break;
-
-case 'answer_call':
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    $input = json_decode(file_get_contents('php://input'), true);
-    $call_id = intval($input['call_id'] ?? 0);
-    $sdp_answer = $input['sdp_answer'] ?? '';
-
-    $stmt = $pdo->prepare("UPDATE calls SET status = 'connected', sdp_answer = ? WHERE id = ?");
-    $stmt->execute([$sdp_answer, $call_id]);
-
-    echo json_encode(['success' => true]);
-    break;
-
-case 'reject_call':
-case 'end_call':
-    $call_id = intval($_GET['call_id'] ?? $_POST['call_id'] ?? 0);
-    if ($call_id <= 0) {
-        $input = json_decode(file_get_contents('php://input'), true);
-        $call_id = intval($input['call_id'] ?? 0);
-    }
-    $status = ($action === 'reject_call') ? 'rejected' : 'ended';
-    if ($call_id > 0) {
-        $pdo->prepare("UPDATE calls SET status = ? WHERE id = ?")->execute([$status, $call_id]);
-    }
-    echo json_encode(['success' => true]);
-    break;
-
-case 'send_ice_candidate':
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    $input = json_decode(file_get_contents('php://input'), true);
-    $call_id = intval($input['call_id'] ?? 0);
-    $candidate = $input['candidate'] ?? '';
-    $role = $input['role'] ?? 'caller';
-
-    if ($call_id > 0 && !empty($candidate)) {
-        $column = ($role === 'caller') ? 'ice_candidates_caller' : 'ice_candidates_receiver';
-        $stmt = $pdo->prepare("SELECT $column FROM calls WHERE id = ?");
-        $stmt->execute([$call_id]);
-        $existing = $stmt->fetchColumn() ?: '[]';
-        $c_arr = json_decode($existing, true) ?: [];
-        $c_arr[] = $candidate;
-
-        $upd = $pdo->prepare("UPDATE calls SET $column = ? WHERE id = ?");
-        $upd->execute([json_encode($c_arr), $call_id]);
-    }
-    echo json_encode(['success' => true]);
-    break;
 
 // ── TRACKER ────────────────────────────────────────────────────────────
 case 'tracker_tasks':
@@ -3042,9 +3293,9 @@ case 'check_incoming_call':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
     $uid = $_SESSION['user']['id'];
     
-    // Look for active ringing calls (within last 30 seconds, database-agnostic)
-    $time_limit = date('Y-m-d H:i:s', time() - 30);
-    $stmt = $pdo->prepare("SELECT c.*, u.name as caller_name, u.avatar as caller_avatar FROM calls c JOIN users u ON c.caller_id = u.id WHERE c.receiver_id = ? AND c.status = 'ringing' AND c.created_at >= ? ORDER BY c.id DESC LIMIT 1");
+    // Look for active ringing or dialing calls (within last 60 seconds)
+    $time_limit = date('Y-m-d H:i:s', time() - 60);
+    $stmt = $pdo->prepare("SELECT c.*, u.name as caller_name, u.avatar as caller_avatar FROM calls c JOIN users u ON c.caller_id = u.id WHERE c.receiver_id = ? AND c.status IN ('ringing', 'dialing') AND c.created_at >= ? ORDER BY c.id DESC LIMIT 1");
     $stmt->execute([$uid, $time_limit]);
     $call = $stmt->fetch();
     
@@ -3052,6 +3303,7 @@ case 'check_incoming_call':
     break;
 
 case 'accept_call':
+case 'answer_call':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $call_id = intval($input['call_id'] ?? 0);
@@ -3068,10 +3320,13 @@ case 'accept_call':
     break;
 
 case 'update_call_status':
+case 'reject_call':
+case 'end_call':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
-    $call_id = intval($input['call_id'] ?? 0);
-    $status = clean($input['status'] ?? 'ended');
+    $call_id = intval($input['call_id'] ?? $_GET['call_id'] ?? $_POST['call_id'] ?? 0);
+    $default_status = ($action === 'reject_call') ? 'rejected' : 'ended';
+    $status = clean($input['status'] ?? $default_status);
     $duration = intval($input['duration'] ?? 0);
 
     $stmt = $pdo->prepare("UPDATE calls SET status = ?, duration = ?, updated_at = ? WHERE id = ?");
@@ -3098,16 +3353,17 @@ case 'send_ice_candidate':
         $get_stmt = $pdo->prepare("SELECT $field FROM calls WHERE id = ?");
         $get_stmt->execute([$call_id]);
         $existing = json_decode($get_stmt->fetchColumn() ?: '[]', true);
+        if (!is_array($existing)) $existing = [];
         
-        $new_cand = json_decode($candidate, true);
+        $new_cand = is_array($candidate) ? $candidate : json_decode($candidate, true);
         if (is_array($new_cand) && isset($new_cand[0])) {
             foreach ($new_cand as $c) {
                 if ($c) {
-                    $existing[] = $c;
+                    $existing[] = is_string($c) ? (json_decode($c, true) ?: $c) : $c;
                 }
             }
         } else if ($new_cand) {
-            $existing[] = $new_cand;
+            $existing[] = is_string($new_cand) ? (json_decode($new_cand, true) ?: $new_cand) : $new_cand;
         }
 
         $up_stmt = $pdo->prepare("UPDATE calls SET $field = ?, updated_at = ? WHERE id = ?");
@@ -3123,7 +3379,8 @@ case 'send_ice_candidate':
 
 case 'get_call_details':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $cid = intval($_GET['call_id'] ?? 0);
+    $input = json_decode(file_get_contents('php://input'), true);
+    $cid = intval($_GET['call_id'] ?? $_POST['call_id'] ?? $input['call_id'] ?? 0);
     
     $stmt = $pdo->prepare("SELECT c.*, u1.name as caller_name, u1.avatar as caller_avatar, u2.name as receiver_name, u2.avatar as receiver_avatar FROM calls c JOIN users u1 ON c.caller_id = u1.id JOIN users u2 ON c.receiver_id = u2.id WHERE c.id = ?");
     $stmt->execute([$cid]);

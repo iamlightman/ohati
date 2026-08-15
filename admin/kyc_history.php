@@ -39,13 +39,13 @@ $where = ["1=1"];
 $params = [];
 
 if ($filter === 'pending') {
-    $where[] = "u.kyc_status = 'pending_verification'";
+    $where[] = "(u.kyc_status = 'pending_verification' OR u.kyc_status = 'pending') AND (u.kyc_id_front != '' OR u.kyc_selfie != '' OR u.kyc_id_back != '')";
 } elseif ($filter === 'verified') {
     $where[] = "u.kyc_status = 'verified'";
 } elseif ($filter === 'rejected') {
     $where[] = "u.kyc_status = 'rejected'";
 } elseif ($filter === 'has_docs') {
-    $where[] = "(u.kyc_id_front != '' OR u.kyc_selfie != '' OR u.kyc_status != 'not_started')";
+    $where[] = "(u.kyc_id_front != '' OR u.kyc_selfie != '' OR u.kyc_id_back != '')";
 }
 
 if ($search !== '') {
@@ -70,8 +70,8 @@ $kyc_records = $stmt->fetchAll();
 
 // Statistics
 $stat_total = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-$stat_has_docs = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_id_front != '' OR kyc_selfie != '' OR kyc_status != 'not_started'")->fetchColumn();
-$stat_pending = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pending_verification'")->fetchColumn();
+$stat_has_docs = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != ''")->fetchColumn();
+$stat_pending = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn();
 $stat_verified = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'verified'")->fetchColumn();
 $stat_rejected = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'rejected'")->fetchColumn();
 ?>

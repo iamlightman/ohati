@@ -1,0 +1,10 @@
+require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
+platform :ios, '13.0'
+use_frameworks!
+
+inhibit_all_warnings!
+
+target 'App' do
+  capacitor_pods
+end

@@ -205,7 +205,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $users = $stmt->fetchAll();
 
-$pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pending_verification'")->fetchColumn();
+$pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -398,7 +398,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
                             <?php foreach ($users as $u): ?>
                                 <tr id="row-<?= $u['id'] ?>">
                                     <td>
-                                        <img src="<?= htmlspecialchars($u['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80') ?>" alt="avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid #E4E7ED;">
+                                        <img src="<?= htmlspecialchars($u['avatar'] ?: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>") ?>" alt="avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid #E4E7ED;">
                                     </td>
                                     <td>
                                         <div style="font-weight:700; color:var(--primary);"><?= htmlspecialchars($u['name']) ?></div>
@@ -666,7 +666,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             const safeName = escapeHtml(u.name || 'User Profile');
             const safeEmail = escapeHtml(u.email || 'N/A');
             const safePhone = escapeHtml(u.phone || 'N/A');
-            const safeAvatar = u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150';
+            const safeAvatar = u.avatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
 
             content.innerHTML = `
                 <div style="text-align:center; margin-bottom:16px;">

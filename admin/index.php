@@ -8,7 +8,7 @@ require_once __DIR__ . '/auth_guard.php';
 $total_users = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $total_vendors = $pdo->query("SELECT COUNT(*) FROM vendors")->fetchColumn();
 $total_bookings = $pdo->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
-$pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pending_verification'")->fetchColumn();
+$pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn();
 
 // Fetch recent bookings with vendor details
 $recent_bookings = $pdo->query("

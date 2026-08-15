@@ -39,10 +39,18 @@ workflows:
           xcode-project use-profiles --project "ios/App/App.xcodeproj"
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" || echo 1)
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 2)
+          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 2 ]; then
+            LATEST_BUILD_NUMBER=2
+          fi
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-          cd ios/App && agvtool new-version -all $NEW_BUILD_NUMBER
-          echo "Updated iOS Build Number to: $NEW_BUILD_NUMBER"
+          echo "Setting iOS Build Number to: $NEW_BUILD_NUMBER"
+          
+          # Set CFBundleVersion directly in Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_BUILD_NUMBER" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $NEW_BUILD_NUMBER" ios/App/App/Info.plist
+          
+          # Update agvtool in Xcode project
+          cd ios/App && agvtool new-version -all $NEW_BUILD_NUMBER || true
       - name: Build and Export Signed IPA for App Store
         script: |
           xcode-project build-ipa \

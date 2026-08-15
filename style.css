@@ -51,9 +51,51 @@ body.dark-theme .app-badge-btn:hover {
     background: #0b131c !important;
 }
 
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+/* ===== NATIVE APP UX & TOUCH OPTIMIZATIONS (DISABLE BROWSER ARTIFACTS) ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none !important; /* Disables iOS long-press popups on links/images */
+    -webkit-user-select: none !important;   /* Disables browser text highlighting */
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-user-drag: none !important;
+}
+
+/* Allow text selection ONLY in form inputs, textareas, and chat messages */
+input, textarea, select, [contenteditable="true"], .selectable-text, .msg-bubble {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+}
+
+/* Prevent image dragging, save-image callouts, and ghosting */
+img, svg {
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
+    -webkit-touch-callout: none !important;
+    pointer-events: auto;
+}
+
+/* Buttons and Links - Prevent browser focus rings & touch delays */
+a, button, [role="button"], input[type="button"], input[type="submit"] {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    outline: none !important;
+    touch-action: manipulation;
+}
+
 html{font-size:16px;}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:#0F1923;color:var(--gray-800);min-height:100vh;display:flex;justify-content:center;align-items:center;overflow:auto;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#0F1923;color:var(--gray-800);min-height:100vh;display:flex;justify-content:center;align-items:center;overflow:auto;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;-webkit-user-select:none;user-select:none;}
 
 /* App Container */
 .app-container{width:100%;height:100vh;height:100dvh;background:var(--ivory);position:relative;display:flex;flex-direction:column;overflow:hidden;transition:background var(--anim-mid) ease;}

@@ -223,6 +223,107 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // 7. Global Link Interception & Native App UX Behavior (Prevent Browser Tabs)
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        // Prevent default on pure '#' or javascript links
+        if (href === '#' || href.startsWith('javascript:')) {
+            e.preventDefault();
+            return;
+        }
+
+        // Allow tel: and mailto: to trigger native phone/email handlers
+        if (href.startsWith('tel:') || href.startsWith('mailto:')) {
+            return;
+        }
+
+        // Handle internal app routes (e.g. detail.php?id=123, planner.php, etc.)
+        if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')) {
+            try {
+                const urlObj = new URL(href, window.location.href);
+                const pathName = urlObj.pathname.split('/').pop();
+
+                if (pathName === 'detail.php') {
+                    e.preventDefault();
+                    const vendorId = urlObj.searchParams.get('id');
+                    if (vendorId) {
+                        state.selectedVendorId = parseInt(vendorId);
+                        navigateTo('detail');
+                    }
+                    return;
+                } else if (pathName === 'chat.php') {
+                    e.preventDefault();
+                    const vendorId = urlObj.searchParams.get('vendor_id');
+                    state.activeChatVendorId = vendorId ? parseInt(vendorId) : null;
+                    navigateTo('chat');
+                    return;
+                } else if (pathName === 'planner.php') {
+                    e.preventDefault();
+                    navigateTo('event');
+                    return;
+                } else if (pathName === 'search.php') {
+                    e.preventDefault();
+                    navigateTo('search');
+                    return;
+                } else if (pathName === 'bookings.php') {
+                    e.preventDefault();
+                    navigateTo('bookings');
+                    return;
+                } else if (pathName === 'favorites.php') {
+                    e.preventDefault();
+                    navigateTo('favorites');
+                    return;
+                } else if (pathName === 'notifications.php') {
+                    e.preventDefault();
+                    navigateTo('notifications');
+                    return;
+                } else if (pathName === 'profile.php') {
+                    e.preventDefault();
+                    navigateTo('profile');
+                    return;
+                } else if (pathName === 'vendor-dash.php') {
+                    e.preventDefault();
+                    navigateTo('vendor-dash');
+                    return;
+                } else if (pathName === 'help.php') {
+                    e.preventDefault();
+                    navigateTo('help');
+                    return;
+                }
+            } catch (err) {}
+        }
+
+        // If running in Capacitor / Mobile native app, open external links via system browser cleanly
+        const isNative = window.Capacitor && (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);
+        if (isNative && (href.startsWith('http://') || href.startsWith('https://'))) {
+            e.preventDefault();
+            if (window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+                window.Capacitor.Plugins.Browser.open({ url: href }).catch(() => {
+                    window.open(href, '_system');
+                });
+            } else {
+                window.open(href, '_system');
+            }
+        }
+    });
+
+    // 8. Prevent long-press context menus everywhere except text input fields
+    document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('input, textarea, [contenteditable="true"], .selectable-text')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // 9. Prevent ghost dragging of images/links
+    document.addEventListener('dragstart', (e) => {
+        e.preventDefault();
+    });
 });
 
 // Helper to update app header state

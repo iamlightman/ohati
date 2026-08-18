@@ -218,6 +218,9 @@ function navigateTo(screenId) {
         case 'profile-edit':
             initProfileEditScreen();
             break;
+        case 'about':
+            initAboutScreen();
+            break;
         case 'help':
             initHelpScreen();
             break;
@@ -6584,6 +6587,25 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                 </div>
             </div>
 
+            <!-- About & Legal -->
+            <h4 style="margin-bottom:12px;">About & Company</h4>
+            <div class="card p-16 mb-16" style="display:flex; flex-direction:column; gap:12px;">
+                <a href="javascript:void(0)" onclick="navigateTo('about')" style="display:flex; align-items:center; justify-content:space-between; text-decoration:none; color:var(--gray-900); font-weight:600; font-size:0.88rem;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-circle-info" style="color:var(--primary); font-size:1.1rem;"></i>
+                        <span>About Ohati</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="font-size:0.8rem; color:var(--gray-400);"></i>
+                </a>
+                <a href="javascript:void(0)" onclick="navigateTo('privacy')" style="display:flex; align-items:center; justify-content:space-between; text-decoration:none; color:var(--gray-900); font-weight:600; font-size:0.88rem; border-top:1px solid var(--gray-100); padding-top:12px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-shield-halved" style="color:var(--primary); font-size:1.1rem;"></i>
+                        <span>Privacy Policy & Terms</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="font-size:0.8rem; color:var(--gray-400);"></i>
+                </a>
+            </div>
+
             <!-- Preferences -->
             <h4 style="margin-bottom:12px;">Preferences</h4>
             <div class="card p-16 mb-16">
@@ -7810,3 +7832,75 @@ function renderVendorJobsTab(tabKey) {
     }
 }
 
+
+
+function initAboutScreen() {
+    const screen = document.getElementById('screen-about');
+    if (!screen) return;
+
+    screen.innerHTML = `
+        <div style="max-width:800px; margin:0 auto; padding: 24px 16px 60px;">
+            <div style="background:linear-gradient(135deg, #0F1923, #1B2B4B); border-radius:24px; padding:40px 24px; text-align:center; color:#fff; box-shadow:0 12px 30px rgba(0,0,0,0.15); margin-bottom:28px; position:relative; overflow:hidden;">
+                <div style="position:absolute; right:-20px; top:-20px; opacity:0.1; font-size:12rem; color:#F2A735;"><i class="fa-solid fa-glass-water-droplet"></i></div>
+                <img src="img/app_icon.png" alt="Ohati Logo" style="width:72px; height:72px; border-radius:18px; margin-bottom:16px; box-shadow:0 6px 16px rgba(0,0,0,0.3);">
+                <h1 style="font-family:'Fraunces',serif; font-size:2.2rem; font-weight:800; margin-bottom:8px; color:#fff;">About Ohati</h1>
+                <p style="font-size:1.05rem; color:#F2A735; font-weight:700; margin-bottom:12px;">Find. Compare. Book. Celebrate.</p>
+                <p style="max-width:560px; margin:0 auto; font-size:0.88rem; color:#CBD5E1; line-height:1.6;">
+                    Ohati is Africa's premier all-in-one event discovery, vendor comparison, direct messaging, and booking platform created to make event planning effortless, transparent, and joyful.
+                </p>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px; margin-bottom:32px;">
+                <div class="card p-20" style="border-radius:18px; border:1px solid var(--gray-100);">
+                    <div style="width:44px; height:44px; border-radius:12px; background:rgba(242,167,53,0.15); color:#F2A735; display:flex; align-items:center; justify-content:center; font-size:1.3rem; margin-bottom:12px;">
+                        <i class="fa-solid fa-shield-check"></i>
+                    </div>
+                    <h3 style="font-size:1.1rem; margin-bottom:6px; color:var(--primary);">Verified Vendors</h3>
+                    <p style="font-size:0.83rem; color:var(--gray-600); line-height:1.5; margin:0;">
+                        Every vendor on Ohati is thoroughly vetted with verified ID credentials and customer reviews, ensuring peace of mind for your special occasion.
+                    </p>
+                </div>
+
+                <div class="card p-20" style="border-radius:18px; border:1px solid var(--gray-100);">
+                    <div style="width:44px; height:44px; border-radius:12px; background:rgba(29,161,242,0.15); color:#1DA1F2; display:flex; align-items:center; justify-content:center; font-size:1.3rem; margin-bottom:12px;">
+                        <i class="fa-solid fa-comments"></i>
+                    </div>
+                    <h3 style="font-size:1.1rem; margin-bottom:6px; color:var(--primary);">Direct Messaging</h3>
+                    <p style="font-size:0.83rem; color:var(--gray-600); line-height:1.5; margin:0;">
+                        Chat directly with event planners, photographers, caterers, DJs, and decorators. Negotiate terms, share inspiration photos, and confirm details easily.
+                    </p>
+                </div>
+
+                <div class="card p-20" style="border-radius:18px; border:1px solid var(--gray-100);">
+                    <div style="width:44px; height:44px; border-radius:12px; background:rgba(16,185,129,0.15); color:#10B981; display:flex; align-items:center; justify-content:center; font-size:1.3rem; margin-bottom:12px;">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <h3 style="font-size:1.1rem; margin-bottom:6px; color:var(--primary);">Side-by-Side Comparison</h3>
+                    <p style="font-size:0.83rem; color:var(--gray-600); line-height:1.5; margin:0;">
+                        Compare vendor pricing, service packages, ratings, and portfolio showcases side-by-side to make the best decision for your event budget.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card p-24 mb-24" style="border-radius:20px;">
+                <h3 style="font-family:'Fraunces',serif; font-size:1.3rem; color:var(--primary); margin-bottom:12px;">Our Mission</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6; margin-bottom:16px;">
+                    Whether you are planning a traditional wedding, corporate gala, milestone birthday, engagement party, or private dinner, Ohati bridges the gap between visionary event hosts and talented event professionals across Ghana and Africa.
+                </p>
+                <div style="background:var(--gray-50); border-left:4px solid var(--accent); padding:14px 18px; border-radius:0 12px 12px 0; font-size:0.83rem; color:var(--gray-800); font-style:italic;">
+                    "We believe every celebration deserves world-class vendor craftsmanship, total financial transparency, and stress-free planning."
+                </div>
+            </div>
+
+            <div class="card p-20" style="border-radius:18px; text-align:center;">
+                <h4 style="margin-bottom:6px; color:var(--primary);">Need assistance or have feedback?</h4>
+                <p style="font-size:0.82rem; color:var(--gray-600); margin-bottom:14px;">Our support team is available 24/7 to assist vendors and event hosts.</p>
+                <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                    <a href="mailto:support@ohati.com" class="btn btn-outline btn-sm"><i class="fa-solid fa-envelope"></i> Contact Support</a>
+                    <button class="btn btn-primary btn-sm" onclick="navigateTo('help')"><i class="fa-solid fa-circle-question"></i> Help Center</button>
+                </div>
+                <div style="font-size:0.7rem; color:var(--gray-400); margin-top:16px;">Ohati Platform Version 1.1.4 — All rights reserved.</div>
+            </div>
+        </div>
+    `;
+}

@@ -399,6 +399,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
             <section id="screen-vendor-auto-response" class="screen" style="display:none;"></section>
             <section id="screen-profile-edit" class="screen" style="display:none;"></section>
             <section id="screen-report-issue" class="screen" style="display:none;"></section>
+            <section id="screen-about" class="screen" style="display:none;"></section>
             <section id="screen-user-jobs" class="screen" style="display:none;"></section>
             <section id="screen-vendor-jobs" class="screen" style="display:none;"></section>
         </main>
@@ -479,6 +480,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                     <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
+                    <a class="sidebar-link" onclick="navigateTo('about'); toggleSidebar(false)"><i class="fa-solid fa-circle-info"></i> About Us</a>
                     <a class="sidebar-link" onclick="navigateTo('help'); toggleSidebar(false)">
                         <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                     </a>
@@ -496,7 +498,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                     <div class="sidebar-footer-text">
                         <span style="font-weight:700;color:var(--primary);font-size:0.65rem;">Ohati v1.0.0</span>
                         <span>Find. Compare. Book. Celebrate.</span>
-                        <span style="font-size:0.65rem; color:var(--gray-500); margin-top:3px; display:block;">App Designed by <a href="https://wa.me/2348136731796" target="_blank" style="color:var(--accent, #F2A735); text-decoration:none; font-weight:bold;">C Eye Q Digital</a></span>
+                        <a href="javascript:void(0)" onclick="navigateTo('about'); toggleSidebar(false)" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; margin-top:6px;"><i class="fa-solid fa-circle-info"></i> About Ohati</a>
                     </div>
                 </div>
             </aside>

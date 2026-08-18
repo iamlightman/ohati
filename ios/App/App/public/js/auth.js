@@ -1310,6 +1310,7 @@ window.triggerAccountDeletionFlow = function() {
 
 window.showMandatoryAuthLockScreen = function(initialMode) {
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
+    const alreadyExists = !!overlay;
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'mandatory-auth-lock-overlay';
@@ -1321,6 +1322,7 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
 
     window.renderMandatoryAuthContent = function(currentMode) {
         const mode = currentMode || 'login';
+        window._currentAuthLockMode = mode;
 
         if (mode === 'otp') {
             const email = window._mandatorySignupDraft.email || '';
@@ -1384,8 +1386,8 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                             <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password <span style="color:#F2A735; font-size:0.7rem;">(Compulsory)</span></label>
-                            <input type="password" id="m-lock-confirm" required placeholder="Re-enter your password to confirm" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password</label>
+                            <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
                         <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Verification Code</button>
@@ -1426,7 +1428,11 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
         }
     };
 
-    window.renderMandatoryAuthContent(initialMode || 'login');
+    if (alreadyExists && window._currentAuthLockMode && window._currentAuthLockMode !== 'login') {
+        return;
+    }
+
+    window.renderMandatoryAuthContent(initialMode || window._currentAuthLockMode || 'login');
 };
 
 window.unlockMandatoryAuthScreen = function() {

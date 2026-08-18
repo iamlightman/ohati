@@ -2053,7 +2053,6 @@ function renderChatShell(v) {
 
             <div class="chat-input-bar" style="gap: 8px;">
                 <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
-                <button class="chat-attach-btn" id="chat-mic-btn" onclick="toggleVoiceRecording()" title="Record Voice" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-microphone"></i></button>
                 <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
                 <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                 <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
@@ -2255,7 +2254,6 @@ let previewAudioInstance = null;
 function getNormalChatInputBarHTML() {
     return `
         <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
-        <button class="chat-attach-btn" id="chat-mic-btn" onclick="toggleVoiceRecording()" title="Record Voice" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-microphone"></i></button>
         <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
         <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">

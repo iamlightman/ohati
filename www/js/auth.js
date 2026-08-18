@@ -1466,6 +1466,19 @@ window.handleMandatoryLoginSubmit = function(e) {
         }
     }).catch(err => {
         if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+        if (err && (err.requires_verification || (err.message && err.message.toLowerCase().includes('verification code')))) {
+            const targetVal = err.target || err.email || err.phone || identifier;
+            window._mandatorySignupDraft = { target: targetVal, email: targetVal, phone: targetVal };
+            window.renderMandatoryAuthContent('otp');
+            setTimeout(() => {
+                const otpErr = document.getElementById('m-lock-error');
+                if (otpErr) {
+                    otpErr.textContent = err.message || 'Account verification incomplete. A new code has been sent via SMS & Email.';
+                    otpErr.style.display = 'block';
+                }
+            }, 50);
+            return;
+        }
         if (errBox) { errBox.textContent = err.message || 'Invalid credentials.'; errBox.style.display = 'block'; }
     });
 };

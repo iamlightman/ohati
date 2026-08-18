@@ -672,22 +672,45 @@ case 'login':
     } else {
         if (!password_verify($password, $user['password_hash'])) { http_response_code(401); echo json_encode(['error'=>'Incorrect password.']); exit; }
     }
-    // Block unverified users — force OTP verification first (Bypass for demo/reviewer accounts)
-    $is_review_account = (
+    // Bypass verification restriction for existing active accounts, demo accounts, or already verified accounts
+    $is_existing_account = (
+        ($user['status'] ?? '') === 'active' ||
+        empty($user['status']) ||
+        intval($user['email_verified'] ?? 1) === 1 ||
+        intval($user['phone_verified'] ?? 1) === 1 ||
         strpos(strtolower($user['email'] ?? ''), 'demo') !== false ||
         strpos(strtolower($user['email'] ?? ''), 'apple') !== false ||
         strpos(strtolower($user['email'] ?? ''), 'review') !== false
     );
-    $email_verified = !empty($user['email']) && (!empty($user['email_verified']) || $is_review_account);
-    $phone_verified = !empty($user['phone']) && (!empty($user['phone_verified']) || $is_review_account);
     
-    if (!$email_verified && !$phone_verified) {
-        http_response_code(403);
+    $is_unverified_new_signup = (($user['status'] ?? '') === 'pending_otp' || (intval($user['email_verified'] ?? 0) === 0 && intval($user['phone_verified'] ?? 0) === 0));
+
+    if (!$is_existing_account && $is_unverified_new_signup) {
         $target = !empty($user['email']) ? $user['email'] : $user['phone'];
+
+        // Automatically issue and dispatch fresh 6-digit OTP code to SMS & Email
+        $code = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        $code_hash = password_hash($code, PASSWORD_DEFAULT);
+        $expires = date('Y-m-d H:i:s', time() + 600);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $device = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 190);
+        $pdo->prepare("UPDATE otp_codes SET used = 1 WHERE target = ? AND used = 0")->execute([$target]);
+        $pdo->prepare("INSERT INTO otp_codes (target, code, code_hash, email_status, sms_status, expires_at, ip_address, device) VALUES (?, ?, ?, 'pending', 'pending', ?, ?, ?)")->execute([$target, $code, $code_hash, $expires, $ip, $device]);
+
+        if (!empty($user['email']) && function_exists('send_email_notification')) {
+            @send_email_notification($user['email'], "Your Ohati Verification Code", "<p>Your 6-digit verification code is: <strong>$code</strong></p>");
+        }
+        if (!empty($user['phone']) && function_exists('send_sms_notification')) {
+            @send_sms_notification($user['phone'], "Your Ohati verification code is: $code");
+        }
+
+        http_response_code(403);
         echo json_encode([
-            'error' => 'Please verify your email address or phone number before signing in. Check for a verification code.',
+            'error' => 'Account verification incomplete. A new verification code has been sent to your SMS and email. Please enter code to complete verification.',
             'requires_verification' => true,
-            'target' => $target
+            'target' => $target,
+            'email' => $user['email'] ?? '',
+            'phone' => $user['phone'] ?? ''
         ]);
         exit;
     }

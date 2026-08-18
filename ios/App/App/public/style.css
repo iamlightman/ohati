@@ -3850,3 +3850,11 @@ body.dark-theme .inline-verified-badge {
 
 
 
+
+/* Forced Instant Loading Dismissal Rule */
+#screen-loading {
+    animation: autoHideLoading 0.8s forwards 0.8s !important;
+}
+@keyframes autoHideLoading {
+    to { opacity: 0; visibility: hidden; pointer-events: none; display: none; }
+}

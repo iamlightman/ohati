@@ -77,11 +77,11 @@ function renderSkeletonListHTML(count = 4) {
 
 // ── Screen Manager: navigateTo ─────────────────────────────────────────
 function navigateTo(screenId) {
-    // Auth Guard: Only restrict strictly protected account settings / vendor dashboard
-    const protectedScreens = ['vendor-dash', 'profile-edit', 'vendor-ads'];
-    if (!state.user && protectedScreens.includes(screenId)) {
-        showPushNotification('Sign In Required', 'Please sign in to access your vendor dashboard and account settings.');
-        openLoginModal();
+    // Auth Guard: Lock screen to login/signup unless authenticated
+    if (!state.user) {
+        if (typeof showMandatoryAuthLockScreen === 'function') {
+            showMandatoryAuthLockScreen('login');
+        }
         return;
     }
 

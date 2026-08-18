@@ -1987,6 +1987,10 @@ case 'get_user_status':
 
 case 'chat_inbox':
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) {
+        echo json_encode([]);
+        exit;
+    }
     $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     $list = [];
     if ($role === 'vendor') {
@@ -2049,6 +2053,10 @@ case 'get_unread_chats':
 case 'chat_history':
     $vid = intval($_GET['vendor_id'] ?? 0);
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) {
+        echo json_encode([]);
+        exit;
+    }
     $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");

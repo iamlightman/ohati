@@ -1300,11 +1300,185 @@ window.triggerAccountDeletionFlow = function() {
             API.deleteAccount().then(res => {
                 showAccountDeletedSuccessModal();
             }).catch(err => {
-                // Soft fallback
                 showAccountDeletedSuccessModal();
             });
         } else {
             showAccountDeletedSuccessModal();
         }
     }
+};
+
+window.showMandatoryAuthLockScreen = function(initialMode) {
+    let overlay = document.getElementById('mandatory-auth-lock-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'mandatory-auth-lock-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:#081729; z-index:9999999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; overflow-y:auto;';
+        document.body.appendChild(overlay);
+    }
+
+    window.renderMandatoryAuthContent = function(currentMode) {
+        const mode = currentMode || 'login';
+        if (mode === 'signup') {
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:72px; height:72px; border-radius:50%; background:rgba(242,167,53,0.15); border:2px solid var(--accent, #F2A735); margin:0 auto 16px; display:flex; align-items:center; justify-content:center;">
+                        <img src="img/logo white transparent.png" style="max-width:44px; max-height:44px; object-fit:contain;" alt="Ohati">
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Create Your Account</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">Join Ohati to discover and book verified event services</p>
+
+                    <form onsubmit="handleMandatorySignupSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Account Role</label>
+                            <select id="m-lock-role" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
+                                <option value="customer" style="background:#0F1923; color:#FFF;">Customer (Planning Events)</option>
+                                <option value="vendor" style="background:#0F1923; color:#FFF;">Vendor (Offering Event Services)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Full Name</label>
+                            <input type="text" id="m-lock-name" required placeholder="John Doe" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Email Address</label>
+                            <input type="email" id="m-lock-email" required placeholder="email@example.com" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Phone Number</label>
+                            <input type="tel" id="m-lock-phone" required placeholder="+233 24 123 4567" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password</label>
+                            <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Create Account</button>
+                    </form>
+
+                    <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
+                        Already have an account? <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Log In</a>
+                    </div>
+                </div>
+            `;
+        } else {
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:72px; height:72px; border-radius:50%; background:rgba(242,167,53,0.15); border:2px solid var(--accent, #F2A735); margin:0 auto 16px; display:flex; align-items:center; justify-content:center;">
+                        <img src="img/logo white transparent.png" style="max-width:44px; max-height:44px; object-fit:contain;" alt="Ohati">
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Sign In to Ohati</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Please log in to access event vendors and services</p>
+
+                    <form onsubmit="handleMandatoryLoginSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email or Phone Number</label>
+                            <input type="text" id="m-lock-id" required placeholder="email@example.com or phone" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Password</label>
+                            <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Sign In</button>
+                    </form>
+
+                    <div style="margin-top:24px; font-size:0.85rem; color:#94A3B8;">
+                        Don't have an account? <a href="#" onclick="renderMandatoryAuthContent('signup'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Sign up</a>
+                    </div>
+                </div>
+            `;
+        }
+    };
+
+    window.renderMandatoryAuthContent(initialMode || 'login');
+};
+
+window.unlockMandatoryAuthScreen = function() {
+    const overlay = document.getElementById('mandatory-auth-lock-overlay');
+    if (overlay) overlay.remove();
+};
+
+window.handleMandatoryLoginSubmit = function(e) {
+    if (e) e.preventDefault();
+    const idInput = document.getElementById('m-lock-id');
+    const passInput = document.getElementById('m-lock-pass');
+    const errBox = document.getElementById('m-lock-error');
+    const btn = document.getElementById('m-lock-btn');
+
+    if (errBox) errBox.style.display = 'none';
+
+    const identifier = idInput ? idInput.value.trim() : '';
+    const password = passInput ? passInput.value : '';
+
+    if (!identifier || !password) {
+        if (errBox) { errBox.textContent = 'Please enter both identifier and password.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...'; }
+
+    API.login(identifier, password).then(res => {
+        if (res.user) {
+            state.user = res.user;
+            if (res.token) localStorage.setItem('ohati_auth_token', res.token);
+            localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            window.unlockMandatoryAuthScreen();
+            if (typeof updateAppHeader === 'function') updateAppHeader();
+            if (typeof navigateTo === 'function') navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+        } else {
+            throw new Error(res.error || 'Login failed.');
+        }
+    }).catch(err => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+        if (errBox) { errBox.textContent = err.message || 'Invalid credentials.'; errBox.style.display = 'block'; }
+    });
+};
+
+window.handleMandatorySignupSubmit = function(e) {
+    if (e) e.preventDefault();
+    const nameInput = document.getElementById('m-lock-name');
+    const emailInput = document.getElementById('m-lock-email');
+    const phoneInput = document.getElementById('m-lock-phone');
+    const passInput = document.getElementById('m-lock-pass');
+    const roleSelect = document.getElementById('m-lock-role');
+    const errBox = document.getElementById('m-lock-error');
+    const btn = document.getElementById('m-lock-btn');
+
+    if (errBox) errBox.style.display = 'none';
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const password = passInput ? passInput.value : '';
+    const role = roleSelect ? roleSelect.value : 'customer';
+
+    const parts = name.split(' ');
+    const fname = parts[0] || '';
+    const lname = parts.slice(1).join(' ') || '';
+
+    if (!fname || !email || !phone || !password) {
+        if (errBox) { errBox.textContent = 'Please fill out all required fields.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account...'; }
+
+    API.post('register', {
+        fname, lname, email, phone, password, role
+    }).then(res => {
+        if (res.user) {
+            state.user = res.user;
+            if (res.token) localStorage.setItem('ohati_auth_token', res.token);
+            localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            window.unlockMandatoryAuthScreen();
+            if (typeof updateAppHeader === 'function') updateAppHeader();
+            if (typeof navigateTo === 'function') navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+        } else {
+            throw new Error(res.error || 'Registration failed.');
+        }
+    }).catch(err => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+        if (errBox) { errBox.textContent = err.message || 'Registration failed. Email or phone may already exist.'; errBox.style.display = 'block'; }
+    });
 };

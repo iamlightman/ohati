@@ -48,6 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => {
             clearTimeout(splashTimer);
             state.user = res.user;
+            if (!state.user) {
+                if (typeof showMandatoryAuthLockScreen === 'function') {
+                    showMandatoryAuthLockScreen('login');
+                }
+            } else {
+                if (typeof unlockMandatoryAuthScreen === 'function') {
+                    unlockMandatoryAuthScreen();
+                }
+            }
             state.lockedFields = res.locked_profile_fields || ["name", "email", "phone", "dob"];
             if (res.platform_reviews) state.platformReviews = res.platform_reviews;
             state.settings = res.settings || {};

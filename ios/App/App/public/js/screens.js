@@ -77,23 +77,13 @@ function renderSkeletonListHTML(count = 4) {
 
 // ── Screen Manager: navigateTo ─────────────────────────────────────────
 function navigateTo(screenId) {
-    // Auth Guard: Restrict guests from viewing vendors or performing major activities
-    const guestAllowedScreens = ['home', 'help', 'onboarding', 'loading'];
-    if (!state.user && !guestAllowedScreens.includes(screenId)) {
-        showPushNotification('Sign In Required', 'Please sign in or sign up to view vendors and plan events.');
-        openLoginModal();
-        if (!state.currentScreen || state.currentScreen === 'loading') {
-            window.history.replaceState({ screenId: 'home' }, '', 'index.php');
-            state.currentScreen = 'home';
-            const target = document.getElementById('screen-home');
-            if (target) {
-                target.style.display = 'block';
-            }
-            initHomeScreen();
+    // Auth Guard: Lock screen to login/signup unless authenticated
+    if (!state.user) {
+        if (typeof showMandatoryAuthLockScreen === 'function') {
+            showMandatoryAuthLockScreen('login');
         }
         return;
     }
-
     if (state.currentScreen === screenId) return;
 
     if (screenId !== 'chat' && state.chatInterval) {

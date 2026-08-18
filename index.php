@@ -1,180 +1,18 @@
 <?php
-// index.php - Ohati App - Find. Compare. Book. Celebrate.
+// index.php — Ohati Event Marketplace Web App
 session_start();
 if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
 }
-
-// Check Maintenance Mode
-require_once __DIR__ . '/db.php';
-try {
-    $stmt = $pdo->prepare("SELECT val_value FROM system_settings WHERE key_name = 'maintenance_mode'");
-    $stmt->execute();
-    $maint = $stmt->fetchColumn();
-    if ($maint === '1' && (!isset($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'admin')) {
-        // Render a beautiful, premium maintenance screen
-        ?>
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Under Maintenance — Ohati</title>
-            <link rel="stylesheet" href="style.css">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-            <style>
-                body {
-                    background: radial-gradient(circle at center, #1E2E4F 0%, #0F172A 100%);
-                    color: #FFFFFF;
-                    font-family: 'Plus Jakarta Sans', sans-serif;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    margin: 0;
-                    padding: 20px;
-                    box-sizing: border-box;
-                    text-align: center;
-                }
-                .maintenance-card {
-                    background: rgba(255, 255, 255, 0.03);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    backdrop-filter: blur(16px);
-                    border-radius: 24px;
-                    padding: 40px 30px;
-                    max-width: 480px;
-                    width: 100%;
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-                }
-                .maint-logo {
-                    width: 70px;
-                    margin-bottom: 24px;
-                }
-                .maint-icon-pulse {
-                    font-size: 3rem;
-                    color: var(--accent, #D4AF37);
-                    margin-bottom: 20px;
-                    animation: pulse 2s infinite ease-in-out;
-                }
-                @keyframes pulse {
-                    0% { transform: scale(1); opacity: 0.8; }
-                    50% { transform: scale(1.08); opacity: 1; }
-                    100% { transform: scale(1); opacity: 0.8; }
-                }
-                h1 {
-                    font-family: 'Fraunces', serif;
-                    font-size: 1.8rem;
-                    margin: 0 0 12px 0;
-                    color: #FFFFFF;
-                    font-weight: 700;
-                }
-                p {
-                    color: #94A3B8;
-                    font-size: 0.9rem;
-                    line-height: 1.6;
-                    margin: 0 0 24px 0;
-                }
-                .contact-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    background: var(--accent, #D4AF37);
-                    color: #0F172A;
-                    text-decoration: none;
-                    font-weight: 700;
-                    font-size: 0.85rem;
-                    padding: 12px 24px;
-                    border-radius: 30px;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
-                }
-                .contact-btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
-                }
-                .footer-text {
-                    font-size: 0.75rem;
-                    color: #64748B;
-                    margin-top: 30px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="maintenance-card">
-                <img src="img/logo white transparent small.png" class="maint-logo" alt="Ohati Logo">
-                <div class="maint-icon-pulse">
-                    <i class="fa-solid fa-screwdriver-wrench"></i>
-                </div>
-                <h1>System Under Upgrades</h1>
-                <p>Ohati is currently undergoing planned maintenance upgrades to deliver an even smoother vendor booking experience. We'll be back online shortly!</p>
-                <a href="https://wa.me/233543377470" target="_blank" class="contact-btn">
-                    <i class="fa-brands fa-whatsapp"></i> Chat Support
-                </a>
-                <div class="footer-text">© <?= date('Y') ?> Ohati. All rights reserved.</div>
-            </div>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
-} catch (Exception $e) {}
-
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-$domainName = $_SERVER['HTTP_HOST'];
-$currentDir = dirname($_SERVER['SCRIPT_NAME']);
-$currentDir = str_replace('\\', '/', $currentDir);
-if ($currentDir === '/') $currentDir = '';
-$base_url = $protocol . $domainName . $currentDir;
-
-$page_title = "Ohati — Find. Compare. Book. Celebrate.";
-$meta_desc = "Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure escrow payments.";
-$meta_image = $base_url . "/img/logo black transparent small.png";
-$meta_url = $base_url;
-
-if (isset($_GET['ref']) && !empty($_GET['ref'])) {
-    $ref_code = htmlspecialchars(trim($_GET['ref']));
-    $_SESSION['pending_ref'] = $ref_code;
-    
-    // Custom Open Graph Link Preview for Referral Links
-    $page_title = "Join Ohati — Earn Rewards on Event Vendor Bookings!";
-    $meta_desc = "Sign up using referral code " . $ref_code . " to join Ohati! Discover, compare, and book top event photographers, caterers, DJs & decorators across Ghana.";
-    $meta_image = $base_url . "/img/logo black transparent small.png";
-    $meta_url = $base_url . "/index.php?ref=" . urlencode($ref_code);
-}
-
-if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id'])) {
-    try {
-        require_once __DIR__ . '/db.php';
-        $vendor_id = intval($_GET['id']);
-        $stmt = $pdo->prepare("SELECT v.*, u.avatar FROM vendors v JOIN users u ON v.user_id = u.id WHERE v.id = ?");
-        $stmt->execute([$vendor_id]);
-        $vendor = $stmt->fetch();
-        if ($vendor) {
-            $page_title = htmlspecialchars($vendor['name']) . " — Ohati Event Vendor";
-            $meta_desc = "Check out " . ($vendor['verification_badge'] === 'gold' ? 'Gold Verified ' : '') . htmlspecialchars($vendor['name']) . " on Ohati. Rated " . ($vendor['rating'] ?: '5.0') . " ★. Based in " . htmlspecialchars($vendor['location']) . ".";
-            $cover = $vendor['logo'] ?: $vendor['cover_photo'];
-            if ($cover) {
-                if (strpos($cover, 'http') === 0) {
-                    $meta_image = $cover;
-                } else {
-                    $meta_image = $base_url . "/" . $cover;
-                }
-            } else {
-                $meta_image = $base_url . "/img/logo black transparent small.png";
-            }
-            $meta_url = $base_url . "/detail.php?id=" . $vendor['id'];
-        }
-    } catch (Exception $e) {}
-}
 ?>
-<!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title><?= $page_title ?></title>
-    <meta name="csrf-token" content="<?= $_SESSION['csrf'] ?>">
-    <meta name="description" content="<?= $meta_desc ?>">
+    <title>Ohati — Find. Compare. Book. Celebrate.</title>
+    <meta name="csrf-token" content="">
+    <meta name="description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta name="theme-color" content="#1B2B4B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -183,28 +21,28 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
     <link rel="apple-touch-icon" href="img/app_icon.png">
 
     <!-- Canonical URL -->
-    <link rel="canonical" href="<?= $meta_url ?>">
+    <link rel="canonical" href="https://ohati.com">
 
     <!-- Android App Deep Indexing & Google Play Link Tags -->
     <link rel="alternate" href="android-app://com.ohati.app/https/ohati.com/" />
     <meta property="al:android:url" content="android-app://com.ohati.app/https/ohati.com/">
     <meta property="al:android:package" content="com.ohati.app">
     <meta property="al:android:app_name" content="Ohati">
-    <meta property="al:web:url" content="<?= $meta_url ?>">
+    <meta property="al:web:url" content="https://ohati.com">
     <meta name="twitter:app:name:googleplay" content="Ohati">
     <meta name="twitter:app:id:googleplay" content="com.ohati.app">
     <meta name="twitter:app:url:googleplay" content="https://play.google.com/store/apps/details?id=com.ohati.app">
 
     <!-- SEO & Link Preview Meta Tags (Open Graph / Twitter) -->
-    <meta property="og:title" content="<?= $page_title ?>">
-    <meta property="og:description" content="<?= $meta_desc ?>">
-    <meta property="og:image" content="<?= $meta_image ?>">
-    <meta property="og:url" content="<?= $meta_url ?>">
+    <meta property="og:title" content="Ohati — Find. Compare. Book. Celebrate.">
+    <meta property="og:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
+    <meta property="og:image" content="https://ohati.com/img/app_icon.png">
+    <meta property="og:url" content="https://ohati.com">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="<?= $page_title ?>">
-    <meta name="twitter:description" content="<?= $meta_desc ?>">
-    <meta name="twitter:image" content="<?= $meta_image ?>">
+    <meta name="twitter:title" content="Ohati — Find. Compare. Book. Celebrate.">
+    <meta name="twitter:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
+    <meta name="twitter:image" content="https://ohati.com/img/app_icon.png">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -216,13 +54,13 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap" media="print" onload="this.media='all'">
 
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'">
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
+    <link rel="stylesheet" href="style.css">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -251,18 +89,18 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
         {
           "@type": "WebSite",
           "name": "Ohati",
-          "url": "<?= $base_url ?>",
+          "url": "https://ohati.com",
           "potentialAction": {
             "@type": "SearchAction",
-            "target": "<?= $base_url ?>/search.php?q={search_term_string}",
+            "target": "https://ohati.com/search.php?q={search_term_string}",
             "query-input": "required name=search_term_string"
           }
         },
         {
           "@type": "Organization",
           "name": "Ohati",
-          "url": "<?= $base_url ?>",
-          "logo": "<?= $base_url ?>/img/app_icon.png",
+          "url": "https://ohati.com",
+          "logo": "https://ohati.com/img/app_icon.png",
           "sameAs": [
             "https://facebook.com/ohatighana",
             "https://instagram.com/ohatighana"
@@ -575,25 +413,25 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
 
     </div><!-- /app-container -->
 
-    <?php $v_ts = filemtime(__DIR__ . '/js/screens.js'); ?>
-    <script src="js/utils.js?v=<?= $v_ts ?>"></script>
-    <script src="js/helpers.js?v=<?= $v_ts ?>"></script>
-    <script src="js/api.js?v=<?= $v_ts ?>"></script>
-    <script src="js/action_lock.js?v=<?= $v_ts ?>"></script>
-    <script src="js/state.js?v=<?= $v_ts ?>"></script>
-    <script src="js/modals.js?v=<?= $v_ts ?>"></script>
-    <script src="js/auth.js?v=<?= $v_ts ?>"></script>
-    <script src="js/booking.js?v=<?= $v_ts ?>"></script>
-    <script src="js/vendor.js?v=<?= $v_ts ?>"></script>
-    <script src="js/chat.js?v=<?= $v_ts ?>"></script>
-    <script src="js/search.js?v=<?= $v_ts ?>"></script>
-    <script src="js/review.js?v=<?= $v_ts ?>"></script>
-    <script src="js/notification.js?v=<?= $v_ts ?>"></script>
-    <script src="js/payment.js?v=<?= $v_ts ?>"></script>
-    <script src="js/screens.js?v=<?= $v_ts ?>"></script>
-    <script src="js/calling.js?v=<?= $v_ts ?>"></script>
-    <script src="js/jobs.js?v=<?= $v_ts ?>"></script>
-    <script src="js/app.js?v=<?= $v_ts ?>"></script>
+    
+    <script src="js/utils.js"></script>
+    <script src="js/helpers.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/action_lock.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/modals.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/booking.js"></script>
+    <script src="js/vendor.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/review.js"></script>
+    <script src="js/notification.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/screens.js"></script>
+    <script src="js/calling.js"></script>
+    <script src="js/jobs.js"></script>
+    <script src="js/app.js"></script>
 
 </body>
 </html>

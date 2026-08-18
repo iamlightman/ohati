@@ -1175,3 +1175,20 @@ try {
     $pdo->prepare("UPDATE users SET avatar = ? WHERE avatar LIKE '%unsplash.com%' OR avatar LIKE '%photo-%' OR avatar = '' OR avatar IS NULL")->execute([$user_svg]);
 } catch (Exception $e) {}
 ?>
+
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS call_sessions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            caller_id INT NOT NULL,
+            receiver_id INT NOT NULL,
+            status VARCHAR(30) DEFAULT 'ringing',
+            call_type VARCHAR(20) DEFAULT 'voice',
+            sdp_offer TEXT NULL,
+            sdp_answer TEXT NULL,
+            ice_candidates TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )");
+    } catch (Exception $e) {}
+    

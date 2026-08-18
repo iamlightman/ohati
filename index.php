@@ -60,7 +60,7 @@ if (empty($_SESSION['csrf'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=1.0.7">
+    <link rel="stylesheet" href="style.css?v=1.0.8">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -414,24 +414,24 @@ if (empty($_SESSION['csrf'])) {
     </div><!-- /app-container -->
 
     
-    <script src="js/utils.js?v=1.0.7"></script>
-    <script src="js/helpers.js?v=1.0.7"></script>
-    <script src="js/api.js?v=1.0.7"></script>
-    <script src="js/action_lock.js?v=1.0.7"></script>
-    <script src="js/state.js?v=1.0.7"></script>
-    <script src="js/modals.js?v=1.0.7"></script>
-    <script src="js/auth.js?v=1.0.7"></script>
-    <script src="js/booking.js?v=1.0.7"></script>
-    <script src="js/vendor.js?v=1.0.7"></script>
-    <script src="js/chat.js?v=1.0.7"></script>
-    <script src="js/search.js?v=1.0.7"></script>
-    <script src="js/review.js?v=1.0.7"></script>
-    <script src="js/notification.js?v=1.0.7"></script>
-    <script src="js/payment.js?v=1.0.7"></script>
-    <script src="js/screens.js?v=1.0.7"></script>
-    <script src="js/calling.js?v=1.0.7"></script>
-    <script src="js/jobs.js?v=1.0.7"></script>
-    <script src="js/app.js?v=1.0.7"></script>
+    <script src="js/utils.js?v=1.0.8"></script>
+    <script src="js/helpers.js?v=1.0.8"></script>
+    <script src="js/api.js?v=1.0.8"></script>
+    <script src="js/action_lock.js?v=1.0.8"></script>
+    <script src="js/state.js?v=1.0.8"></script>
+    <script src="js/modals.js?v=1.0.8"></script>
+    <script src="js/auth.js?v=1.0.8"></script>
+    <script src="js/booking.js?v=1.0.8"></script>
+    <script src="js/vendor.js?v=1.0.8"></script>
+    <script src="js/chat.js?v=1.0.8"></script>
+    <script src="js/search.js?v=1.0.8"></script>
+    <script src="js/review.js?v=1.0.8"></script>
+    <script src="js/notification.js?v=1.0.8"></script>
+    <script src="js/payment.js?v=1.0.8"></script>
+    <script src="js/screens.js?v=1.0.8"></script>
+    <script src="js/calling.js?v=1.0.8"></script>
+    <script src="js/jobs.js?v=1.0.8"></script>
+    <script src="js/app.js?v=1.0.8"></script>
 
 </body>
 </html>

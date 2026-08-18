@@ -1,6 +1,8 @@
 // js/app.js — Ohati Main Application Bootstrapper
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Instant launch: Dismiss splash screen and activate Home screen in 200ms
+    setTimeout(() => { if (typeof dismissLoading === 'function') dismissLoading(); }, 200);
     // Render initial Home screen immediately to prevent blank white screen
     if (typeof navigateTo === 'function') {
         try { navigateTo('home'); } catch(e) {}
@@ -40,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Safety fallback: Dismiss loading screen after 1.2s maximum to ensure instant app launch
     const splashTimer = setTimeout(() => {
         dismissLoading();
-    }, 1200);
+    }, 200);
 
     API.getSession()
         .then(res => {

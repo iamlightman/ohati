@@ -1726,6 +1726,7 @@ function initChatScreen() {
                                     </div>
                                     <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
                                         <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
+                    <button class="chat-call-action-btn" onclick="blockVendorUser(${v.id}, '${(v.name||'').replace(/'/g, \"\\\'")}')" title="Block / Report User" style="background:none; border:none; color:var(--danger, #EF4444); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;"><i class="fa-solid fa-ban"></i></button>
                                     </div>
                                 </div>
                                 <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
@@ -1984,6 +1985,7 @@ function renderChatShell(v) {
                 </div>
                 <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
                     <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
+                    <button class="chat-call-action-btn" onclick="blockVendorUser(${v.id}, '${(v.name||'').replace(/'/g, \"\\\'")}')" title="Block / Report User" style="background:none; border:none; color:var(--danger, #EF4444); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;"><i class="fa-solid fa-ban"></i></button>
                 </div>
             </div>
 
@@ -2155,7 +2157,7 @@ function handleChatFileSelected(input) {
     const inputBarField = document.getElementById('chat-input-field');
     if (inputBarField) inputBarField.placeholder = "Uploading file...";
 
-    fetch('api.php?action=upload_chat_file', {
+    fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file', {
         method: 'POST',
         body: formData
     })
@@ -2451,7 +2453,7 @@ function sendVoiceRecording() {
         bar.innerHTML = `<div style="padding:10px; text-align:center; width:100%; color:var(--gray-500); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Sending voice note...</div>`;
     });
     
-    fetch('api.php?action=upload_chat_file', {
+    fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file', {
         method: 'POST',
         body: formData
     })
@@ -3319,7 +3321,7 @@ function showPaymentReceipt(booking, amountPaid, reference) {
             <div style="text-align:center;margin-bottom:16px;">
                 <div style="font-size:2rem;font-weight:800;color:var(--primary);font-family:'Outfit',sans-serif;">GH₵ ${parseFloat(amountPaid).toLocaleString(undefined,{minimumFractionDigits:2})}</div>
                 <div style="font-size:0.7rem;color:var(--success);font-weight:600;margin-top:4px;">
-                    <i class="fa-solid fa-shield-halved"></i> Secured in Escrow
+                    <i class="fa-solid fa-shield-halved"></i> Ohati Protected
                 </div>
             </div>
 
@@ -3468,7 +3470,7 @@ function openBookingInvoice(bid) {
                     </tbody>
                     <tfoot>
                         <tr style="background:var(--gray-50);">
-                            <td style="padding:8px 10px;font-size:0.7rem;color:var(--gray-600);">Total Paid (Escrow)</td>
+                            <td style="padding:8px 10px;font-size:0.7rem;color:var(--gray-600);">Total Paid (Verified)</td>
                             <td style="padding:8px 10px;text-align:right;font-weight:700;font-size:0.8rem;color:var(--success);">GH₵ ${totalPaid.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
                         </tr>
                         <tr style="background:var(--gray-50);border-top:2px solid var(--primary);">
@@ -3498,7 +3500,7 @@ function openBookingInvoice(bid) {
                 <div style="background:rgba(27,43,75,0.05);border:1px solid var(--gray-100);border-radius:8px;padding:10px 12px;margin-bottom:16px;">
                     <p style="margin:0;font-size:0.65rem;color:var(--gray-500);line-height:1.5;">
                         <i class="fa-solid fa-shield-halved" style="color:var(--accent);"></i>
-                        <strong>Escrow Protection:</strong> All payments are held securely in Ohati's escrow system. Funds are only released to the vendor upon confirmed service delivery. For disputes, contact support.
+                        <strong>Escrow Protection:</strong> All payments are processed securely and verified directly by Ohati Admin. For disputes, contact support.
                     </p>
                 </div>
 

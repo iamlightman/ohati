@@ -63,7 +63,7 @@ function renderManualPaymentModal(bookingId, reference, amount, details) {
                 <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">
                     <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 600; letter-spacing: 0.5px;">Amount To Transfer</div>
                     <div style="font-size: 1.8rem; font-weight: 800; color: #081729; margin-top: 4px;">GH₵ ${fmtAmount}</div>
-                    <div style="font-size: 0.75rem; color: #10B981; font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-shield-halved"></i> Secured in Ohati Escrow</div>
+                    <div style="font-size: 0.75rem; color: #10B981; font-weight: 600; margin-top: 4px;"><i class="fa-solid fa-shield-halved"></i> Secured with Ohati Direct Protection</div>
                 </div>
 
                 <div style="margin-bottom: 20px;">

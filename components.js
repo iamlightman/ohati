@@ -143,7 +143,7 @@ async function initApp() {
 
 async function fetchEventDetails() {
     try {
-        const res = await fetch('api.php?action=get_event');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=get_event');
         state.event = await res.json();
     } catch (e) {
         console.error("Error loading event details", e);
@@ -286,7 +286,7 @@ function setupEventListeners() {
 // 4. API Service Helper Functions
 async function fetchCategories() {
     try {
-        const res = await fetch('api.php?action=categories');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=categories');
         state.categories = await res.json();
     } catch (e) {
         console.error("Error loading categories", e);
@@ -310,7 +310,7 @@ async function fetchVendors() {
 
 async function fetchFavorites() {
     try {
-        const res = await fetch('api.php?action=favorites');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=favorites');
         state.favorites = await res.json();
     } catch (e) {
         console.error("Error loading favorites", e);
@@ -319,7 +319,7 @@ async function fetchFavorites() {
 
 async function fetchBookings() {
     try {
-        const res = await fetch('api.php?action=bookings');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=bookings');
         state.bookings = await res.json();
     } catch (e) {
         console.error("Error loading bookings", e);
@@ -328,7 +328,7 @@ async function fetchBookings() {
 
 async function fetchTrackerTasks() {
     try {
-        const res = await fetch('api.php?action=tracker_tasks');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=tracker_tasks');
         state.trackerTasks = await res.json();
     } catch (e) {
         console.error("Error loading tracker tasks", e);
@@ -337,7 +337,7 @@ async function fetchTrackerTasks() {
 
 async function fetchTrackerStats() {
     try {
-        const res = await fetch('api.php?action=tracker_stats');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=tracker_stats');
         state.trackerStats = await res.json();
     } catch (e) {
         console.error("Error loading tracker stats", e);
@@ -879,7 +879,7 @@ function renderVendorList(vendorsList) {
 // Vendor Details Component
 async function viewVendorDetails(vendorId) {
     try {
-        const res = await fetch(`api.php?action=vendor_details&id=${vendorId}`);
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=vendor_details&id=${vendorId}`);
         const vendor = await res.json();
         
         state.selectedVendorId = vendorId;
@@ -1089,7 +1089,7 @@ async function submitBooking(event, vendorId) {
     const date = document.getElementById('book-date').value;
     
     try {
-        const res = await fetch('api.php?action=book', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=book', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1160,7 +1160,7 @@ async function submitReview(event, vendorId) {
     const comment = document.getElementById('rev-comment').value;
     
     try {
-        const res = await fetch('api.php?action=review', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=review', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1525,7 +1525,7 @@ async function bookVendorDirect(vendorId) {
     wizardState.services_needed = wizardState.services_needed.filter(c => c !== v.category);
     
     try {
-        const res = await fetch('api.php?action=book', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=book', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1552,7 +1552,7 @@ async function bookVendorDirect(vendorId) {
 
 async function completePlanEventWizard() {
     try {
-        const res = await fetch('api.php?action=save_event', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=save_event', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(wizardState)
@@ -1939,7 +1939,7 @@ async function saveTaskDetailsAndBudget(taskId) {
     const paidVal = parseFloat(document.getElementById(`paid-${taskId}`).value) || 0.0;
     
     try {
-        const res = await fetch('api.php?action=update_task', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=update_task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1970,7 +1970,7 @@ async function resetPlannedEvent() {
     if (!confirm("Are you sure you want to reset this planned event? This will clear all milestones, budget details, and event settings!")) return;
     
     try {
-        const res = await fetch('api.php?action=reset_event');
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=reset_event');
         const data = await res.json();
         if (data.success) {
             showPushNotification("Event Cleared", "Planner has been reset successfully.");
@@ -2202,7 +2202,7 @@ async function simulateVendorResponse(bookingId, status) {
     }
     
     try {
-        const res = await fetch('api.php?action=update_booking', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=update_booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: bookingId, status: status, reason: reason })
@@ -2225,7 +2225,7 @@ async function simulateVendorCounter(bookingId) {
     if (isNaN(counterVal) || counterVal <= 0) return;
     
     try {
-        const res = await fetch('api.php?action=update_booking', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=update_booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: bookingId, status: 'Counter-offer Sent', price: counterVal })
@@ -2245,7 +2245,7 @@ async function submitSimulatedPayment(bookingId, amount, paymentStatus) {
     const isDeposit = paymentStatus === 'Deposit Paid';
     
     try {
-        const res = await fetch('api.php?action=update_booking', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=update_booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2287,7 +2287,7 @@ function triggerCalendarSync() {
 // Toggle completion status via API
 async function toggleTaskCompletion(taskId, isCompleted) {
     try {
-        const res = await fetch('api.php?action=update_task', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=update_task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: taskId, completed: isCompleted })
@@ -2319,7 +2319,7 @@ async function saveTaskDetails(taskId) {
     const dateVal = document.getElementById(`date-${taskId}`).value;
     
     try {
-        const res = await fetch('api.php?action=update_task', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=update_task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2395,7 +2395,7 @@ async function submitAddTask(event) {
     const notesVal = document.getElementById('new-task-notes').value;
     
     try {
-        const res = await fetch('api.php?action=add_task', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=add_task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2425,7 +2425,7 @@ async function deleteTask(taskId) {
     if (!confirm("Are you sure you want to delete this custom milestone?")) return;
     
     try {
-        const res = await fetch('api.php?action=delete_task', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=delete_task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: taskId })
@@ -2469,7 +2469,7 @@ function renderFavoritesScreen() {
 // 7. Favorite Toggle API Action
 async function toggleFavorite(vendorId, buttonEl) {
     try {
-        const res = await fetch('api.php?action=toggle_favorite', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=toggle_favorite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vendor_id: vendorId })
@@ -2511,7 +2511,7 @@ async function renderChatScreen() {
     if (!vendorId) {
         // Render Inbox View
         try {
-            const res = await fetch('api.php?action=chat_inbox');
+            const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_inbox');
             const inbox = await res.json();
             
             el.innerHTML = `
@@ -2549,7 +2549,7 @@ async function renderChatScreen() {
     }
     
     // Fetch vendor details
-    const vRes = await fetch(`api.php?action=vendor_details&id=${vendorId}`);
+    const vRes = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=vendor_details&id=${vendorId}`);
     const v = await vRes.json();
     
     el.innerHTML = `
@@ -2642,7 +2642,7 @@ async function renderChatScreen() {
             if (indicator) indicator.remove();
             
             // Post message via API so it persists in database
-            await fetch('api.php?action=chat', {
+            await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ vendor_id: vendorId, message: randomTip, simulate_vendor: true })
@@ -2660,7 +2660,7 @@ async function renderChatScreen() {
 
 async function loadChatHistory(vendorId) {
     try {
-        const res = await fetch(`api.php?action=chat_history&vendor_id=${vendorId}`);
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_history&vendor_id=${vendorId}`);
         const history = await res.json();
         
         const area = document.getElementById('chat-msg-area');
@@ -2707,7 +2707,7 @@ async function sendChatMessage(vendorId) {
     
     try {
         // Send request to API
-        const res = await fetch('api.php?action=chat', {
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vendor_id: vendorId, message: msg })

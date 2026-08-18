@@ -835,6 +835,21 @@ try {
         $pdo->prepare("INSERT INTO users (name, email, password_hash, role, email_verified, is_active) VALUES (?, ?, ?, 'admin', 1, 1)")
             ->execute([$admin_name, $admin_email, $admin_hash]);
     }
+    $demo_cust_count = $pdo->query("SELECT COUNT(*) FROM users WHERE email = 'demo.customer@ohati.com'")->fetchColumn();
+    if ($demo_cust_count == 0) {
+        $cust_hash = password_hash('OhatiDemo2026@Customer', PASSWORD_BCRYPT);
+        $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active) VALUES ('App Review Customer', 'demo.customer@ohati.com', '+233200000001', ?, 'customer', 1, 1, 1)")
+            ->execute([$cust_hash]);
+    }
+    $demo_vnd_count = $pdo->query("SELECT COUNT(*) FROM users WHERE email = 'demo.vendor@ohati.com'")->fetchColumn();
+    if ($demo_vnd_count == 0) {
+        $vnd_hash = password_hash('OhatiDemo2026@Vendor', PASSWORD_BCRYPT);
+        $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active) VALUES ('App Review Vendor', 'demo.vendor@ohati.com', '+233200000002', ?, 'vendor', 1, 1, 1)")
+            ->execute([$vnd_hash]);
+        $v_uid = $pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO vendors (user_id, name, category, location, rating, verified, verification_badge, is_active) VALUES (?, 'App Review Event Services', 'Photography', 'Accra, Ghana', 5.0, 1, 'gold', 1)")
+            ->execute([$v_uid]);
+    }
 } catch (Exception $e) {}
 
 // Create tables if not existing without dropping any data
@@ -1104,7 +1119,7 @@ try {
             ['category' => 'General', 'question' => 'What is Ohati?', 'answer' => 'Ohati is an all-in-one premium event vendor marketplace in Ghana. It helps couples, corporate planners, and event hosts find, compare, and book verified service providers including caterers, photographers, videographers, DJs, decorators, bridal shops, and makeup artists.'],
             ['category' => 'Verification & Badges', 'question' => 'What do the gold, blue, and grey verification badges mean?', 'answer' => 'Verification badges reflect the vetting level of a vendor: <strong>Gold (Premium Trust)</strong> indicates a business with verified company registration, tax status, and a proven track record on the platform. <strong>Blue (Identity Verified)</strong> means the vendor\'s personal ID (such as a Ghana Card) has been successfully verified. <strong>Grey (Unverified)</strong> represents newly registered vendors whose credentials are still pending review.'],
             ['category' => 'Verification & Badges', 'question' => 'How do I submit my vendor account for verification?', 'answer' => 'Vendors can submit KYC details during onboarding or from their Dashboard Profile settings. You must upload a high-resolution photo of your Ghana Card (front and back) and a selfie holding the card. The administration team reviews submissions within 24 to 72 hours.'],
-            ['category' => 'Bookings & Escrow', 'question' => 'How does the Ohati escrow payment system work?', 'answer' => 'To protect both parties, clients pay event fees directly to Ohati\'s secure escrow vault. Ohati holds the deposit and final balances, only releasing the funds to the vendor after the client confirms that specified booking milestones are met or the event is successfully completed.'],
+            ['category' => 'Bookings & Escrow', 'question' => 'How does the Ohati escrow payment system work?', 'answer' => 'To protect both parties, clients pay event fees directly to Ohati\'s secure direct payment vault. Ohati holds the deposit and final balances, only releasing the funds to the vendor after the client confirms that specified booking milestones are met or the event is successfully completed.'],
             ['category' => 'Payments & Withdrawals', 'question' => 'What payment methods does Ohati support?', 'answer' => 'Ohati integrates with Paystack, allowing clients to pay securely using Mobile Money (MTN MoMo, Telecel Cash, AT Money) and credit/debit cards (Visa, Mastercard).'],
             ['category' => 'Payments & Withdrawals', 'question' => 'How do vendors withdraw their earnings?', 'answer' => 'Once booking milestones are signed off by the client and funds are released from escrow, vendors can request a payout. Payouts are transferred directly to the vendor\'s registered bank account or mobile money number within 24 to 48 hours.'],
             ['category' => 'Bookings & Escrow', 'question' => 'Is my deposit refundable if the vendor cancels?', 'answer' => 'Yes. Since Ohati holds your deposit securely in escrow, if a vendor cancels the booking or fails to fulfill their contract, the escrowed deposit is fully refunded back to the client\'s original payment method.'],
@@ -1116,7 +1131,7 @@ try {
             ['category' => 'Vendor Accounts', 'question' => 'What is the automated chat response feature for vendors?', 'answer' => 'Vendors can write a custom automated reply in their Auto-Response settings. If a client messages them while they are away or offline, this automated greeting is sent instantly to keep the customer engaged.'],
             ['category' => 'Vendor Accounts', 'question' => 'How do vendors launch advertisement campaigns?', 'answer' => 'Vendors can boost their profile visibility by launching an Ad Campaign from their dashboard. Select a duration (1 to 365 days) and target location, pay securely via Paystack, and the ad banner will automatically appear in featured slots on the homepage.'],
             ['category' => 'Vendor Accounts', 'question' => 'How are vendor locations pinned on the map?', 'answer' => 'During vendor registration, the onboarding wizard uses GPS coordinates to pin the exact business location. Clients can then filter and find vendors within their specific region or radius.'],
-            ['category' => 'Vendor Accounts', 'question' => 'What are the platform fees for booking transactions?', 'answer' => 'Ohati charges a flat 10% commission on completed bookings to cover secure escrow maintenance, platform hosting, payment gateways, and dispute resolution. Vendors retain 90% of their booking value.'],
+            ['category' => 'Vendor Accounts', 'question' => 'What are the platform fees for booking transactions?', 'answer' => 'Ohati charges a flat 10% commission on completed bookings to cover secure payment verification, platform hosting, payment gateways, and dispute resolution. Vendors retain 90% of their booking value.'],
             ['category' => 'General', 'question' => 'What happens if a vendor is unresponsive?', 'answer' => 'Each vendor has a visible "average response time" badge. If a vendor fails to respond to a booking inquiry or chat message within 72 hours, the inquiry expires, and Ohati support can assist in finding an alternative vendor.'],
             ['category' => 'General', 'question' => 'How do I reset my account password?', 'answer' => 'If you cannot log in, click the "Forgot Password" link on the Sign In modal. Enter your email address or phone number to receive a temporary recovery link or OTP code to reset it securely.'],
             ['category' => 'Vendor Accounts', 'question' => 'Can I list team members on my vendor profile?', 'answer' => 'Yes! Verified vendors can go to their Edit Profile page and add team members, including their roles, names, and photos, to highlight their staff and build client trust.'],

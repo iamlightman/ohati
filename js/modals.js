@@ -477,6 +477,11 @@ function openSettingsModal() {
                 <span class="profile-menu-label">Notifications</span>
                 <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
             </div>
+            <div class="profile-menu-item" onclick="closeModal(); confirmDeleteAccount();" style="color:var(--danger, #EF4444);">
+                <div class="profile-menu-icon" style="background:rgba(239,68,68,0.1); color:var(--danger, #EF4444);"><i class="fa-solid fa-trash-can"></i></div>
+                <span class="profile-menu-label" style="color:var(--danger, #EF4444); font-weight:700;">Delete My Account</span>
+                <i class="fa-solid fa-chevron-right profile-menu-arrow" style="color:var(--danger, #EF4444);"></i>
+            </div>
         </div>
     `);
 }

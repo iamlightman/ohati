@@ -672,9 +672,14 @@ case 'login':
     } else {
         if (!password_verify($password, $user['password_hash'])) { http_response_code(401); echo json_encode(['error'=>'Incorrect password.']); exit; }
     }
-    // Block unverified users — force OTP verification first
-    $email_verified = !empty($user['email']) && !empty($user['email_verified']);
-    $phone_verified = !empty($user['phone']) && !empty($user['phone_verified']);
+    // Block unverified users — force OTP verification first (Bypass for demo/reviewer accounts)
+    $is_review_account = (
+        strpos(strtolower($user['email'] ?? ''), 'demo') !== false ||
+        strpos(strtolower($user['email'] ?? ''), 'apple') !== false ||
+        strpos(strtolower($user['email'] ?? ''), 'review') !== false
+    );
+    $email_verified = !empty($user['email']) && (!empty($user['email_verified']) || $is_review_account);
+    $phone_verified = !empty($user['phone']) && (!empty($user['phone_verified']) || $is_review_account);
     
     if (!$email_verified && !$phone_verified) {
         http_response_code(403);

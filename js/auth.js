@@ -1102,3 +1102,25 @@ function saveVendorStep6() {
         showPushNotification('Registration Error', e.message || 'Failed to submit application.');
     });
 }
+
+
+window.confirmDeleteAccount = function() {
+    if (!window.state || !window.state.user) {
+        if (typeof showPushNotification === 'function') showPushNotification('Notice', 'Please sign in to delete your account.');
+        else alert('Please sign in to delete your account.');
+        return;
+    }
+    if (confirm('Are you sure you want to permanently delete your Ohati account? This action is immediate and will anonymize your profile data in accordance with privacy regulations.')) {
+        if (typeof showPushNotification === 'function') showPushNotification('Processing', 'Deleting account...');
+        API.deleteAccount().then(res => {
+            if (typeof showPushNotification === 'function') showPushNotification('Account Deleted', 'Your account has been successfully deleted.');
+            else alert('Your account has been deleted.');
+            window.state.user = null;
+            localStorage.removeItem('ohati_auth_token');
+            location.reload();
+        }).catch(err => {
+            if (typeof showPushNotification === 'function') showPushNotification('Error', err.message || 'Could not delete account.');
+            else alert(err.message || 'Could not delete account.');
+        });
+    }
+};

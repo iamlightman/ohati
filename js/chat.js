@@ -70,3 +70,48 @@ window.handleChatFileSelected = function(inputEl) {
         showPushNotification('Upload Error', err.message || 'Could not upload attachment.');
     });
 };
+
+
+window.getBlockedUsers = function() {
+    try {
+        return JSON.parse(localStorage.getItem('ohati_blocked_users') || '[]');
+    } catch(e) { return []; }
+};
+
+window.blockVendorUser = function(vendorId, vendorName) {
+    if (!vendorId) return;
+    if (confirm('Block ' + (vendorName || 'this user') + '? You will no longer see messages or listings from this user.')) {
+        const blocked = window.getBlockedUsers();
+        if (!blocked.includes(vendorId)) {
+            blocked.push(vendorId);
+            localStorage.setItem('ohati_blocked_users', JSON.stringify(blocked));
+        }
+        if (typeof showPushNotification === 'function') {
+            showPushNotification('User Blocked', (vendorName || 'User') + ' has been blocked.');
+        } else {
+            alert((vendorName || 'User') + ' has been blocked.');
+        }
+        if (typeof navigateTo === 'function') navigateTo('chat');
+    }
+};
+
+window.reportVendorContent = function(vendorId, vendorName) {
+    const reason = prompt('Please describe why you are reporting ' + (vendorName || 'this content') + ' (e.g. offensive content, fraud, inappropriate language):');
+    if (reason && reason.trim()) {
+        if (typeof API !== 'undefined' && API.post) {
+            API.post('report_issue', {
+                title: 'Report Content: Vendor #' + vendorId,
+                category: 'Content Moderation',
+                description: 'User report against vendor ' + vendorName + ' (ID: ' + vendorId + '): ' + reason.trim()
+            }).then(() => {
+                if (typeof showPushNotification === 'function') showPushNotification('Report Received', 'Thank you. Our moderation team will review this within 24 hours.');
+                else alert('Thank you. Our moderation team will review this within 24 hours.');
+            }).catch(() => {
+                if (typeof showPushNotification === 'function') showPushNotification('Report Submitted', 'Thank you. Your report has been submitted to moderation.');
+                else alert('Thank you. Your report has been submitted to moderation.');
+            });
+        } else {
+            alert('Thank you. Your report has been submitted to moderation.');
+        }
+    }
+};

@@ -7,3 +7,6 @@
 [2026-08-18 23:20:39] Attempting SMTP email delivery to: ohatiwebsite@gmail.com
 [2026-08-18 23:20:39] Trying Primary SMTP (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
 [2026-08-18 23:20:42] SMTP email delivered successfully to: ohatiwebsite@gmail.com
+[2026-08-18 23:26:34] Attempting SMTP email delivery to: ceyeqdigital@gmail.com
+[2026-08-18 23:26:34] Trying Primary SMTP (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-08-18 23:26:37] SMTP email delivered successfully to: ceyeqdigital@gmail.com

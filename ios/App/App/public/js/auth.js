@@ -1436,10 +1436,10 @@ window.unlockMandatoryAuthScreen = function() {
 
 window.handleMandatoryLoginSubmit = function(e) {
     if (e) e.preventDefault();
+    const btn = document.getElementById('m-lock-btn');
     const idInput = document.getElementById('m-lock-id');
     const passInput = document.getElementById('m-lock-pass');
     const errBox = document.getElementById('m-lock-error');
-    const btn = document.getElementById('m-lock-btn');
 
     if (errBox) errBox.style.display = 'none';
 
@@ -1451,7 +1451,25 @@ window.handleMandatoryLoginSubmit = function(e) {
         return;
     }
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...'; }
+    if (btn) { 
+        btn.disabled = true; 
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.65';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Signing in...'; 
+    }
+    if (idInput) idInput.disabled = true;
+    if (passInput) passInput.disabled = true;
+
+    function unlockLogin() {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Sign In';
+        }
+        if (idInput) idInput.disabled = false;
+        if (passInput) passInput.disabled = false;
+    }
 
     API.login(identifier, password).then(res => {
         if (res.user) {
@@ -1462,10 +1480,11 @@ window.handleMandatoryLoginSubmit = function(e) {
             if (typeof updateAppHeader === 'function') updateAppHeader();
             if (typeof navigateTo === 'function') navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
         } else {
+            unlockLogin();
             throw new Error(res.error || 'Login failed.');
         }
     }).catch(err => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+        unlockLogin();
         if (err && (err.requires_verification || (err.message && err.message.toLowerCase().includes('verification code')))) {
             const targetVal = err.target || err.email || err.phone || identifier;
             window._mandatorySignupDraft = { target: targetVal, email: targetVal, phone: targetVal };
@@ -1522,9 +1541,26 @@ window.handleMandatorySignupSubmit = function(e) {
         return;
     }
 
-    window._mandatorySignupDraft = { name, fname, lname, email, phone, password, role };
+    const fields = [nameInput, emailInput, phoneInput, passInput, confirmInput, roleSelect];
+    if (btn) {
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.65';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending Code...';
+    }
+    fields.forEach(f => { if (f) f.disabled = true; });
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending OTP...'; }
+    function unlockSignup() {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Send Verification Code';
+        }
+        fields.forEach(f => { if (f) f.disabled = false; });
+    }
+
+    window._mandatorySignupDraft = { name, fname, lname, email, phone, password, role };
 
     API.post('send_otp', {
         target: email || phone,
@@ -1533,7 +1569,7 @@ window.handleMandatorySignupSubmit = function(e) {
     }).then(res => {
         window.renderMandatoryAuthContent('otp');
     }).catch(err => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Send Verification Code'; }
+        unlockSignup();
         if (errBox) { errBox.textContent = err.message || 'Failed to send OTP code. Please try again.'; errBox.style.display = 'block'; }
     });
 };
@@ -1552,9 +1588,25 @@ window.handleMandatoryOTPVerifySubmit = function(e) {
         return;
     }
 
-    const draft = window._mandatorySignupDraft || {};
+    if (btn) {
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.65';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Verifying...';
+    }
+    if (otpInput) otpInput.disabled = true;
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...'; }
+    function unlockOTP() {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Verify & Complete Registration';
+        }
+        if (otpInput) otpInput.disabled = false;
+    }
+
+    const draft = window._mandatorySignupDraft || {};
 
     API.post('verify_otp', {
         target: draft.email || draft.phone,
@@ -1570,10 +1622,11 @@ window.handleMandatoryOTPVerifySubmit = function(e) {
             if (typeof updateAppHeader === 'function') updateAppHeader();
             if (typeof navigateTo === 'function') navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
         } else {
+            unlockOTP();
             throw new Error(res.error || 'Registration failed.');
         }
     }).catch(err => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Verify & Complete Registration'; }
+        unlockOTP();
         if (errBox) { errBox.textContent = err.message || 'Invalid or expired OTP code.'; errBox.style.display = 'block'; }
     });
 };

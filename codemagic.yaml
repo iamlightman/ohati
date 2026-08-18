@@ -141,10 +141,20 @@ workflows:
           sed -i '' 's/targetSdkVersion = 34/targetSdkVersion = 36/g' android/variables.gradle 2>/dev/null || sed -i 's/targetSdkVersion = 34/targetSdkVersion = 36/g' android/variables.gradle 2>/dev/null || true
           sed -i '' 's/compileSdkVersion = 34/compileSdkVersion = 36/g' android/variables.gradle 2>/dev/null || sed -i 's/compileSdkVersion = 34/compileSdkVersion = 36/g' android/variables.gradle 2>/dev/null || true
           npx @capacitor/cli sync android
-      - name: Build Android AAB Bundle & APK Release
+      - name: Generate Release Keystore & Build Signed Android AAB Bundle
         script: |
           cd android
           chmod +x gradlew
+          if [ ! -f "app/ohati-release-key.jks" ]; then
+            echo "Generating production release keystore for Google Play..."
+            keytool -genkeypair -v \
+              -keystore app/ohati-release-key.jks \
+              -alias ohati-key-alias \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass OhatiRelease2026@Key \
+              -keypass OhatiRelease2026@Key \
+              -dname "CN=Ohati Event Marketplace, OU=Mobile, O=Ohati Inc, L=Accra, S=Greater Accra, C=GH"
+          fi
           ./gradlew bundleRelease assembleRelease
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab

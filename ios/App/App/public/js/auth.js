@@ -1274,15 +1274,11 @@ window.showAccountDeletedSuccessModal = function() {
                 <div style="width:72px; height:72px; border-radius:50%; background:rgba(239,68,68,0.15); border:2px solid #EF4444; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; color:#EF4444; font-size:2rem;">
                     <i class="fa-solid fa-user-slash"></i>
                 </div>
-                <h3 style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:800; margin-bottom:8px; color:#fff;">Account Deactivated & Deleted</h3>
-                <p style="font-size:0.83rem; color:#94A3B8; line-height:1.5; margin-bottom:18px;">
-                    Your account has been deleted and removed from public view.
+                <h3 style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:800; margin-bottom:8px; color:#fff;">Account Deleted</h3>
+                <p style="font-size:0.88rem; color:#94A3B8; line-height:1.5; margin-bottom:22px;">
+                    Your account and associated profile data have been deleted.
                 </p>
-                <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:12px 16px; margin-bottom:22px; text-align:left; font-size:0.75rem; color:#CBD5E1;">
-                    <i class="fa-solid fa-shield-halved" style="color:#F2A735; margin-right:6px;"></i>
-                    <strong>Admin Record Archival:</strong> All details and transaction history remain archived in the secure Admin database per compliance regulations.
-                </div>
-                <button class="btn btn-primary btn-full" onclick="closeAccountDeletedProModal()" style="background:linear-gradient(135deg,#EF4444,#DC2626); color:#fff; font-weight:700; border-radius:14px; padding:14px;">Got It, Return Home</button>
+                <button class="btn btn-primary btn-full" onclick="closeAccountDeletedProModal()" style="background:linear-gradient(135deg,#EF4444,#DC2626); color:#fff; font-weight:700; border-radius:14px; padding:14px;">Return Home</button>
             </div>
         `;
         document.body.appendChild(modal);

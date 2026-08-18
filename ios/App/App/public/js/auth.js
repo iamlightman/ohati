@@ -1364,7 +1364,7 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                     <form onsubmit="handleMandatorySignupSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Account Role</label>
-                            <select id="m-lock-role" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
+                            <select id="m-lock-role" onchange="toggleVendorAuthFields(this.value)" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
                                 <option value="customer" style="background:#0F1923; color:#FFF;">Customer (Planning Events)</option>
                                 <option value="vendor" style="background:#0F1923; color:#FFF;">Vendor (Offering Event Services)</option>
                             </select>
@@ -1381,6 +1381,38 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Phone Number</label>
                             <input type="tel" id="m-lock-phone" required placeholder="+233 24 123 4567" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
+
+                        <!-- Vendor Specific Registration Fields -->
+                        <div id="m-lock-vendor-fields" style="display:none; flex-direction:column; gap:12px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:12px; margin-top:4px;">
+                            <div style="font-size:0.8rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:0.5px; text-align:left;">Vendor Profile Details</div>
+                            <div>
+                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Business / Brand Name *</label>
+                                <input type="text" id="m-lock-bname" placeholder="e.g. Royal Crown Event Services" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Primary Service Category *</label>
+                                <select id="m-lock-category" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
+                                    <option value="Photography & Videography" style="background:#0F1923; color:#FFF;">Photography & Videography</option>
+                                    <option value="Catering & Drinks" style="background:#0F1923; color:#FFF;">Catering & Drinks</option>
+                                    <option value="DJ & Sound System" style="background:#0F1923; color:#FFF;">DJ & Sound System</option>
+                                    <option value="Event Planning & Decor" style="background:#0F1923; color:#FFF;">Event Planning & Decor</option>
+                                    <option value="Makeup & Hair Styling" style="background:#0F1923; color:#FFF;">Makeup & Hair Styling</option>
+                                    <option value="Venues & Halls" style="background:#0F1923; color:#FFF;">Venues & Halls</option>
+                                    <option value="Ushering & Security" style="background:#0F1923; color:#FFF;">Ushering & Security</option>
+                                    <option value="MC & Entertainment" style="background:#0F1923; color:#FFF;">MC & Entertainment</option>
+                                    <option value="Other Event Services" style="background:#0F1923; color:#FFF;">Other Event Services</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">City / Business Location *</label>
+                                <input type="text" id="m-lock-location" placeholder="e.g. Accra, Ghana" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Short Service Description</label>
+                                <textarea id="m-lock-desc" rows="2" placeholder="Brief description of services offered..." style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.85rem; outline:none; box-sizing:border-box; resize:none;"></textarea>
+                            </div>
+                        </div>
+
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password</label>
                             <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
@@ -1508,6 +1540,13 @@ window.handleMandatoryLoginSubmit = function(e) {
     });
 };
 
+window.toggleVendorAuthFields = function(role) {
+    const vFields = document.getElementById('m-lock-vendor-fields');
+    if (vFields) {
+        vFields.style.display = (role === 'vendor') ? 'flex' : 'none';
+    }
+};
+
 window.handleMandatorySignupSubmit = function(e) {
     if (e) e.preventDefault();
     const nameInput = document.getElementById('m-lock-name');
@@ -1516,6 +1555,10 @@ window.handleMandatorySignupSubmit = function(e) {
     const passInput = document.getElementById('m-lock-pass');
     const confirmInput = document.getElementById('m-lock-confirm');
     const roleSelect = document.getElementById('m-lock-role');
+    const bnameInput = document.getElementById('m-lock-bname');
+    const catSelect = document.getElementById('m-lock-category');
+    const locInput = document.getElementById('m-lock-location');
+    const descInput = document.getElementById('m-lock-desc');
     const errBox = document.getElementById('m-lock-error');
     const btn = document.getElementById('m-lock-btn');
 
@@ -1528,6 +1571,11 @@ window.handleMandatorySignupSubmit = function(e) {
     const confirm = confirmInput ? confirmInput.value : '';
     const role = roleSelect ? roleSelect.value : 'customer';
 
+    const business_name = bnameInput ? bnameInput.value.trim() : '';
+    const category = catSelect ? catSelect.value : '';
+    const location = locInput ? locInput.value.trim() : '';
+    const description = descInput ? descInput.value.trim() : '';
+
     const parts = name.split(' ');
     const fname = parts[0] || '';
     const lname = parts.slice(1).join(' ') || '';
@@ -1535,6 +1583,13 @@ window.handleMandatorySignupSubmit = function(e) {
     if (!name || !email || !phone || !password || !confirm) {
         if (errBox) { errBox.textContent = 'Please fill out all required fields.'; errBox.style.display = 'block'; }
         return;
+    }
+
+    if (role === 'vendor') {
+        if (!business_name || !location) {
+            if (errBox) { errBox.textContent = 'Please enter your business name and location.'; errBox.style.display = 'block'; }
+            return;
+        }
     }
 
     if (password.length < 6) {
@@ -1547,7 +1602,7 @@ window.handleMandatorySignupSubmit = function(e) {
         return;
     }
 
-    const fields = [nameInput, emailInput, phoneInput, passInput, confirmInput, roleSelect];
+    const fields = [nameInput, emailInput, phoneInput, passInput, confirmInput, roleSelect, bnameInput, catSelect, locInput, descInput];
     if (btn) {
         btn.disabled = true;
         btn.style.pointerEvents = 'none';
@@ -1566,7 +1621,10 @@ window.handleMandatorySignupSubmit = function(e) {
         fields.forEach(f => { if (f) f.disabled = false; });
     }
 
-    window._mandatorySignupDraft = { name, fname, lname, email, phone, password, confirm, confirm_password: confirm, role };
+    window._mandatorySignupDraft = { 
+        name, fname, lname, email, phone, password, confirm, confirm_password: confirm, role,
+        business_name, bname: business_name, category, location, city: location, description
+    };
 
     API.post('send_otp', {
         target: email || phone,

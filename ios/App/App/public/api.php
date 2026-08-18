@@ -610,6 +610,18 @@ case 'register':
             } catch (Exception $e) {}
         }
 
+        if ($role === 'vendor') {
+            $bname = clean($input['business_name'] ?? $input['bname'] ?? $name);
+            $category = clean($input['category'] ?? 'General Services');
+            $desc = clean($input['description'] ?? '');
+            $loc = clean($input['location'] ?? $input['city'] ?? 'Accra, Ghana');
+            
+            try {
+                $v_ins = $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'grey', 1)");
+                $v_ins->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
+            } catch (Exception $eVend) {}
+        }
+
         $pdo->commit();
     } catch (Exception $eReg) {
         if ($pdo->inTransaction()) $pdo->rollBack();

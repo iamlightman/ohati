@@ -879,7 +879,7 @@ function renderVendorList(vendorsList) {
 // Vendor Details Component
 async function viewVendorDetails(vendorId) {
     try {
-        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=vendor_details&id=${vendorId}`);
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=vendor_details&id=' + vendorId);
         const vendor = await res.json();
         
         state.selectedVendorId = vendorId;
@@ -2549,7 +2549,7 @@ async function renderChatScreen() {
     }
     
     // Fetch vendor details
-    const vRes = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=vendor_details&id=${vendorId}`);
+    const vRes = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=vendor_details&id=' + vendorId);
     const v = await vRes.json();
     
     el.innerHTML = `
@@ -2660,7 +2660,7 @@ async function renderChatScreen() {
 
 async function loadChatHistory(vendorId) {
     try {
-        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_history&vendor_id=${vendorId}`);
+        const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_history&vendor_id=' + vendorId);
         const history = await res.json();
         
         const area = document.getElementById('chat-msg-area');

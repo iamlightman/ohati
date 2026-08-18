@@ -1317,9 +1317,40 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
         document.body.appendChild(overlay);
     }
 
+    if (!window._mandatorySignupDraft) window._mandatorySignupDraft = {};
+
     window.renderMandatoryAuthContent = function(currentMode) {
         const mode = currentMode || 'login';
-        if (mode === 'signup') {
+
+        if (mode === 'otp') {
+            const email = window._mandatorySignupDraft.email || '';
+            const phone = window._mandatorySignupDraft.phone || '';
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Verify Your Account</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">A 6-digit verification code was sent to <strong>${phone || email}</strong> via SMS & Email.</p>
+
+                    <form onsubmit="handleMandatoryOTPVerifySubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">6-Digit OTP Code</label>
+                            <input type="text" id="m-lock-otp" maxlength="6" required placeholder="123456" style="width:100%; padding:14px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:1.4rem; letter-spacing:6px; text-align:center; font-weight:800; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem;">Verify & Complete Registration</button>
+                    </form>
+
+                    <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
+                        Didn't receive the code? <a href="#" onclick="handleResendSignupOTP(event); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Resend OTP</a>
+                    </div>
+                    <div style="margin-top:10px; font-size:0.85rem; color:#94A3B8;">
+                        <a href="#" onclick="renderMandatoryAuthContent('signup'); return false;" style="color:#CBD5E1; text-decoration:underline;">Back to Sign Up</a>
+                    </div>
+                </div>
+            `;
+        } else if (mode === 'signup') {
             overlay.innerHTML = `
                 <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
                     <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
@@ -1352,8 +1383,12 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password</label>
                             <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password</label>
+                            <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
-                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Create Account</button>
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Verification Code</button>
                     </form>
 
                     <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
@@ -1441,6 +1476,7 @@ window.handleMandatorySignupSubmit = function(e) {
     const emailInput = document.getElementById('m-lock-email');
     const phoneInput = document.getElementById('m-lock-phone');
     const passInput = document.getElementById('m-lock-pass');
+    const confirmInput = document.getElementById('m-lock-confirm');
     const roleSelect = document.getElementById('m-lock-role');
     const errBox = document.getElementById('m-lock-error');
     const btn = document.getElementById('m-lock-btn');
@@ -1451,21 +1487,67 @@ window.handleMandatorySignupSubmit = function(e) {
     const email = emailInput ? emailInput.value.trim() : '';
     const phone = phoneInput ? phoneInput.value.trim() : '';
     const password = passInput ? passInput.value : '';
+    const confirm = confirmInput ? confirmInput.value : '';
     const role = roleSelect ? roleSelect.value : 'customer';
 
     const parts = name.split(' ');
     const fname = parts[0] || '';
     const lname = parts.slice(1).join(' ') || '';
 
-    if (!fname || !email || !phone || !password) {
+    if (!name || !email || !phone || !password || !confirm) {
         if (errBox) { errBox.textContent = 'Please fill out all required fields.'; errBox.style.display = 'block'; }
         return;
     }
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account...'; }
+    if (password.length < 6) {
+        if (errBox) { errBox.textContent = 'Password must be at least 6 characters long.'; errBox.style.display = 'block'; }
+        return;
+    }
 
-    API.post('register', {
-        fname, lname, email, phone, password, role
+    if (password !== confirm) {
+        if (errBox) { errBox.textContent = 'Passwords do not match. Please re-enter your password.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    window._mandatorySignupDraft = { name, fname, lname, email, phone, password, role };
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending OTP...'; }
+
+    API.post('send_otp', {
+        target: email || phone,
+        email: email,
+        phone: phone
+    }).then(res => {
+        window.renderMandatoryAuthContent('otp');
+    }).catch(err => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Send Verification Code'; }
+        if (errBox) { errBox.textContent = err.message || 'Failed to send OTP code. Please try again.'; errBox.style.display = 'block'; }
+    });
+};
+
+window.handleMandatoryOTPVerifySubmit = function(e) {
+    if (e) e.preventDefault();
+    const otpInput = document.getElementById('m-lock-otp');
+    const errBox = document.getElementById('m-lock-error');
+    const btn = document.getElementById('m-lock-btn');
+
+    if (errBox) errBox.style.display = 'none';
+
+    const otp = otpInput ? otpInput.value.trim() : '';
+    if (!otp || otp.length < 6) {
+        if (errBox) { errBox.textContent = 'Please enter the 6-digit OTP code received.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    const draft = window._mandatorySignupDraft || {};
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...'; }
+
+    API.post('verify_otp', {
+        target: draft.email || draft.phone,
+        code: otp
+    }).then(() => {
+        return API.post('register', draft);
     }).then(res => {
         if (res.user) {
             state.user = res.user;
@@ -1478,7 +1560,25 @@ window.handleMandatorySignupSubmit = function(e) {
             throw new Error(res.error || 'Registration failed.');
         }
     }).catch(err => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
-        if (errBox) { errBox.textContent = err.message || 'Registration failed. Email or phone may already exist.'; errBox.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Verify & Complete Registration'; }
+        if (errBox) { errBox.textContent = err.message || 'Invalid or expired OTP code.'; errBox.style.display = 'block'; }
+    });
+};
+
+window.handleResendSignupOTP = function(e) {
+    if (e) e.preventDefault();
+    const errBox = document.getElementById('m-lock-error');
+    const draft = window._mandatorySignupDraft || {};
+
+    if (errBox) { errBox.textContent = 'Resending code via SMS & Email...'; errBox.style.color = '#F2A735'; errBox.style.display = 'block'; }
+
+    API.post('send_otp', {
+        target: draft.email || draft.phone,
+        email: draft.email,
+        phone: draft.phone
+    }).then(() => {
+        if (errBox) { errBox.textContent = 'New 6-digit verification code sent!'; errBox.style.color = '#34D399'; errBox.style.display = 'block'; }
+    }).catch(err => {
+        if (errBox) { errBox.textContent = err.message || 'Resend failed. Please wait a minute before trying again.'; errBox.style.color = '#FCA5A5'; errBox.style.display = 'block'; }
     });
 };

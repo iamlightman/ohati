@@ -510,7 +510,7 @@ case 'register':
     check_idempotency_lock('register', 3);
     if (!rate_limit('register', 5, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many registration attempts. Please wait 5 minutes before trying again.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
-    $name = clean($input['name'] ?? '');
+    $name = clean($input['name'] ?? trim(($input['fname'] ?? '') . ' ' . ($input['lname'] ?? '')));
     $raw_email = strtolower(trim($input['email'] ?? ''));
     $email = !empty($raw_email) ? filter_var($raw_email, FILTER_VALIDATE_EMAIL) : '';
     $phone = clean($input['phone'] ?? '');
@@ -528,8 +528,8 @@ case 'register':
     if (empty($email) && empty($phone)) {
         http_response_code(400); echo json_encode(['error'=>'Either a valid email address or phone number is required.']); exit;
     }
-    if (strlen($password) < 8) {
-        http_response_code(400); echo json_encode(['error'=>'Password must be at least 8 characters long.']); exit;
+    if (strlen($password) < 6) {
+        http_response_code(400); echo json_encode(['error'=>'Password must be at least 6 characters long.']); exit;
     }
 
     try {

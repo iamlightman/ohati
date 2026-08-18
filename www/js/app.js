@@ -28,8 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Safety fallback: Dismiss loading screen after 1.2s maximum to ensure instant app launch
+    const splashTimer = setTimeout(() => {
+        dismissLoading();
+    }, 1200);
+
     API.getSession()
         .then(res => {
+            clearTimeout(splashTimer);
             state.user = res.user;
             state.lockedFields = res.locked_profile_fields || ["name", "email", "phone", "dob"];
             if (res.platform_reviews) state.platformReviews = res.platform_reviews;

@@ -72,3 +72,31 @@ if (typeof window !== 'undefined') {
         }
     });
 }
+
+
+/* ===== GALLERY PAGINATION & DASHBOARD STATS FILTER HANDLERS ===== */
+window.changePublicGalleryPage = function(delta) {
+    if (!state._publicGalleryPage) state._publicGalleryPage = 1;
+    state._publicGalleryPage += delta;
+    if (state._publicGalleryPage < 1) state._publicGalleryPage = 1;
+    if (typeof renderVendorDetailsScreen === 'function' && state.selectedVendorId) {
+        renderVendorDetailsScreen(state.selectedVendorId);
+    }
+};
+
+window.filterVendorStats = function(range, btnEl) {
+    if (btnEl) {
+        const parent = btnEl.parentElement;
+        if (parent) {
+            parent.querySelectorAll('.date-filter-btn').forEach(b => {
+                b.classList.remove('btn-primary', 'active');
+                b.classList.add('btn-outline');
+            });
+            btnEl.classList.remove('btn-outline');
+            btnEl.classList.add('btn-primary', 'active');
+        }
+    }
+    if (typeof renderVendorDashboardScreen === 'function') {
+        renderVendorDashboardScreen();
+    }
+};

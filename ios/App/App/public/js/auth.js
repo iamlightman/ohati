@@ -579,13 +579,33 @@ function submitReset(event) {
 
 // Log Out
 function handleLogout() {
-    API.logout().then(() => {
-        state.user = null;
-        showPushNotification('Signed Out', 'Goodbye!');
-        updateAppHeader();
-        navigateTo('home');
-    });
+    console.log("Signing out user...");
+    state.user = null;
+    state.currentUser = null;
+    localStorage.removeItem('ohati_user');
+    localStorage.removeItem('wedmi_user');
+    sessionStorage.clear();
+
+    const doLocalCleanup = () => {
+        if (typeof updateAppHeader === 'function') updateAppHeader();
+        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+        if (typeof renderSidebar === 'function') renderSidebar();
+        showPushNotification('Signed Out', 'You have successfully signed out.');
+        if (typeof navigateTo === 'function') navigateTo('home');
+    };
+
+    if (window.API && typeof API.logout === 'function') {
+        API.logout().then(() => {
+            doLocalCleanup();
+        }).catch(() => {
+            doLocalCleanup();
+        });
+    } else {
+        doLocalCleanup();
+    }
 }
+window.logoutUser = handleLogout;
+window.handleLogout = handleLogout;
 
 // ── Vendor Onboarding Flow (Step by Step) ──────────────────────────────────
 function renderVendorOnboardingStep() {

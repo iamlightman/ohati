@@ -3082,12 +3082,7 @@ function updateUserSessionUI() {
     }
 }
 
-function logoutUser() {
-    state.currentUser = null;
-    localStorage.removeItem('wedmi_user');
-    updateUserSessionUI();
-    showPushNotification("Signed Out", "You have successfully logged out of your session.");
-}
+function logoutUser() { if (typeof handleLogout === 'function') handleLogout(); }
 
 function openProfileModal() {
     const el = document.getElementById('booking-modal');

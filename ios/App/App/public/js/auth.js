@@ -1322,8 +1322,8 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
         if (mode === 'signup') {
             overlay.innerHTML = `
                 <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
-                    <div style="width:72px; height:72px; border-radius:50%; background:rgba(242,167,53,0.15); border:2px solid var(--accent, #F2A735); margin:0 auto 16px; display:flex; align-items:center; justify-content:center;">
-                        <img src="img/logo white transparent.png" style="max-width:44px; max-height:44px; object-fit:contain;" alt="Ohati">
+                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
                     </div>
                     <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Create Your Account</h2>
                     <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">Join Ohati to discover and book verified event services</p>
@@ -1364,8 +1364,8 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
         } else {
             overlay.innerHTML = `
                 <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
-                    <div style="width:72px; height:72px; border-radius:50%; background:rgba(242,167,53,0.15); border:2px solid var(--accent, #F2A735); margin:0 auto 16px; display:flex; align-items:center; justify-content:center;">
-                        <img src="img/logo white transparent.png" style="max-width:44px; max-height:44px; object-fit:contain;" alt="Ohati">
+                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
                     </div>
                     <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Sign In to Ohati</h2>
                     <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Please log in to access event vendors and services</p>

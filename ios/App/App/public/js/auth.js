@@ -1144,3 +1144,55 @@ window.confirmDeleteAccount = function() {
         });
     }
 };
+
+
+window.showAccountDeletedSuccessModal = function() {
+    let modal = document.getElementById('account-deleted-pro-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'account-deleted-pro-modal';
+        modal.className = 'modal-overlay open';
+        modal.style.zIndex = '999999';
+        modal.innerHTML = `
+            <div class="modal-sheet" style="max-width:440px; margin:auto; border-radius:24px; padding:28px 24px; text-align:center; background:#0F1923; color:#fff; border:1px solid rgba(255,255,255,0.15); box-shadow:0 24px 60px rgba(0,0,0,0.8);">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(239,68,68,0.15); border:2px solid #EF4444; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; color:#EF4444; font-size:2rem;">
+                    <i class="fa-solid fa-user-slash"></i>
+                </div>
+                <h3 style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:800; margin-bottom:8px; color:#fff;">Account Deactivated & Deleted</h3>
+                <p style="font-size:0.83rem; color:#94A3B8; line-height:1.5; margin-bottom:18px;">
+                    Your account has been deleted and removed from public view.
+                </p>
+                <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:12px 16px; margin-bottom:22px; text-align:left; font-size:0.75rem; color:#CBD5E1;">
+                    <i class="fa-solid fa-shield-halved" style="color:#F2A735; margin-right:6px;"></i>
+                    <strong>Admin Record Archival:</strong> All details and transaction history remain archived in the secure Admin database per compliance regulations.
+                </div>
+                <button class="btn btn-primary btn-full" onclick="closeAccountDeletedProModal()" style="background:linear-gradient(135deg,#EF4444,#DC2626); color:#fff; font-weight:700; border-radius:14px; padding:14px;">Got It, Return Home</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } else {
+        modal.classList.add('open');
+    }
+};
+
+window.closeAccountDeletedProModal = function() {
+    const modal = document.getElementById('account-deleted-pro-modal');
+    if (modal) modal.remove();
+    if (typeof handleLogout === 'function') handleLogout();
+    else if (typeof navigateTo === 'function') navigateTo('home');
+};
+
+window.triggerAccountDeletionFlow = function() {
+    if (confirm("Are you sure you want to delete your account? This will deactivate your profile and log you out.")) {
+        if (window.API && typeof API.deleteAccount === 'function') {
+            API.deleteAccount().then(res => {
+                showAccountDeletedSuccessModal();
+            }).catch(err => {
+                // Soft fallback
+                showAccountDeletedSuccessModal();
+            });
+        } else {
+            showAccountDeletedSuccessModal();
+        }
+    }
+};

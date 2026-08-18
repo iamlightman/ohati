@@ -135,6 +135,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <i class="fa-solid fa-briefcase"></i> Vendors
         </a>
         <a href="users.php" class="admin-nav-item <?= $current_page === 'users.php' ? 'active' : '' ?>">
+        <a href="deleted_accounts.php" class="admin-nav-item <?= $current_page === 'deleted_accounts.php' ? 'active' : '' ?>">
+            <i class="fa-solid fa-user-slash"></i> Deleted Accounts
+        </a>
+
             <i class="fa-solid fa-users"></i> Users
         </a>
         <a href="bookings.php" class="admin-nav-item <?= $current_page === 'bookings.php' ? 'active' : '' ?>">

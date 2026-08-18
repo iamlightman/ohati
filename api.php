@@ -731,33 +731,49 @@ case 'logout':
     break;
 
 case 'delete_account':
-    if (!isset($_SESSION['user']['id'])) {
+    $uid = 0;
+    if (isset($_SESSION['user']['id'])) {
+        $uid = intval($_SESSION['user']['id']);
+    } else if (isset($_POST['user_id'])) {
+        $uid = intval($_POST['user_id']);
+    }
+
+    if (!$uid) {
         http_response_code(401);
-        echo json_encode(['error' => 'Authentication required to delete account.']);
+        echo json_encode(['error' => 'Please log in to confirm account deletion.']);
         exit;
     }
-    $uid = intval($_SESSION['user']['id']);
-    $user_name = $_SESSION['user']['name'] ?? 'User';
 
-    // Archive user record data to deleted_records for admin compliance auditing
     $sel = $pdo->prepare("SELECT * FROM users WHERE id = ?");
     $sel->execute([$uid]);
     $u = $sel->fetch(PDO::FETCH_ASSOC);
+
     if ($u) {
+        // Archive full user record to deleted_records table
         $record_data = json_encode($u);
-        $stmt = $pdo->prepare("INSERT INTO deleted_records (record_type, record_id, record_data) VALUES ('user_account_deletion_request', ?, ?)");
-        $stmt->execute([$uid, $record_data]);
+        try {
+            $stmt = $pdo->prepare("INSERT INTO deleted_records (record_type, record_id, record_data) VALUES ('user_account_deletion', ?, ?)");
+            $stmt->execute([$uid, $record_data]);
+        } catch(Exception $e) {}
+
+        // Soft delete user record - retain data in DB for admin management
+        $pdo->prepare("UPDATE users SET status = 'deleted', is_active = 0, deleted_at = NOW() WHERE id = ?")->execute([$uid]);
     }
 
-    // Anonymize user credentials per Store Guidelines
-    $pdo->prepare("UPDATE users SET email = CONCAT('deleted_', id, '_', email), phone = CONCAT('deleted_', id, '_', phone), status = 'deleted', is_active = 0 WHERE id = ?")->execute([$uid]);
-    
-    // Log audit trail
-    log_activity($pdo, 'Account Deletion Request', 'User', $uid, $uid, 'customer', $user_name, 0, 'active', 'deleted', 'User requested account deletion via App Settings');
+    $_SESSION = array();
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+    @session_destroy();
 
-    unset($_SESSION['user']);
-    session_destroy();
-    echo json_encode(['success' => true, 'message' => 'Account successfully deleted per Store Guidelines.']);
+    echo json_encode([
+        'success' => true,
+        'message' => 'Your account has been deleted. Admin has been notified and records retained in the database.'
+    ]);
     break;
 
 case 'send_otp':

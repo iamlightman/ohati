@@ -22,13 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 1. Initial State Sync & Data Loading
-    const dismissLoading = () => {
+        const dismissLoading = () => {
         const loadingScreen = document.getElementById('screen-loading');
         if (loadingScreen) {
             loadingScreen.classList.add('hide');
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-            }, 500);
+            loadingScreen.style.display = 'none';
+            try { loadingScreen.remove(); } catch(e) {}
+        }
+        if (typeof navigateTo === 'function') {
+            try {
+                const activeScreen = document.querySelector('.screen.active');
+                if (!activeScreen) navigateTo('home');
+            } catch(e) {}
         }
     };
 

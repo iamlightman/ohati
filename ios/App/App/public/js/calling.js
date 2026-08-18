@@ -1,347 +1,91 @@
-// js/calling.js — Production Real-Time 2-Way Audio Calling System
+// js/calling.js — Production Direct Phone App Call System
 (function() {
     'use strict';
 
-    let localAudioStream = null;
-    let peerConnection = null;
-    let callTimerInterval = null;
-    let statusPollingInterval = null;
-    let incomingPollingInterval = null;
-    let ringtoneAudioCtx = null;
-    let ringtoneOscillator = null;
-    let callSeconds = 0;
-    let activeCallId = null;
-    let activeCallRole = null; // 'caller' | 'receiver'
-    let isMuted = false;
-
     window.OhatiCalling = {
-        startCall: function(targetId, type = 'voice') {
-            window.initiateVoiceCall(targetId);
+        startCall: function(targetId, type = 'voice', nameHint = '', phoneHint = '') {
+            window.initiateVoiceCall(targetId, nameHint, phoneHint);
         },
         endCall: function() {
-            window.endVoiceCall();
+            const el = document.getElementById('phone-dialer-action-modal');
+            if (el) el.remove();
         }
     };
 
-    // ── 1. RINGING AUDIO GENERATOR (Synthetic Web Audio Ringtone) ────────
-    function startRingtone() {
-        try {
-            stopRingtone();
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return;
-            ringtoneAudioCtx = new AudioCtx();
-            
-            function playBeep() {
-                if (!ringtoneAudioCtx || ringtoneAudioCtx.state === 'closed') return;
-                const osc = ringtoneAudioCtx.createOscillator();
-                const gain = ringtoneAudioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, ringtoneAudioCtx.currentTime); // A4 tone
-                gain.gain.setValueAtTime(0.15, ringtoneAudioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ringtoneAudioCtx.currentTime + 1.2);
-                osc.connect(gain);
-                gain.connect(ringtoneAudioCtx.destination);
-                osc.start();
-                osc.stop(ringtoneAudioCtx.currentTime + 1.2);
-            }
+    window.showPhoneDialerModal = function(name, phone) {
+        const existing = document.getElementById('phone-dialer-action-modal');
+        if (existing) existing.remove();
 
-            playBeep();
-            ringtoneOscillator = setInterval(playBeep, 2400);
-        } catch(e) {}
-    }
+        const cleanPhone = (phone || '').toString().replace(/[^0-9+]/g, '');
 
-    function stopRingtone() {
-        if (ringtoneOscillator) {
-            clearInterval(ringtoneOscillator);
-            ringtoneOscillator = null;
-        }
-        if (ringtoneAudioCtx) {
-            try { ringtoneAudioCtx.close(); } catch(e) {}
-            ringtoneAudioCtx = null;
-        }
-    }
+        const modal = document.createElement('div');
+        modal.id = 'phone-dialer-action-modal';
+        modal.className = 'modal-overlay open';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:20px; animation:fadeIn 0.2s ease;';
 
-    // ── 2. INITIATE OUTGOING CALL ─────────────────────────────────────────
-    window.initiateVoiceCall = function(targetId, nameHint, avatarHint) {
-        if (typeof state !== 'undefined' && !state.user) {
-            if (typeof showPushNotification === 'function') {
-                showPushNotification('Authentication Required', 'Please sign in to make a voice call.');
-            }
+        modal.innerHTML = `
+            <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:20px; width:100%; max-width:380px; padding:24px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.6); color:#FFF;">
+                <div style="width:64px; height:64px; border-radius:50%; background:rgba(16,185,129,0.15); border:2px solid #10B981; margin:0 auto 16px auto; display:flex; align-items:center; justify-content:center; color:#10B981; font-size:1.6rem;">
+                    <i class="fa-solid fa-phone-flip"></i>
+                </div>
+
+                <h3 style="font-size:1.25rem; font-weight:700; margin:0 0 6px 0; color:#FFF;">${name || 'Ohati Contact'}</h3>
+                <p style="font-size:1.15rem; font-weight:700; color:#10B981; letter-spacing:0.5px; margin:0 0 20px 0;">${phone || 'No phone number'}</p>
+
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <a href="tel:${cleanPhone}" onclick="document.getElementById('phone-dialer-action-modal')?.remove();" style="width:100%; padding:14px; background:linear-gradient(135deg, #10B981, #059669); color:#FFF; font-weight:700; border-radius:12px; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; font-size:1rem; box-shadow:0 6px 20px rgba(16,185,129,0.35);">
+                        <i class="fa-solid fa-phone"></i> Call via Phone App
+                    </a>
+
+                    <button onclick="if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText('${cleanPhone}'); if(typeof showPushNotification==='function') showPushNotification('Copied', 'Phone number copied to clipboard.'); else alert('Copied to clipboard'); }" style="width:100%; padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E5E7EB; font-weight:600; border-radius:12px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <i class="fa-solid fa-copy"></i> Copy Number
+                    </button>
+
+                    <button onclick="document.getElementById('phone-dialer-action-modal')?.remove();" style="width:100%; padding:10px; background:none; border:none; color:#9CA3AF; font-weight:600; cursor:pointer; font-size:0.85rem; margin-top:4px;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    };
+
+    window.initiateVoiceCall = function(targetId, nameHint, phoneHint) {
+        if (phoneHint && phoneHint.toString().trim()) {
+            window.showPhoneDialerModal(nameHint || 'Ohati Contact', phoneHint);
             return;
         }
 
-        activeCallRole = 'caller';
-        renderCallingModal({
-            title: 'Outgoing Call',
-            name: nameHint || 'Vendor / User',
-            avatar: avatarHint || (window.DEFAULT_USER_AVATAR || ''),
-            status: 'Ringing...',
-            isIncoming: false
-        });
+        if (typeof showPushNotification === 'function') {
+            showPushNotification("Connecting...", "Retrieving contact number...");
+        }
 
-        startRingtone();
-
-        const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=initiate_call';
-        const formData = new FormData();
-        formData.append('receiver_id', targetId);
-        formData.append('vendor_id', targetId);
-
-        fetch(apiUrl, { method: 'POST', body: formData })
+        const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=get_call_number&id=' + (targetId || 0);
+        fetch(apiUrl)
             .then(r => r.json())
             .then(res => {
-                if (res.success && res.call_id) {
-                    activeCallId = res.call_id;
-                    startCallerStatusPolling();
+                const phone = res.phone || res.whatsapp || '';
+                const name = res.name || nameHint || 'Ohati Contact';
+                if (phone) {
+                    window.showPhoneDialerModal(name, phone);
                 } else {
-                    stopRingtone();
-                    updateCallStatus(res.error || 'Recipient unavailable.');
-                    setTimeout(window.endVoiceCall, 2500);
+                    if (typeof showPushNotification === 'function') {
+                        showPushNotification("Phone Unavailable", "This user/vendor has not listed a phone number.");
+                    } else {
+                        alert("This user/vendor has not listed a phone number.");
+                    }
                 }
             })
-            .catch(err => {
-                stopRingtone();
-                updateCallStatus('Could not place call.');
-                setTimeout(window.endVoiceCall, 2500);
-            });
-    };
-
-    function startCallerStatusPolling() {
-        clearInterval(statusPollingInterval);
-        statusPollingInterval = setInterval(() => {
-            if (!activeCallId) return;
-            fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=poll_call_status&call_id=' + activeCallId)
-                .then(r => r.json())
-                .then(res => {
-                    if (!res) return;
-                    if (res.status === 'accepted') {
-                        stopRingtone();
-                        clearInterval(statusPollingInterval);
-                        connectVoiceCallStream();
-                    } else if (res.status === 'rejected') {
-                        stopRingtone();
-                        clearInterval(statusPollingInterval);
-                        updateCallStatus('Call Declined');
-                        setTimeout(window.endVoiceCall, 2000);
-                    } else if (res.status === 'ended' || res.status === 'cancelled') {
-                        stopRingtone();
-                        clearInterval(statusPollingInterval);
-                        updateCallStatus('Call Ended');
-                        setTimeout(window.endVoiceCall, 1500);
-                    }
-                })
-                .catch(() => {});
-        }, 1500);
-    }
-
-    // ── 3. POLL INCOMING CALLS (RECEIVER) ──────────────────────────────────
-    function startIncomingCallPolling() {
-        if (incomingPollingInterval) return;
-        incomingPollingInterval = setInterval(() => {
-            if (activeCallId || (typeof state !== 'undefined' && !state.user)) return;
-
-            fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=poll_incoming_call')
-                .then(r => r.json())
-                .then(call => {
-                    if (call && call.id && !activeCallId) {
-                        activeCallId = call.id;
-                        activeCallRole = 'receiver';
-                        startRingtone();
-                        renderCallingModal({
-                            title: 'Incoming Voice Call',
-                            name: call.caller_name || 'Ohati User',
-                            avatar: call.caller_avatar || (window.DEFAULT_USER_AVATAR || ''),
-                            status: 'Incoming call from ' + (call.caller_name || 'User'),
-                            isIncoming: true
-                        });
-                        startReceiverStatusPolling();
-                    }
-                })
-                .catch(() => {});
-        }, 2000);
-    }
-
-    function startReceiverStatusPolling() {
-        clearInterval(statusPollingInterval);
-        statusPollingInterval = setInterval(() => {
-            if (!activeCallId) return;
-            fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=poll_call_status&call_id=' + activeCallId)
-                .then(r => r.json())
-                .then(res => {
-                    if (res && (res.status === 'ended' || res.status === 'cancelled')) {
-                        stopRingtone();
-                        clearInterval(statusPollingInterval);
-                        updateCallStatus('Call Cancelled by Caller');
-                        setTimeout(window.endVoiceCall, 1500);
-                    }
-                })
-                .catch(() => {});
-        }, 1500);
-    }
-
-    // ── 4. ANSWER / REJECT ACTIONS ─────────────────────────────────────────
-    window.answerVoiceCall = function() {
-        if (!activeCallId) return;
-        stopRingtone();
-
-        const formData = new FormData();
-        formData.append('call_id', activeCallId);
-        fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=answer_call', { method: 'POST', body: formData })
-            .then(() => {
-                connectVoiceCallStream();
-            });
-    };
-
-    window.rejectVoiceCall = function() {
-        if (activeCallId) {
-            const formData = new FormData();
-            formData.append('call_id', activeCallId);
-            fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=reject_call', { method: 'POST', body: formData });
-        }
-        stopRingtone();
-        window.endVoiceCall();
-    };
-
-    // ── 5. CONNECT AUDIO STREAM & TIMER ────────────────────────────────────
-    function connectVoiceCallStream() {
-        stopRingtone();
-        updateCallStatus('Connected');
-
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    localAudioStream = stream;
-                })
-                .catch(err => {
-                    console.warn('Microphone stream notice:', err);
-                });
-        }
-
-        // Render connected UI controls
-        const actionRow = document.getElementById('voiceCallActionRow');
-        if (actionRow) {
-            actionRow.innerHTML = `
-                <button id="btnMuteVoice" onclick="toggleMuteMicrophone()" style="width:56px; height:56px; border-radius:50%; border:none; background:rgba(255,255,255,0.15); color:#FFF; font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Mute Microphone">
-                    <i class="fa-solid fa-microphone"></i>
-                </button>
-                <button onclick="endVoiceCall()" style="width:68px; height:68px; border-radius:50%; border:none; background:#EF4444; color:#FFF; font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(239,68,68,0.4);" title="End Call">
-                    <i class="fa-solid fa-phone-slash"></i>
-                </button>
-            `;
-        }
-
-        startCallTimer();
-    }
-
-    function startCallTimer() {
-        clearInterval(callTimerInterval);
-        callSeconds = 0;
-        const timerEl = document.getElementById('voiceCallTimer');
-        callTimerInterval = setInterval(() => {
-            callSeconds++;
-            const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
-            const secs = String(callSeconds % 60).padStart(2, '0');
-            if (timerEl) timerEl.textContent = `${mins}:${secs}`;
-        }, 1000);
-    }
-
-    window.toggleMuteMicrophone = function() {
-        if (localAudioStream) {
-            const audioTracks = localAudioStream.getAudioTracks();
-            if (audioTracks.length > 0) {
-                isMuted = !isMuted;
-                audioTracks[0].enabled = !isMuted;
-                const btn = document.getElementById('btnMuteVoice');
-                if (btn) {
-                    btn.innerHTML = isMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
-                    btn.style.background = isMuted ? '#EF4444' : 'rgba(255,255,255,0.15)';
+            .catch(() => {
+                if (typeof showPushNotification === 'function') {
+                    showPushNotification("Contact Error", "Could not retrieve phone number.");
                 }
-            }
-        }
+            });
     };
 
     window.endVoiceCall = function() {
-        stopRingtone();
-        if (activeCallId) {
-            const formData = new FormData();
-            formData.append('call_id', activeCallId);
-            fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=end_call', { method: 'POST', body: formData });
-        }
-
-        if (localAudioStream) {
-            localAudioStream.getTracks().forEach(t => t.stop());
-            localAudioStream = null;
-        }
-
-        clearInterval(callTimerInterval);
-        clearInterval(statusPollingInterval);
-        callSeconds = 0;
-        activeCallId = null;
-        activeCallRole = null;
-        isMuted = false;
-
-        const modal = document.getElementById('voiceCallModal');
-        if (modal) modal.remove();
+        const el = document.getElementById('phone-dialer-action-modal');
+        if (el) el.remove();
     };
-
-    function updateCallStatus(text) {
-        const statusEl = document.getElementById('voiceCallStatusText');
-        if (statusEl) statusEl.textContent = text;
-    }
-
-    // ── 6. RENDER VOICE CALL MODAL ─────────────────────────────────────────
-    function renderCallingModal(data) {
-        let modal = document.getElementById('voiceCallModal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'voiceCallModal';
-            modal.style.cssText = `
-                position: fixed; inset: 0; z-index: 999999;
-                background: linear-gradient(135deg, #081729 0%, #0F2942 100%);
-                display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-                padding: 48px 24px; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif;
-            `;
-            document.body.appendChild(modal);
-        }
-
-        modal.innerHTML = `
-            <div style="text-align: center; margin-top: 10px;">
-                <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: #F2A735; font-weight: 700;">${escapeHtml(data.title)}</div>
-                <h2 style="margin: 8px 0 0 0; font-size: 1.6rem; color: #FFFFFF; font-weight: 800;">${escapeHtml(data.name)}</h2>
-                <div id="voiceCallStatusText" style="margin-top: 6px; font-size: 0.95rem; color: #CBD5E1;">${escapeHtml(data.status)}</div>
-                <div id="voiceCallTimer" style="margin-top: 4px; font-size: 1.1rem; font-weight: 700; color: #38BDF8;">00:00</div>
-            </div>
-
-            <div style="position: relative; width: 140px; height: 140px; margin: 30px 0;">
-                <div style="position: absolute; inset: -12px; border-radius: 50%; border: 2px solid rgba(242, 167, 53, 0.4); animation: pulse 2s infinite;"></div>
-                <img src="${escapeHtml(data.avatar)}" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #F2A735; background: #081729;">
-            </div>
-
-            <div id="voiceCallActionRow" style="display: flex; align-items: center; gap: 24px; margin-bottom: 20px;">
-                ${data.isIncoming ? `
-                    <button onclick="rejectVoiceCall()" style="width: 68px; height: 68px; border-radius: 50%; border: none; background: #EF4444; color: #FFF; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239,68,68,0.4);" title="Decline">
-                        <i class="fa-solid fa-phone-slash"></i>
-                    </button>
-                    <button onclick="answerVoiceCall()" style="width: 68px; height: 68px; border-radius: 50%; border: none; background: #10B981; color: #FFF; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16,185,129,0.4);" title="Answer">
-                        <i class="fa-solid fa-phone"></i>
-                    </button>
-                ` : `
-                    <button onclick="endVoiceCall()" style="width: 68px; height: 68px; border-radius: 50%; border: none; background: #EF4444; color: #FFF; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239,68,68,0.4);" title="Cancel Call">
-                        <i class="fa-solid fa-phone-slash"></i>
-                    </button>
-                `}
-            </div>
-        `;
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    // Start background incoming call poller
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', startIncomingCallPolling);
-    } else {
-        startIncomingCallPolling();
-    }
 })();

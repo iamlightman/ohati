@@ -1700,53 +1700,18 @@ function initChatScreen() {
             renderChatInbox(inbox);
             
             if (state.activeChatVendorId) {
-                const role = state.user?.active_role || state.user?.role || 'customer';
-                API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
-                    state.activeChatPartner = v;
-                    const contentPanel = document.getElementById('chat-desktop-content-panel');
-                    if (contentPanel) {
-                        const role = state.user?.active_role || state.user?.role || 'customer';
-                        let nameWithBadge = v.name;
-                        if (role !== 'vendor') {
-                            const isVerified = parseInt(v.verified) === 1;
-                            const badge = v.verification_badge;
-                            if (badge === 'gold') {
-                                nameWithBadge += ` <i class="fa-solid fa-circle-check" style="color:#D4AF37; font-size:0.85rem;" title="Gold Verified Vendor"></i>`;
-                            } else if (badge === 'blue' || isVerified) {
-                                nameWithBadge += ` <i class="fa-solid fa-circle-check" style="color:#1DA1F2; font-size:0.85rem;" title="ID Verified Vendor"></i>`;
-                            }
-                        }
-                        const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
-                        const isOnlineDesk = v.is_online || v.availability === 'Online';
-                        const statusTextDesk = isOnlineDesk ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
-                        contentPanel.innerHTML = `
-                            <div class="chat-screen" data-vendor-id="${v.id}">
-                                <div class="chat-header">
-                                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
-                                    <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
-                                        <div class="chat-vendor-name">${nameWithBadge}</div>
-                                        <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
-                                    </div>
-                                    <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
-                                        <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
-                    <button class="chat-call-action-btn" onclick="blockVendorUser(${v.id}, '${(v.name||'').replace(/'/g, "\\'")}')" title="Block / Report User" style="background:none; border:none; color:var(--danger, #EF4444); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;"><i class="fa-solid fa-ban"></i></button>
-                                    </div>
-                                </div>
-                                <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
-                                <div class="chat-input-bar" style="gap: 8px;">
-                                    <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
-                                    <button class="chat-attach-btn" id="chat-mic-btn" onclick="toggleVoiceRecording()" title="Record Voice" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-microphone"></i></button>
-                                    <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
-                                    <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
-                                    <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                                </div>
-                            </div>
-                        `;
-                        API.getChatHistory(state.activeChatVendorId).then(history => {
-                            updateChatMessages(history);
-                        });
-                    }
-                });
+                loadDesktopChatPartner(state.activeChatVendorId);
+            }
+        }).catch(err => {
+            console.error("Desktop inbox load error:", err);
+            const inboxList = document.getElementById('chat-inbox-list');
+            if (inboxList) {
+                inboxList.innerHTML = `
+                    <div style="padding:30px 16px; text-align:center; color:var(--gray-500);">
+                        <p style="font-size:0.8rem; margin-bottom:10px;">${err.message || 'Could not load messages.'}</p>
+                        <button class="btn btn-primary btn-xs" onclick="initChatScreen()">Retry</button>
+                    </div>
+                `;
             }
         });
 
@@ -1825,7 +1790,20 @@ function initChatScreen() {
                             state.chatInterval = null;
                         }
                     }, 2000);
+                }).catch(err => {
+                    console.error("Chat history load error:", err);
+                    updateChatMessages([]);
                 });
+            }).catch(err => {
+                console.error("Chat partner load error:", err);
+                screen.innerHTML = `
+                    <div style="padding:50px 20px; text-align:center; color:var(--gray-500);">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem; color:#EF4444; margin-bottom:12px; display:block;"></i>
+                        <h4 style="margin:0 0 8px 0; color:var(--gray-900);">Could Not Open Chat</h4>
+                        <p style="font-size:0.8rem; margin:0 0 16px 0; color:var(--gray-400);">${err.message || 'Unable to connect to chat partner.'}</p>
+                        <button class="btn btn-outline btn-sm" onclick="state.activeChatVendorId = null; initChatScreen();">Return to Inbox</button>
+                    </div>
+                `;
             });
         } else {
             screen.innerHTML = `
@@ -1858,6 +1836,19 @@ function initChatScreen() {
                         state.chatInterval = null;
                     }
                 }, 3000);
+            }).catch(err => {
+                console.error("Inbox load error:", err);
+                const inboxList = document.getElementById('chat-inbox-list');
+                if (inboxList) {
+                    inboxList.innerHTML = `
+                        <div style="padding:40px 20px; text-align:center; color:var(--gray-500);">
+                            <i class="fa-solid fa-comments" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:12px; display:block;"></i>
+                            <h4 style="margin:0 0 6px 0;">No Messages Available</h4>
+                            <p style="font-size:0.8rem; margin:0 0 16px 0; color:var(--gray-400);">${err.message || 'Could not retrieve inbox messages.'}</p>
+                            <button class="btn btn-primary btn-xs" onclick="initChatScreen()">Tap to Retry</button>
+                        </div>
+                    `;
+                }
             });
         }
     }
@@ -1935,13 +1926,86 @@ function renderChatInbox(inbox) {
     }
 }
 
+function loadDesktopChatPartner(vid) {
+    state.activeChatVendorId = vid;
+    const contentPanel = document.getElementById('chat-desktop-content-panel');
+    if (!contentPanel) {
+        initChatScreen();
+        return;
+    }
+
+    contentPanel.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
+
+    const role = state.user?.active_role || state.user?.role || 'customer';
+    API.getVendorDetails(vid, role === 'vendor').then(v => {
+        state.activeChatPartner = v;
+        let nameWithBadge = v.name;
+        if (role !== 'vendor') {
+            const isVerified = parseInt(v.verified) === 1;
+            const badge = v.verification_badge;
+            if (badge === 'gold') {
+                nameWithBadge += ` <i class="fa-solid fa-circle-check" style="color:#D4AF37; font-size:0.85rem;" title="Gold Verified Vendor"></i>`;
+            } else if (badge === 'blue' || isVerified) {
+                nameWithBadge += ` <i class="fa-solid fa-circle-check" style="color:#1DA1F2; font-size:0.85rem;" title="ID Verified Vendor"></i>`;
+            }
+        }
+        const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
+        const isOnlineDesk = v.is_online || v.availability === 'Online';
+        const statusTextDesk = isOnlineDesk ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
+        
+        contentPanel.innerHTML = `
+            <div class="chat-screen" data-vendor-id="${v.id}">
+                <div class="chat-header">
+                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                    <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
+                        <div class="chat-vendor-name">${nameWithBadge}</div>
+                        <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
+                    </div>
+                    <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
+                        <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id || v.id}, 'voice', '${(v.name||'').replace(/'/g, "\\'")}', '${v.phone||''}')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
+                        <button class="chat-call-action-btn" onclick="blockVendorUser(${v.id}, '${(v.name||'').replace(/'/g, "\\'")}')" title="Block / Report User" style="background:none; border:none; color:var(--danger, #EF4444); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;"><i class="fa-solid fa-ban"></i></button>
+                    </div>
+                </div>
+                <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
+                <div class="chat-input-bar" style="gap: 8px;">
+                    <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
+                    <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
+                    <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                    <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                </div>
+            </div>
+        `;
+
+        API.getChatHistory(vid).then(history => {
+            updateChatMessages(history);
+        }).catch(err => {
+            console.error("Chat history load error:", err);
+            updateChatMessages([]);
+        });
+    }).catch(err => {
+        console.error("Desktop chat partner load error:", err);
+        contentPanel.innerHTML = `
+            <div style="padding:60px 20px; text-align:center; color:var(--gray-500);">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem; color:#EF4444; margin-bottom:12px; display:block;"></i>
+                <h4 style="margin:0 0 8px 0; color:var(--gray-900);">Could Not Open Chat</h4>
+                <p style="font-size:0.8rem; margin:0 0 16px 0; color:var(--gray-400);">${err.message || 'Unable to connect to chat partner.'}</p>
+                <button class="btn btn-primary btn-xs" onclick="loadDesktopChatPartner(${vid})">Retry</button>
+            </div>
+        `;
+    });
+}
+
 function openChatWithVendor(vid) {
     if (!state.user) {
         openAuthModal('login');
         return;
     }
     state.activeChatVendorId = vid;
-    initChatScreen();
+    if (window.innerWidth >= 768 && document.getElementById('chat-desktop-content-panel')) {
+        loadDesktopChatPartner(vid);
+    } else {
+        initChatScreen();
+    }
 }
 
 
@@ -7900,6 +7964,12 @@ function initAboutScreen() {
                     <button class="btn btn-primary btn-sm" onclick="navigateTo('help')"><i class="fa-solid fa-circle-question"></i> Help Center</button>
                 </div>
                 <div style="font-size:0.7rem; color:var(--gray-400); margin-top:16px;">Ohati Platform Version 1.1.4 — All rights reserved.</div>
+                <div style="font-size:0.78rem; color:var(--gray-500); margin-top:12px; padding-top:12px; border-top:1px dashed var(--gray-200); display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <span>App developed by</span>
+                    <a href="https://wa.me/2348136731796" target="_blank" rel="noopener" style="color:var(--accent); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                        <i class="fa-brands fa-whatsapp" style="color:#25D366;"></i> C Eye Q Digital
+                    </a>
+                </div>
             </div>
         </div>
     `;

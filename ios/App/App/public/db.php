@@ -1171,24 +1171,20 @@ try {
     $pdo->exec("DELETE FROM vendors WHERE id NOT IN (SELECT min_id FROM (SELECT MIN(id) as min_id FROM vendors GROUP BY name) as t)");
 
     // Clean user table avatars
+    // Clean user table avatars
     $user_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
     $pdo->prepare("UPDATE users SET avatar = ? WHERE avatar LIKE '%unsplash.com%' OR avatar LIKE '%photo-%' OR avatar = '' OR avatar IS NULL")->execute([$user_svg]);
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS call_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        caller_id INT NOT NULL,
+        receiver_id INT NOT NULL,
+        status VARCHAR(30) DEFAULT 'ringing',
+        call_type VARCHAR(20) DEFAULT 'voice',
+        sdp_offer TEXT NULL,
+        sdp_answer TEXT NULL,
+        ice_candidates TEXT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
 } catch (Exception $e) {}
-?>
-
-
-    try {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS call_sessions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            caller_id INT NOT NULL,
-            receiver_id INT NOT NULL,
-            status VARCHAR(30) DEFAULT 'ringing',
-            call_type VARCHAR(20) DEFAULT 'voice',
-            sdp_offer TEXT NULL,
-            sdp_answer TEXT NULL,
-            ice_candidates TEXT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )");
-    } catch (Exception $e) {}
-    

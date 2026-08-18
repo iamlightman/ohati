@@ -492,16 +492,22 @@ function openNotificationsModal() {
 
 // ── Welcome Popup Modal ───────────────────────────────────────────────
 function openWelcomePopup() {
-    // Suppress welcome popup on native mobile app (Capacitor / Android / iOS)
-    if (typeof window.isNativeMobileApp === 'function' && window.isNativeMobileApp()) {
-        return;
+    // Completely suppress welcome popup on mobile app (Capacitor, Android, iOS WebView, Mobile app windows)
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const isApp = (typeof window.Capacitor !== 'undefined') ||
+                  (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                  window.location.protocol === 'capacitor:' ||
+                  window.location.protocol === 'file:' ||
+                  ua.includes('ohatiapp') ||
+                  ua.includes('capacitor') ||
+                  ua.includes('wv') ||
+                  (typeof window.isNativeMobileApp === 'function' && window.isNativeMobileApp()) ||
+                  (window.state && window.state.isMobileApp);
+
+    if (isApp) {
+        return; // Never show website welcome promo popup inside mobile app
     }
-    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-        return;
-    }
-    if (window.location.protocol === 'capacitor:' || window.location.protocol === 'file:' || (navigator.userAgent && navigator.userAgent.includes('OhatiApp'))) {
-        return;
-    }
+
 
     const dismissedValue = localStorage.getItem('ohati_welcome_dismissed');
     if (dismissedValue) {

@@ -50,7 +50,8 @@ $page_title = "Terms of Service — Ohati Ghana";
             <li>Vendors are responsible for maintaining accurate pricing, availability calendars, and package deliverables.</li>
         </ul>
 
-        <h2>4. Conduct & Content Policy</h2>
+        <h2>4. Conduct & Content Policy (Zero-Tolerance EULA)</h2>
+        <p><strong>Zero-Tolerance Policy:</strong> Ohati strictly prohibits offensive, abusive, objectionable, or fraudulent content and harassment. Users can block abusive users and report inappropriate listings or messages directly within the app. Ohati reserves the right to immediately suspend violating accounts and remove flagged content within 24 hours.</p>
         <p>Users and vendors agree not to post deceptive, offensive, or fraudulent content. Ohati reserves the right to suspend accounts or remove campaigns violating community standards.</p>
 
         <h2>5. Account Termination</h2>

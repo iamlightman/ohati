@@ -1124,26 +1124,142 @@ function saveVendorStep6() {
 }
 
 
-window.confirmDeleteAccount = function() {
-    if (!window.state || !window.state.user) {
-        if (typeof showPushNotification === 'function') showPushNotification('Notice', 'Please sign in to delete your account.');
-        else alert('Please sign in to delete your account.');
+window.closeAccountDeletionModal = function() {
+    const modal = document.getElementById('account-deletion-custom-modal');
+    if (modal) modal.remove();
+};
+
+window.showAccountDeletionModal = function() {
+    window.closeAccountDeletionModal();
+    
+    const user = (window.state && window.state.user) ? window.state.user : null;
+    const userDisplay = user ? (user.email || user.phone || user.name || 'Your Account') : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'account-deletion-custom-modal';
+    modal.className = 'modal-overlay open';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation:fadeIn 0.25s ease-out;';
+    
+    modal.innerHTML = `
+        <div class="modal-sheet" style="width:100%; max-width:440px; border-radius:28px; padding:28px 24px; text-align:center; background:#0F1923; color:#fff; border:1px solid rgba(239,68,68,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.8); position:relative; animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1);">
+            <button onclick="closeAccountDeletionModal()" style="position:absolute; top:18px; right:18px; background:rgba(255,255,255,0.08); border:none; color:#94A3B8; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; transition:all 0.2s;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div style="width:68px; height:68px; border-radius:50%; background:rgba(239,68,68,0.12); border:2px solid #EF4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:#EF4444; font-size:1.8rem; box-shadow:0 0 20px rgba(239,68,68,0.25);">
+                <i class="fa-solid fa-user-slash"></i>
+            </div>
+
+            <h3 style="font-family:'Fraunces',serif; font-size:1.45rem; font-weight:800; margin-bottom:6px; color:#fff;">Delete Ohati Account</h3>
+            <p style="font-size:0.83rem; color:#94A3B8; line-height:1.5; margin-bottom:20px;">
+                This action will permanently deactivate your profile, remove public listings, and anonymize your account data.
+            </p>
+
+            <div id="del-modal-error" style="display:none; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; padding:10px 14px; border-radius:12px; margin-bottom:16px; text-align:left;"></div>
+
+            ${user ? `
+                <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:12px 16px; margin-bottom:18px; text-align:left; display:flex; align-items:center; gap:12px;">
+                    <div style="width:38px; height:38px; border-radius:50%; background:#1E293B; display:flex; align-items:center; justify-content:center; color:#F2A735; font-weight:bold; font-size:1rem; border:1px solid rgba(242,167,53,0.3);">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div style="overflow:hidden;">
+                        <div style="font-size:0.85rem; font-weight:700; color:#fff;">${user.name || 'Active Account'}</div>
+                        <div style="font-size:0.75rem; color:#94A3B8; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${userDisplay}</div>
+                    </div>
+                </div>
+                <div style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px; display:block;">Enter Password to Confirm:</label>
+                    <div style="position:relative;">
+                        <input type="password" id="del-modal-pass" placeholder="Your password" style="width:100%; padding:12px 14px; background:#18222D; border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:#fff; font-size:0.9rem; box-sizing:border-box; outline:none;">
+                    </div>
+                </div>
+            ` : `
+                <div style="text-align:left; margin-bottom:14px;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px; display:block;">Email or Phone Number:</label>
+                    <input type="text" id="del-modal-id" placeholder="email@example.com or phone" style="width:100%; padding:12px 14px; background:#18222D; border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:#fff; font-size:0.9rem; box-sizing:border-box; outline:none;">
+                </div>
+                <div style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px; display:block;">Password:</label>
+                    <input type="password" id="del-modal-pass" placeholder="Your password" style="width:100%; padding:12px 14px; background:#18222D; border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:#fff; font-size:0.9rem; box-sizing:border-box; outline:none;">
+                </div>
+            `}
+
+            <div style="display:flex; gap:12px; margin-top:8px;">
+                <button onclick="closeAccountDeletionModal()" style="flex:1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#CBD5E1; font-weight:700; border-radius:14px; padding:13px; font-size:0.9rem; cursor:pointer; transition:all 0.2s;">
+                    Cancel
+                </button>
+                <button id="del-modal-submit-btn" onclick="executeCustomAccountDeletion()" style="flex:1.4; background:linear-gradient(135deg,#EF4444,#DC2626); color:#fff; font-weight:700; border:none; border-radius:14px; padding:13px; font-size:0.9rem; cursor:pointer; box-shadow:0 4px 15px rgba(239,68,68,0.4); transition:all 0.2s;">
+                    <i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Delete Account
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => {
+        const inputToFocus = document.getElementById('del-modal-pass') || document.getElementById('del-modal-id');
+        if (inputToFocus) inputToFocus.focus();
+    }, 100);
+};
+
+window.executeCustomAccountDeletion = function() {
+    const errorBox = document.getElementById('del-modal-error');
+    const btn = document.getElementById('del-modal-submit-btn');
+    if (errorBox) errorBox.style.display = 'none';
+
+    const user = (window.state && window.state.user) ? window.state.user : null;
+    const passInput = document.getElementById('del-modal-pass');
+    const idInput = document.getElementById('del-modal-id');
+
+    const password = passInput ? passInput.value : '';
+    const identifier = idInput ? idInput.value.trim() : (user ? (user.email || user.phone) : '');
+
+    if (!password) {
+        if (errorBox) { errorBox.textContent = 'Please enter your password to confirm deletion.'; errorBox.style.display = 'block'; }
+        if (passInput) passInput.focus();
         return;
     }
-    if (confirm('Are you sure you want to permanently delete your Ohati account? This action is immediate and will anonymize your profile data in accordance with privacy regulations.')) {
-        if (typeof showPushNotification === 'function') showPushNotification('Processing', 'Deleting account...');
-        API.deleteAccount().then(res => {
-            if (typeof showPushNotification === 'function') showPushNotification('Account Deleted', 'Your account has been successfully deleted.');
-            else alert('Your account has been deleted.');
-            window.state.user = null;
-            localStorage.removeItem('ohati_auth_token');
-            location.reload();
-        }).catch(err => {
-            if (typeof showPushNotification === 'function') showPushNotification('Error', err.message || 'Could not delete account.');
-            else alert(err.message || 'Could not delete account.');
-        });
+
+    if (!user && !identifier) {
+        if (errorBox) { errorBox.textContent = 'Please enter your email or phone number.'; errorBox.style.display = 'block'; }
+        if (idInput) idInput.focus();
+        return;
     }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Deleting...';
+    }
+
+    const payload = user ? { user_id: user.id, password } : { identifier, password };
+
+    API.post('delete_account', payload).then(res => {
+        closeAccountDeletionModal();
+        if (typeof showAccountDeletedSuccessModal === 'function') {
+            showAccountDeletedSuccessModal();
+        } else {
+            alert('Your account has been deleted.');
+            if (typeof handleLogout === 'function') handleLogout();
+        }
+    }).catch(err => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Delete Account';
+        }
+        if (errorBox) {
+            errorBox.textContent = err.message || 'Account deletion failed. Please check your credentials.';
+            errorBox.style.display = 'block';
+        } else {
+            alert(err.message || 'Account deletion failed.');
+        }
+    });
 };
+
+window.confirmDeleteAccount = function() {
+    window.showAccountDeletionModal();
+};
+
+
 
 
 window.showAccountDeletedSuccessModal = function() {

@@ -491,7 +491,7 @@ try {
 
 // ── CSRF ENFORCEMENT ────────────────────────────────────────────────────
 // Enforce CSRF on all state-changing POST actions except pre-auth flows
-$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status'];
+$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status', 'upload_chat_file', 'get_call_number'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrf_exempt_actions)) {
     $headers = function_exists('getallheaders') ? getallheaders() : [];
     $csrf = $headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? $raw_input['csrf_token'] ?? '';
@@ -732,17 +732,38 @@ case 'logout':
 
 case 'delete_account':
     $uid = 0;
+    $input_data = json_decode(file_get_contents('php://input'), true) ?: [];
     if (isset($_SESSION['user']['id'])) {
         $uid = intval($_SESSION['user']['id']);
     } else if (isset($_POST['user_id'])) {
         $uid = intval($_POST['user_id']);
+    } else if (isset($input_data['user_id'])) {
+        $uid = intval($input_data['user_id']);
+    }
+
+    // Allow deletion by verifying identifier + password if not currently logged in
+    $identifier = clean($_POST['identifier'] ?? $input_data['identifier'] ?? '');
+    $password = $_POST['password'] ?? $input_data['password'] ?? '';
+    if (!$uid && !empty($identifier) && !empty($password)) {
+        $id_lower = strtolower(trim($identifier));
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE LOWER(email) = ? OR phone = ?");
+        $stmt->execute([$id_lower, $identifier]);
+        $user_to_del = $stmt->fetch();
+        if ($user_to_del && password_verify($password, $user_to_del['password_hash'])) {
+            $uid = intval($user_to_del['id']);
+        } else {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid email/phone or password. Account deletion failed.']);
+            exit;
+        }
     }
 
     if (!$uid) {
         http_response_code(401);
-        echo json_encode(['error' => 'Please log in to confirm account deletion.']);
+        echo json_encode(['error' => 'Please log in or provide your password to confirm account deletion.']);
         exit;
     }
+
 
     $sel = $pdo->prepare("SELECT * FROM users WHERE id = ?");
     $sel->execute([$uid]);
@@ -757,7 +778,16 @@ case 'delete_account':
         } catch(Exception $e) {}
 
         // Soft delete user record - retain data in DB for admin management
-        $pdo->prepare("UPDATE users SET status = 'deleted', is_active = 0, deleted_at = NOW() WHERE id = ?")->execute([$uid]);
+        try {
+            $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = ?")->execute([$uid]);
+        } catch(Exception $e) {}
+        try {
+            $pdo->prepare("UPDATE users SET status = 'deleted' WHERE id = ?")->execute([$uid]);
+        } catch(Exception $e) {}
+        try {
+            $pdo->prepare("UPDATE users SET deleted_at = NOW() WHERE id = ?")->execute([$uid]);
+        } catch(Exception $e) {}
+
     }
 
     $_SESSION = array();
@@ -1956,8 +1986,8 @@ case 'get_user_status':
     break;
 
 case 'chat_inbox':
-    $uid = intval($_SESSION['user']['id'] ?? 0);
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? 'customer';
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     $list = [];
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
@@ -1988,16 +2018,16 @@ case 'chat_inbox':
             }
         }
     }
-    echo json_encode($list);
+    echo json_encode($list ?: []);
     break;
 
 case 'get_unread_chats':
-    if (!isset($_SESSION['user'])) {
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if (!$uid) {
         echo json_encode([]);
         exit;
     }
-    $uid = intval($_SESSION['user']['id'] ?? 0);
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? 'customer';
+    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
         $v_stmt->execute([$uid]);
@@ -2005,21 +2035,21 @@ case 'get_unread_chats':
         if ($vendor_id) {
             $stmt = $pdo->prepare("SELECT m.*, u.name as sender_name FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? AND m.sender = 'user' AND m.is_read = 0 ORDER BY m.id DESC");
             $stmt->execute([$vendor_id]);
-            echo json_encode($stmt->fetchAll());
+            echo json_encode($stmt->fetchAll() ?: []);
         } else {
             echo json_encode([]);
         }
     } else {
         $stmt = $pdo->prepare("SELECT m.*, v.name as sender_name FROM messages m JOIN vendors v ON m.vendor_id = v.id WHERE m.user_id = ? AND m.sender = 'vendor' AND m.is_read = 0 ORDER BY m.id DESC");
         $stmt->execute([$uid]);
-        echo json_encode($stmt->fetchAll());
+        echo json_encode($stmt->fetchAll() ?: []);
     }
     break;
 
 case 'chat_history':
     $vid = intval($_GET['vendor_id'] ?? 0);
-    $uid = intval($_SESSION['user']['id'] ?? 0);
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? 'customer';
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
         $v_stmt->execute([$uid]);
@@ -2037,13 +2067,15 @@ case 'chat_history':
     } else {
         if ($vid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid ID']); exit; }
         // Mark incoming vendor messages as read
-        $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'vendor' AND is_read = 0")->execute([$vid, $uid]);
+        if ($uid > 0) {
+            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'vendor' AND is_read = 0")->execute([$vid, $uid]);
+        }
         
         $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
         $stmt->execute([$vid, $uid]);
     }
     $msgs = $stmt->fetchAll();
-    if (empty($msgs) && $role !== 'vendor') {
+    if (empty($msgs) && $role !== 'vendor' && $uid > 0) {
         $vn = $pdo->prepare("SELECT name, welcome_message FROM vendors WHERE id = ?");
         $vn->execute([$vid]);
         $v_row = $vn->fetch();
@@ -2055,7 +2087,7 @@ case 'chat_history':
         $stmt->execute([$vid, $uid]);
         $msgs = $stmt->fetchAll();
     }
-    echo json_encode($msgs);
+    echo json_encode($msgs ?: []);
     break;
 
 case 'chat':
@@ -2064,8 +2096,8 @@ case 'chat':
     $vid = intval($input['vendor_id'] ?? 0);
     $message = clean($input['message'] ?? '');
     $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','location']) ? $input['type'] : 'text';
-    $uid = intval($_SESSION['user']['id'] ?? 0);
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? 'customer';
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
@@ -2104,10 +2136,29 @@ case 'chat':
     break;
 
 case 'upload_chat_file':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    if (!isset($_FILES['file'])) { http_response_code(400); echo json_encode(['error'=>'No file uploaded.']); exit; }
+    $upload_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$upload_uid) { http_response_code(401); echo json_encode(['error'=>'Please log in to upload files.']); exit; }
+    if (!isset($_FILES['file'])) { http_response_code(400); echo json_encode(['error'=>'No file uploaded or file exceeds server post limit.']); exit; }
     
     $file = $_FILES['file'];
+    if (isset($file['error']) && $file['error'] !== UPLOAD_ERR_OK) {
+        $err_msg = 'Upload failed.';
+        switch ($file['error']) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                $err_msg = 'File exceeds maximum allowed upload size of 20MB.';
+                break;
+            case UPLOAD_ERR_PARTIAL:
+                $err_msg = 'File upload was only partially completed.';
+                break;
+            case UPLOAD_ERR_NO_FILE:
+                $err_msg = 'No file was uploaded.';
+                break;
+        }
+        http_response_code(400);
+        echo json_encode(['error' => $err_msg]);
+        exit;
+    }
     
     // Validate size (20MB limit)
     $max_size = 20 * 1024 * 1024; // 20MB
@@ -2117,10 +2168,18 @@ case 'upload_chat_file':
         exit;
     }
     
-    // Validate MIME type & extension
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
+    // Validate MIME type & extension safely
+    $mime = $file['type'] ?? '';
+    if (function_exists('finfo_open') && !empty($file['tmp_name'])) {
+        try {
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo) {
+                $detected = @finfo_file($finfo, $file['tmp_name']);
+                if ($detected) $mime = $detected;
+                @finfo_close($finfo);
+            }
+        } catch (Throwable $e) {}
+    }
 
     $allowed_mimes = [
         'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -2131,9 +2190,9 @@ case 'upload_chat_file':
         'application/octet-stream'
     ];
 
-    if (!in_array($mime, $allowed_mimes) && strpos($mime, 'image/') !== 0 && strpos($mime, 'audio/') !== 0 && strpos($mime, 'video/') !== 0) {
+    if (!empty($mime) && !in_array($mime, $allowed_mimes) && strpos($mime, 'image/') !== 0 && strpos($mime, 'audio/') !== 0 && strpos($mime, 'video/') !== 0) {
         http_response_code(400);
-        echo json_encode(['error'=>'Invalid or unsupported file MIME type: ' . $mime]);
+        echo json_encode(['error'=>'Invalid or unsupported file type: ' . $mime]);
         exit;
     }
 
@@ -2160,14 +2219,14 @@ case 'upload_chat_file':
         $type = 'location'; // Custom doc type mapped to text/doc placeholder
     } else {
         http_response_code(400);
-        echo json_encode(['error'=>'File type not allowed.']);
+        echo json_encode(['error'=>'File extension .' . $ext . ' not allowed.']);
         exit;
     }
     
     // Create directory if not exists
     $dir = __DIR__ . '/uploads/chat/';
     if (!file_exists($dir)) {
-        mkdir($dir, 0755, true);
+        @mkdir($dir, 0755, true);
     }
     
     // Generate safe unique filename
@@ -2176,7 +2235,9 @@ case 'upload_chat_file':
     
     if (move_uploaded_file($file['tmp_name'], $target)) {
         if ($type === 'image') {
-            compressAndResizeImage($target, $target, 1000, 1000, 75);
+            try {
+                compressAndResizeImage($target, $target, 1200, 1200, 80);
+            } catch (Throwable $e) {}
         }
         $relative_path = 'uploads/chat/' . $new_filename;
         echo json_encode([
@@ -2187,7 +2248,7 @@ case 'upload_chat_file':
         ]);
     } else {
         http_response_code(500);
-        echo json_encode(['error'=>'Failed to save uploaded file.']);
+        echo json_encode(['error'=>'Failed to save uploaded file on server.']);
     }
     break;
 
@@ -3299,32 +3360,48 @@ case 'admin_update_vendor_premium':
 
 // ── CALLING SYSTEM ENDPOINTS ─────────────────────────────────────────────
 case 'initiate_call':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
-    $receiver_id = intval($input['receiver_id'] ?? 0);
-    $type = clean($input['type'] ?? 'voice');
-    $sdp = $input['sdp_offer'] ?? '';
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$call_uid) { http_response_code(401); echo json_encode(['error'=>'Please sign in to make voice calls.']); exit; }
 
-    if ($receiver_id <= 0 || empty($sdp)) {
-        http_response_code(400); echo json_encode(['error'=>'Invalid request parameters.']); exit;
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $receiver_id = intval($input['receiver_id'] ?? $_POST['receiver_id'] ?? $_GET['receiver_id'] ?? $_POST['vendor_id'] ?? $input['vendor_id'] ?? 0);
+    $type = clean($input['type'] ?? $_POST['type'] ?? 'voice');
+    $sdp = $input['sdp_offer'] ?? $_POST['sdp_offer'] ?? 'voice_call_session';
+
+    // If receiver_id maps to a vendor record, resolve user_id
+    if ($receiver_id > 0) {
+        $v_check = $pdo->prepare("SELECT user_id FROM vendors WHERE id = ?");
+        $v_check->execute([$receiver_id]);
+        $v_uid = $v_check->fetchColumn();
+        if ($v_uid) {
+            $receiver_id = intval($v_uid);
+        }
+    }
+
+    if ($receiver_id <= 0) {
+        http_response_code(400); echo json_encode(['error'=>'Recipient not found.']); exit;
+    }
+    if ($receiver_id === $call_uid) {
+        http_response_code(400); echo json_encode(['error'=>'You cannot call yourself.']); exit;
     }
 
     $now = date('Y-m-d H:i:s');
     $stmt = $pdo->prepare("INSERT INTO calls (caller_id, receiver_id, type, status, sdp_offer, ice_candidates_caller, ice_candidates_receiver, created_at, updated_at) VALUES (?, ?, ?, 'ringing', ?, '[]', '[]', ?, ?)");
-    $stmt->execute([$_SESSION['user']['id'], $receiver_id, $type, $sdp, $now, $now]);
+    $stmt->execute([$call_uid, $receiver_id, $type, $sdp, $now, $now]);
     $call_id = $pdo->lastInsertId();
 
     echo json_encode(['success'=>true, 'call_id'=>$call_id]);
     break;
 
 case 'check_incoming_call':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $uid = $_SESSION['user']['id'];
+case 'poll_incoming_call':
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$call_uid) { echo json_encode(null); exit; }
     
-    // Look for active ringing or dialing calls (within last 60 seconds)
+    // Look for active ringing calls (within last 60 seconds)
     $time_limit = date('Y-m-d H:i:s', time() - 60);
     $stmt = $pdo->prepare("SELECT c.*, u.name as caller_name, u.avatar as caller_avatar FROM calls c JOIN users u ON c.caller_id = u.id WHERE c.receiver_id = ? AND c.status IN ('ringing', 'dialing') AND c.created_at >= ? ORDER BY c.id DESC LIMIT 1");
-    $stmt->execute([$uid, $time_limit]);
+    $stmt->execute([$call_uid, $time_limit]);
     $call = $stmt->fetch();
     
     echo json_encode($call ?: null);
@@ -3332,13 +3409,15 @@ case 'check_incoming_call':
 
 case 'accept_call':
 case 'answer_call':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
-    $call_id = intval($input['call_id'] ?? 0);
-    $sdp = $input['sdp_answer'] ?? '';
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$call_uid) { http_response_code(401); echo json_encode(['error'=>'Please sign in to answer calls.']); exit; }
 
-    if ($call_id <= 0 || empty($sdp)) {
-        http_response_code(400); echo json_encode(['error'=>'Invalid request parameters.']); exit;
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $call_id = intval($input['call_id'] ?? $_POST['call_id'] ?? $_GET['call_id'] ?? 0);
+    $sdp = $input['sdp_answer'] ?? $_POST['sdp_answer'] ?? 'voice_call_answered';
+
+    if ($call_id <= 0) {
+        http_response_code(400); echo json_encode(['error'=>'Invalid call session.']); exit;
     }
 
     $stmt = $pdo->prepare("UPDATE calls SET status = 'accepted', sdp_answer = ?, updated_at = ? WHERE id = ?");
@@ -3350,28 +3429,32 @@ case 'answer_call':
 case 'update_call_status':
 case 'reject_call':
 case 'end_call':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
     $call_id = intval($input['call_id'] ?? $_GET['call_id'] ?? $_POST['call_id'] ?? 0);
     $default_status = ($action === 'reject_call') ? 'rejected' : 'ended';
-    $status = clean($input['status'] ?? $default_status);
-    $duration = intval($input['duration'] ?? 0);
+    $status = clean($input['status'] ?? $_POST['status'] ?? $default_status);
+    $duration = intval($input['duration'] ?? $_POST['duration'] ?? 0);
 
-    $stmt = $pdo->prepare("UPDATE calls SET status = ?, duration = ?, updated_at = ? WHERE id = ?");
-    $stmt->execute([$status, $duration, date('Y-m-d H:i:s'), $call_id]);
+    if ($call_id > 0) {
+        $stmt = $pdo->prepare("UPDATE calls SET status = ?, duration = ?, updated_at = ? WHERE id = ?");
+        $stmt->execute([$status, $duration, date('Y-m-d H:i:s'), $call_id]);
+    }
 
     echo json_encode(['success'=>true]);
     break;
 
 case 'send_ice_candidate':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
-    $call_id = intval($input['call_id'] ?? 0);
-    $role = clean($input['role'] ?? 'caller');
-    $candidate = $input['candidate'] ?? '';
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$call_uid) { echo json_encode(['success'=>true]); exit; }
+
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $call_id = intval($input['call_id'] ?? $_POST['call_id'] ?? 0);
+    $role = clean($input['role'] ?? $_POST['role'] ?? 'caller');
+    $candidate = $input['candidate'] ?? $_POST['candidate'] ?? '';
 
     if ($call_id <= 0 || empty($candidate)) {
-        http_response_code(400); echo json_encode(['error'=>'Invalid parameters.']); exit;
+        echo json_encode(['success'=>true]); exit;
     }
 
     $field = ($role === 'caller') ? 'ice_candidates_caller' : 'ice_candidates_receiver';
@@ -3399,31 +3482,60 @@ case 'send_ice_candidate':
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();
-        http_response_code(500); echo json_encode(['error'=>'Database error.']); exit;
+        echo json_encode(['success'=>true]); exit;
     }
 
     echo json_encode(['success'=>true]);
     break;
 
 case 'get_call_details':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+case 'poll_call_status':
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
     $cid = intval($_GET['call_id'] ?? $_POST['call_id'] ?? $input['call_id'] ?? 0);
     
+    if ($cid <= 0) {
+        echo json_encode(['status'=>'ended']); exit;
+    }
+
     $stmt = $pdo->prepare("SELECT c.*, u1.name as caller_name, u1.avatar as caller_avatar, u2.name as receiver_name, u2.avatar as receiver_avatar FROM calls c JOIN users u1 ON c.caller_id = u1.id JOIN users u2 ON c.receiver_id = u2.id WHERE c.id = ?");
     $stmt->execute([$cid]);
+    $call_data = $stmt->fetch();
     
-    echo json_encode($stmt->fetch() ?: null);
+    echo json_encode($call_data ?: ['status'=>'ended']);
     break;
 
 case 'get_call_history':
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $call_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$call_uid) { echo json_encode([]); exit; }
+
     $uid = $_SESSION['user']['id'];
     
     $stmt = $pdo->prepare("SELECT c.*, u1.name as caller_name, u1.avatar as caller_avatar, u2.name as receiver_name, u2.avatar as receiver_avatar FROM calls c JOIN users u1 ON c.caller_id = u1.id JOIN users u2 ON c.receiver_id = u2.id WHERE c.caller_id = ? OR c.receiver_id = ? ORDER BY c.id DESC LIMIT 50");
     $stmt->execute([$uid, $uid]);
     
     echo json_encode($stmt->fetchAll());
+    break;
+
+case 'get_call_number':
+    $target_id = intval($_GET['id'] ?? $_POST['id'] ?? 0);
+    if ($target_id <= 0) { echo json_encode(['phone'=>'', 'name'=>'Ohati User']); exit; }
+
+    // Check vendors table first (by vendor id or user_id)
+    $v_stmt = $pdo->prepare("SELECT phone, whatsapp, name FROM vendors WHERE id = ? OR user_id = ?");
+    $v_stmt->execute([$target_id, $target_id]);
+    $v = $v_stmt->fetch();
+    if ($v && (!empty($v['phone']) || !empty($v['whatsapp']))) {
+        $p = !empty($v['phone']) ? $v['phone'] : $v['whatsapp'];
+        echo json_encode(['phone' => $p, 'name' => $v['name']]);
+        exit;
+    }
+
+    // Check users table
+    $u_stmt = $pdo->prepare("SELECT phone, name FROM users WHERE id = ?");
+    $u_stmt->execute([$target_id]);
+    $u = $u_stmt->fetch();
+    echo json_encode(['phone' => $u['phone'] ?? '', 'name' => $u['name'] ?? 'Ohati User']);
     break;
 
 case 'get_admin_ads':

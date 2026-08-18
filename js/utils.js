@@ -457,10 +457,13 @@ window.OhatiNavManager = {
                 window.Capacitor.Plugins.App.addListener('backButton', () => {
                     this.handleBackPress();
                 });
-            } catch (e) {
-                console.warn("Capacitor BackButton listener setup notice:", e);
-            }
+            } catch (e) {}
         }
+        // Native Cordova/Capacitor document event listener fallback
+        document.addEventListener('backbutton', (e) => {
+            if (e) e.preventDefault();
+            this.handleBackPress();
+        }, false);
 
         // Handle Browser Back / Forward buttons (pushState/popstate)
         window.addEventListener('popstate', (event) => {
@@ -498,11 +501,14 @@ window.OhatiNavManager = {
             }
         }
 
-        // 3. Open Lightbox / Image Viewer Modal
-        const lightbox = document.getElementById('lightbox');
-        if (lightbox && lightbox.style.display !== 'none' && (lightbox.classList.contains('open') || lightbox.style.display === 'flex')) {
+        // 3. Open Custom Overlay Modals & Lightbox
+        const customModal = document.querySelector('#account-deletion-custom-modal, #account-deleted-pro-modal, #voiceCallModal, .modal-overlay.open, #lightbox');
+        if (customModal) {
+            if (typeof closeAccountDeletionModal === 'function') closeAccountDeletionModal();
+            if (typeof closeAccountDeletedProModal === 'function') closeAccountDeletedProModal();
             if (typeof closeDocModal === 'function') closeDocModal();
-            else lightbox.style.display = 'none';
+            if (customModal.parentNode) customModal.remove();
+            else customModal.style.display = 'none';
             if (fromPopState && typeof state !== 'undefined' && state.currentScreen) {
                 history.pushState({ screenId: state.currentScreen }, '', window.location.href);
             }
@@ -525,6 +531,7 @@ window.OhatiNavManager = {
             }
             return true;
         }
+
 
         // 5. Open Search Filter Overlays / Dropdowns
         const openDropdowns = document.querySelectorAll('.dropdown-menu.show, .filter-overlay.active');
@@ -588,5 +595,47 @@ window.OhatiNavManager = {
         return true;
     }
 };
+
+window.compressImageFileBeforeUpload = function(file, maxWidth = 1600, maxHeight = 1600, quality = 0.8, callback) {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+        if (typeof callback === 'function') callback(file);
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth || height > maxHeight) {
+                if (width > height) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                } else {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const compressedFile = new File([blob], file.name || 'upload.jpg', { type: 'image/jpeg' });
+                    if (typeof callback === 'function') callback(compressedFile);
+                } else {
+                    if (typeof callback === 'function') callback(file);
+                }
+            }, 'image/jpeg', quality);
+        };
+        img.onerror = () => { if (typeof callback === 'function') callback(file); };
+        img.src = e.target.result;
+    };
+    reader.onerror = () => { if (typeof callback === 'function') callback(file); };
+    reader.readAsDataURL(file);
+};
+
 
 

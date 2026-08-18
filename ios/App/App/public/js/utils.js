@@ -20,10 +20,20 @@ function parseAppDate(dateStr) {
     if (typeof dateStr === 'number') return new Date(dateStr);
 
     let str = String(dateStr).trim();
-    // Match "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
+    if (!str) return new Date();
+
+    if (str.includes('Z') || str.includes('+') || (str.includes('T') && str.includes('-') && str.length > 19)) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) return d;
+    }
+
     const match = str.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
     if (match) {
         const [, year, month, day, hour, minute, second] = match;
+        const iso = `${year}-${month}-${day}T${hour}:${minute}:${second || '00'}`;
+        const d = new Date(iso);
+        if (!isNaN(d.getTime())) return d;
+
         return new Date(
             parseInt(year, 10),
             parseInt(month, 10) - 1,
@@ -33,6 +43,7 @@ function parseAppDate(dateStr) {
             parseInt(second || '0', 10)
         );
     }
+
     const fallback = new Date(str);
     return isNaN(fallback.getTime()) ? new Date() : fallback;
 }

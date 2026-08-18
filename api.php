@@ -2075,18 +2075,6 @@ case 'chat_history':
         $stmt->execute([$vid, $uid]);
     }
     $msgs = $stmt->fetchAll();
-    if (empty($msgs) && $role !== 'vendor' && $uid > 0) {
-        $vn = $pdo->prepare("SELECT name, welcome_message FROM vendors WHERE id = ?");
-        $vn->execute([$vid]);
-        $v_row = $vn->fetch();
-        $name = $v_row['name'] ?? 'this vendor';
-        $welcome = !empty($v_row['welcome_message']) ? $v_row['welcome_message'] : "Hello! Thank you for reaching out to $name. How can we help you plan your event?";
-        
-        $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type) VALUES (?,?,'vendor',?,'text')")->execute([$vid,$uid,$welcome]);
-        $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
-        $stmt->execute([$vid, $uid]);
-        $msgs = $stmt->fetchAll();
-    }
     echo json_encode($msgs ?: []);
     break;
 
@@ -2115,23 +2103,11 @@ case 'chat':
         if ($vid <= 0 || empty($message)) { http_response_code(400); echo json_encode(['error'=>'Message required.']); exit; }
         $now_stamp = date('Y-m-d H:i:s');
         $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'user',?,?,?)")->execute([$vid,$uid,$message,$type,$now_stamp]);
-        require_once __DIR__ . '/ai_helper.php';
-        $reply = generate_vendor_reply($vid, $message);
-        if ($reply !== null && $reply !== '') {
-            $reply_stamp = date('Y-m-d H:i:s');
-            $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'vendor',?,'text',?)")->execute([$vid,$uid,$reply,$reply_stamp]);
-            echo json_encode([
-                'success' => true,
-                'user_message' => ['sender'=>'user','message'=>$message,'type'=>$type,'created_at'=>$now_stamp],
-                'vendor_reply' => ['sender'=>'vendor','message'=>$reply,'type'=>'text','created_at'=>$reply_stamp]
-            ]);
-        } else {
-            echo json_encode([
-                'success' => true,
-                'user_message' => ['sender'=>'user','message'=>$message,'type'=>$type,'created_at'=>$now_stamp],
-                'vendor_reply' => null
-            ]);
-        }
+        echo json_encode([
+            'success' => true,
+            'user_message' => ['sender'=>'user','message'=>$message,'type'=>$type,'created_at'=>$now_stamp],
+            'vendor_reply' => null
+        ]);
     }
     break;
 
@@ -3519,11 +3495,32 @@ case 'get_call_history':
 
 case 'get_call_number':
     $target_id = intval($_GET['id'] ?? $_POST['id'] ?? 0);
-    if ($target_id <= 0) { echo json_encode(['phone'=>'', 'name'=>'Ohati User']); exit; }
+    $type_param = $_GET['type'] ?? $_POST['type'] ?? '';
+    if ($target_id <= 0) { echo json_encode(['phone'=>'', 'name'=>'Ohati Contact']); exit; }
 
-    // Check vendors table first (by vendor id or user_id)
-    $v_stmt = $pdo->prepare("SELECT phone, whatsapp, name FROM vendors WHERE id = ? OR user_id = ?");
-    $v_stmt->execute([$target_id, $target_id]);
+    // 1. If target is explicitly a customer/user
+    if ($type_param === 'user' || $type_param === 'customer') {
+        $u_stmt = $pdo->prepare("SELECT phone, name FROM users WHERE id = ?");
+        $u_stmt->execute([$target_id]);
+        $u = $u_stmt->fetch();
+        if ($u && !empty($u['phone'])) {
+            echo json_encode(['phone' => $u['phone'], 'name' => $u['name'] ?? 'Ohati User']);
+            exit;
+        }
+        $v_stmt = $pdo->prepare("SELECT phone, whatsapp, name FROM vendors WHERE user_id = ?");
+        $v_stmt->execute([$target_id]);
+        $v = $v_stmt->fetch();
+        if ($v && (!empty($v['phone']) || !empty($v['whatsapp']))) {
+            echo json_encode(['phone' => !empty($v['phone']) ? $v['phone'] : $v['whatsapp'], 'name' => $v['name']]);
+            exit;
+        }
+        echo json_encode(['phone' => $u['phone'] ?? '', 'name' => $u['name'] ?? 'Ohati Contact']);
+        exit;
+    }
+
+    // 2. Check vendors table by vendor ID first
+    $v_stmt = $pdo->prepare("SELECT phone, whatsapp, name FROM vendors WHERE id = ?");
+    $v_stmt->execute([$target_id]);
     $v = $v_stmt->fetch();
     if ($v && (!empty($v['phone']) || !empty($v['whatsapp']))) {
         $p = !empty($v['phone']) ? $v['phone'] : $v['whatsapp'];
@@ -3531,11 +3528,21 @@ case 'get_call_number':
         exit;
     }
 
-    // Check users table
+    // 3. Check vendors table by user_id
+    $v_stmt2 = $pdo->prepare("SELECT phone, whatsapp, name FROM vendors WHERE user_id = ?");
+    $v_stmt2->execute([$target_id]);
+    $v2 = $v_stmt2->fetch();
+    if ($v2 && (!empty($v2['phone']) || !empty($v2['whatsapp']))) {
+        $p = !empty($v2['phone']) ? $v2['phone'] : $v2['whatsapp'];
+        echo json_encode(['phone' => $p, 'name' => $v2['name']]);
+        exit;
+    }
+
+    // 4. Check users table by ID
     $u_stmt = $pdo->prepare("SELECT phone, name FROM users WHERE id = ?");
     $u_stmt->execute([$target_id]);
     $u = $u_stmt->fetch();
-    echo json_encode(['phone' => $u['phone'] ?? '', 'name' => $u['name'] ?? 'Ohati User']);
+    echo json_encode(['phone' => $u['phone'] ?? '', 'name' => $u['name'] ?? 'Ohati Contact']);
     break;
 
 case 'get_admin_ads':

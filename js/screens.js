@@ -77,20 +77,11 @@ function renderSkeletonListHTML(count = 4) {
 
 // ── Screen Manager: navigateTo ─────────────────────────────────────────
 function navigateTo(screenId) {
-    // Auth Guard: Restrict guests from viewing vendors or performing major activities
-    const guestAllowedScreens = ['home', 'help', 'onboarding', 'loading'];
-    if (!state.user && !guestAllowedScreens.includes(screenId)) {
-        showPushNotification('Sign In Required', 'Please sign in or sign up to view vendors and plan events.');
+    // Auth Guard: Only restrict strictly protected account settings / vendor dashboard
+    const protectedScreens = ['vendor-dash', 'profile-edit', 'vendor-ads'];
+    if (!state.user && protectedScreens.includes(screenId)) {
+        showPushNotification('Sign In Required', 'Please sign in to access your vendor dashboard and account settings.');
         openLoginModal();
-        if (!state.currentScreen || state.currentScreen === 'loading') {
-            window.history.replaceState({ screenId: 'home' }, '', 'index.php');
-            state.currentScreen = 'home';
-            const target = document.getElementById('screen-home');
-            if (target) {
-                target.style.display = 'block';
-            }
-            initHomeScreen();
-        }
         return;
     }
 
@@ -2053,7 +2044,7 @@ function renderChatShell(v) {
                     <div class="chat-vendor-status" id="chat-partner-status">${statusText}</div>
                 </div>
                 <div style="display:flex; gap:14px; margin-left:auto; align-items:center; padding-right:4px;">
-                    <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id}, 'voice')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
+                    <button class="chat-call-action-btn" onclick="OhatiCalling.startCall(${v.user_id || v.id}, 'voice', '${(v.name||'').replace(/'/g, "\\'")}', '${v.phone || v.whatsapp || ''}')" title="Voice Call" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; transition:all 0.2s ease;"><i class="fa-solid fa-phone"></i></button>
                     <button class="chat-call-action-btn" onclick="blockVendorUser(${v.id}, '${(v.name||'').replace(/'/g, "\\'")}')" title="Block / Report User" style="background:none; border:none; color:var(--danger, #EF4444); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;"><i class="fa-solid fa-ban"></i></button>
                 </div>
             </div>

@@ -1416,15 +1416,7 @@ body.dark-theme .sidebar-panel {
     background: var(--gray-50);
 }
 
-.sidebar-header {
-    padding: 24px 20px 20px;
-    background: linear-gradient(135deg, var(--primary), #2a4070);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-}
+.sidebar-header { padding: calc(env(safe-area-inset-top, 0px) + 28px) 20px 20px 20px !important; background: linear-gradient(135deg, var(--primary), #2a4070); color: #fff; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 
 .sidebar-user-info {
     display: flex;

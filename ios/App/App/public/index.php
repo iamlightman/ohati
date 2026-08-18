@@ -548,7 +548,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                                 <span class="app-badge-sub">GET IT ON</span>
                                 <span class="app-badge-main">Google Play</span>
                             </div>
-                            <span class="badge badge-success" style="font-size:0.65rem; padding:2px 8px; font-weight:700;">LIVE</span>
+                            <span class="badge badge-warning" style="font-size:0.6rem; padding:2px 8px; font-weight:700; background:#F59E0B; color:#fff; border-radius:10px;">COMING SOON</span>
                         </button>
                         <button class="app-badge-btn" onclick="openAppDownloadUrl('ios')" style="cursor:pointer;">
                             <i class="fa-brands fa-apple"></i>
@@ -556,7 +556,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                                 <span class="app-badge-sub">Download on the</span>
                                 <span class="app-badge-main">App Store</span>
                             </div>
-                            <span class="badge badge-success" style="font-size:0.65rem; padding:2px 8px; font-weight:700;">LIVE</span>
+                            <span class="badge badge-warning" style="font-size:0.6rem; padding:2px 8px; font-weight:700; background:#F59E0B; color:#fff; border-radius:10px;">COMING SOON</span>
                         </button>
                     </div>
 

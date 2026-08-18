@@ -4456,10 +4456,10 @@ window.openAppExclusiveModal = function(featureTitle = "App Exclusive Feature", 
 
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
                 <button class="btn btn-primary btn-full" onclick="openAppDownloadUrl('android')" style="height:44px; font-size:0.88rem; font-weight:700; background:#34A853; border-color:#34A853; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Download for Android (Google Play)
+                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Download for Android (Coming Soon)
                 </button>
                 <button class="btn btn-primary btn-full" onclick="openAppDownloadUrl('ios')" style="height:44px; font-size:0.88rem; font-weight:700; background:#000; border-color:#000; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <i class="fa-brands fa-apple" style="font-size:1.2rem;"></i> Download for iOS (App Store)
+                    <i class="fa-brands fa-apple" style="font-size:1.2rem;"></i> Download for iOS (Coming Soon)
                 </button>
             </div>
 

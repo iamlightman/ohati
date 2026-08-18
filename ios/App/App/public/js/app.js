@@ -1,6 +1,10 @@
 // js/app.js — Ohati Main Application Bootstrapper
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Render initial Home screen immediately to prevent blank white screen
+    if (typeof navigateTo === 'function') {
+        try { navigateTo('home'); } catch(e) {}
+    }
     // 0. Initialize theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const body = document.body;

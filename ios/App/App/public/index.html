@@ -427,20 +427,6 @@
     <script src="js/app.js?v=1.0.5"></script>
 
 
-    <script>
-    (function() {
-        function killLoader() {
-            var s = document.getElementById('screen-loading');
-            if (s) {
-                s.classList.add('hide');
-                s.style.opacity = '0';
-                s.style.pointerEvents = 'none';
-                setTimeout(function() { s.style.display = 'none'; }, 300);
-            }
-        }
-        setTimeout(killLoader, 800);
-        window.addEventListener('load', killLoader);
-    })();
-    </script>
+    
 </body>
 </html>

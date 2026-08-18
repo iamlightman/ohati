@@ -119,3 +119,31 @@ workflows:
       - build/ios/export/*.zip
       - build/ios/App.xcarchive
       - ios/App/App.xcworkspace
+
+  android-google-play-production:
+    name: Ohati Android Google Play Production Build (.aab & .apk)
+    max_build_duration: 30
+    instance_type: mac_mini_m1
+    environment:
+      node: latest
+      java: 17
+    scripts:
+      - name: Install npm dependencies & Initialize Android project
+        script: |
+          npm install
+          chmod -R +x node_modules/.bin || true
+          if [ ! -d "android" ]; then
+            echo "Generating fresh native Android project..."
+            npx @capacitor/cli add android
+          fi
+          sed -i '' 's/targetSdkVersion = 34/targetSdkVersion = 36/g' android/variables.gradle 2>/dev/null || sed -i 's/targetSdkVersion = 34/targetSdkVersion = 36/g' android/variables.gradle 2>/dev/null || true
+          sed -i '' 's/compileSdkVersion = 34/compileSdkVersion = 36/g' android/variables.gradle 2>/dev/null || sed -i 's/compileSdkVersion = 34/compileSdkVersion = 36/g' android/variables.gradle 2>/dev/null || true
+          npx @capacitor/cli sync android
+      - name: Build Android AAB Bundle & APK Release
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease assembleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+      - android/app/build/outputs/apk/release/*.apk

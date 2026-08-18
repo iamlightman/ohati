@@ -60,7 +60,7 @@ if (empty($_SESSION['csrf'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=1.1.0">
+    <link rel="stylesheet" href="style.css?v=1.1.1">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -380,7 +380,7 @@ if (empty($_SESSION['csrf'])) {
                     <div class="welcome-popup-motto">Find. Compare. Book. Celebrate.</div>
                     
                     <div class="welcome-app-badges">
-                        <button class="app-badge-btn" onclick="openAppDownloadUrl('android')" style="cursor:pointer;">
+                        <button class="app-badge-btn" disabled style="cursor:not-allowed; opacity:0.75;" onclick="showPushNotification('Coming Soon', 'Ohati Android app on Google Play will be available shortly!'); event.preventDefault();">
                             <i class="fa-brands fa-google-play"></i>
                             <div class="app-badge-text">
                                 <span class="app-badge-sub">GET IT ON</span>
@@ -388,7 +388,7 @@ if (empty($_SESSION['csrf'])) {
                             </div>
                             <span class="badge badge-warning" style="font-size:0.6rem; padding:2px 8px; font-weight:700; background:#F59E0B; color:#fff; border-radius:10px;">COMING SOON</span>
                         </button>
-                        <button class="app-badge-btn" onclick="openAppDownloadUrl('ios')" style="cursor:pointer;">
+                        <button class="app-badge-btn" disabled style="cursor:not-allowed; opacity:0.75;" onclick="showPushNotification('Coming Soon', 'Ohati iOS app on App Store will be available shortly!'); event.preventDefault();">
                             <i class="fa-brands fa-apple"></i>
                             <div class="app-badge-text">
                                 <span class="app-badge-sub">Download on the</span>
@@ -414,24 +414,24 @@ if (empty($_SESSION['csrf'])) {
     </div><!-- /app-container -->
 
     
-    <script src="js/utils.js?v=1.1.0"></script>
-    <script src="js/helpers.js?v=1.1.0"></script>
-    <script src="js/api.js?v=1.1.0"></script>
-    <script src="js/action_lock.js?v=1.1.0"></script>
-    <script src="js/state.js?v=1.1.0"></script>
-    <script src="js/modals.js?v=1.1.0"></script>
-    <script src="js/auth.js?v=1.1.0"></script>
-    <script src="js/booking.js?v=1.1.0"></script>
-    <script src="js/vendor.js?v=1.1.0"></script>
-    <script src="js/chat.js?v=1.1.0"></script>
-    <script src="js/search.js?v=1.1.0"></script>
-    <script src="js/review.js?v=1.1.0"></script>
-    <script src="js/notification.js?v=1.1.0"></script>
-    <script src="js/payment.js?v=1.1.0"></script>
-    <script src="js/screens.js?v=1.1.0"></script>
-    <script src="js/calling.js?v=1.1.0"></script>
-    <script src="js/jobs.js?v=1.1.0"></script>
-    <script src="js/app.js?v=1.1.0"></script>
+    <script src="js/utils.js?v=1.1.1"></script>
+    <script src="js/helpers.js?v=1.1.1"></script>
+    <script src="js/api.js?v=1.1.1"></script>
+    <script src="js/action_lock.js?v=1.1.1"></script>
+    <script src="js/state.js?v=1.1.1"></script>
+    <script src="js/modals.js?v=1.1.1"></script>
+    <script src="js/auth.js?v=1.1.1"></script>
+    <script src="js/booking.js?v=1.1.1"></script>
+    <script src="js/vendor.js?v=1.1.1"></script>
+    <script src="js/chat.js?v=1.1.1"></script>
+    <script src="js/search.js?v=1.1.1"></script>
+    <script src="js/review.js?v=1.1.1"></script>
+    <script src="js/notification.js?v=1.1.1"></script>
+    <script src="js/payment.js?v=1.1.1"></script>
+    <script src="js/screens.js?v=1.1.1"></script>
+    <script src="js/calling.js?v=1.1.1"></script>
+    <script src="js/jobs.js?v=1.1.1"></script>
+    <script src="js/app.js?v=1.1.1"></script>
 
 </body>
 </html>

@@ -542,7 +542,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                     <div class="welcome-popup-motto">Find. Compare. Book. Celebrate.</div>
                     
                     <div class="welcome-app-badges">
-                        <button class="app-badge-btn" onclick="openAppDownloadUrl('android')" style="cursor:pointer;">
+                        <button class="app-badge-btn" disabled style="cursor:not-allowed; opacity:0.75;" onclick="showPushNotification('Coming Soon', 'Ohati Android app on Google Play will be available shortly!'); event.preventDefault();">
                             <i class="fa-brands fa-google-play"></i>
                             <div class="app-badge-text">
                                 <span class="app-badge-sub">GET IT ON</span>
@@ -550,7 +550,7 @@ if (strpos($_SERVER['REQUEST_URI'], 'detail.php') !== false && isset($_GET['id']
                             </div>
                             <span class="badge badge-warning" style="font-size:0.6rem; padding:2px 8px; font-weight:700; background:#F59E0B; color:#fff; border-radius:10px;">COMING SOON</span>
                         </button>
-                        <button class="app-badge-btn" onclick="openAppDownloadUrl('ios')" style="cursor:pointer;">
+                        <button class="app-badge-btn" disabled style="cursor:not-allowed; opacity:0.75;" onclick="showPushNotification('Coming Soon', 'Ohati iOS app on App Store will be available shortly!'); event.preventDefault();">
                             <i class="fa-brands fa-apple"></i>
                             <div class="app-badge-text">
                                 <span class="app-badge-sub">Download on the</span>

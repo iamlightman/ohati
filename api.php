@@ -531,6 +531,13 @@ case 'register':
     if (strlen($password) < 6) {
         http_response_code(400); echo json_encode(['error'=>'Password must be at least 6 characters long.']); exit;
     }
+    $confirm = $input['confirm_password'] ?? $input['confirm'] ?? '';
+    if (empty($confirm)) {
+        http_response_code(400); echo json_encode(['error'=>'Confirm Password field is compulsory.']); exit;
+    }
+    if ($password !== $confirm) {
+        http_response_code(400); echo json_encode(['error'=>'Passwords do not match. Please verify your password.']); exit;
+    }
 
     try {
         $pdo->beginTransaction();

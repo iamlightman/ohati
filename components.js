@@ -2143,11 +2143,16 @@ function renderNegotiationSection(b, negHistory) {
     return '';
 }
 
-function navigateToChatDirect(vendorId) {
-    closeBookingModal();
-    state.activeChatVendorId = vendorId;
-    navigateTo('chat');
-}
+
+window.startVendorChat = function(vid) {
+    console.log("Opening chat with vendor/user ID:", vid);
+    if (vid) state.activeChatVendorId = vid;
+    if (typeof navigateTo === 'function') {
+        navigateTo('chat');
+    }
+};
+window.navigateToChatDirect = window.startVendorChat;
+
 
 function renderPaymentSection(b) {
     if (b.status !== 'Vendor Accepted' && b.status !== 'Deposit Paid' && b.status !== 'Fully Paid') return '';
@@ -2499,10 +2504,16 @@ async function toggleFavorite(vendorId, buttonEl) {
 
 // 8. Simulated Messaging Flow
 // 8. Simulated Messaging Flow
-async function startVendorChat(vendorId) {
-    state.activeChatVendorId = vendorId;
-    navigateTo('chat');
-}
+
+window.startVendorChat = function(vid) {
+    console.log("Opening chat with vendor/user ID:", vid);
+    if (vid) state.activeChatVendorId = vid;
+    if (typeof navigateTo === 'function') {
+        navigateTo('chat');
+    }
+};
+window.navigateToChatDirect = window.startVendorChat;
+
 
 async function renderChatScreen() {
     const el = document.getElementById('screen-chat');

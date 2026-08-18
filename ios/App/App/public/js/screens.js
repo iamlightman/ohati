@@ -1941,14 +1941,16 @@ function openChatWithVendor(vid) {
     initChatScreen();
 }
 
-function startVendorChat(vid) {
-    if (!state.user) {
-        openAuthModal('login');
-        return;
+
+window.startVendorChat = function(vid) {
+    console.log("Opening chat with vendor/user ID:", vid);
+    if (vid) state.activeChatVendorId = vid;
+    if (typeof navigateTo === 'function') {
+        navigateTo('chat');
     }
-    state.activeChatVendorId = vid;
-    navigateTo('chat');
-}
+};
+window.navigateToChatDirect = window.startVendorChat;
+
 
 function renderChatShell(v) {
     const screen = document.getElementById('screen-chat');

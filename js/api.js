@@ -83,7 +83,13 @@ const API = {
             if (json && json.csrf && window.state) {
                 window.state.csrfToken = json.csrf;
             }
-            if (!res.ok) throw new Error(json.error || 'Request failed');
+            if (!res.ok) {
+                const errObj = new Error((json && json.error) ? json.error : 'Request failed');
+                if (json && typeof json === 'object') {
+                    Object.assign(errObj, json);
+                }
+                throw errObj;
+            }
             return json;
         })();
 

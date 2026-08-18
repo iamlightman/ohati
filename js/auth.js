@@ -1428,11 +1428,11 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
         }
     };
 
-    if (alreadyExists && window._currentAuthLockMode && window._currentAuthLockMode !== 'login') {
+    if (alreadyExists && window._currentAuthLockMode) {
         return;
     }
 
-    window.renderMandatoryAuthContent(initialMode || window._currentAuthLockMode || 'login');
+    window.renderMandatoryAuthContent(initialMode || 'login');
 };
 
 window.unlockMandatoryAuthScreen = function() {

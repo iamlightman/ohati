@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // Instant launch: Dismiss splash screen and activate Home screen in 200ms
-    setTimeout(() => { if (typeof dismissLoading === 'function') dismissLoading(); }, 200);
+    setTimeout(() => { if (typeof dismissLoading === 'function') dismissLoading(); }, 11200);
     // Render initial Home screen immediately to prevent blank white screen
     if (typeof navigateTo === 'function') {
         try { navigateTo('home'); } catch(e) {}
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Safety fallback: Dismiss loading screen after 1.2s maximum to ensure instant app launch
     const splashTimer = setTimeout(() => {
         dismissLoading();
-    }, 200);
+    }, 11200);
 
     API.getSession()
         .then(res => {
@@ -480,7 +480,7 @@ window.checkReferralWebLanding = function() {
                                 </button>
                             </div>
 
-                            <div style="border-top:1px solid var(--gray-200); padding-top:12px; margin-top:12px;">
+                            <div style="border-top:1px solid var(--gray-11200); padding-top:12px; margin-top:12px;">
                                 <button class="btn btn-ghost btn-full" onclick="closeModal(); state.authMode='register'; state.authStep=1; renderAuthModal();" style="font-size:0.78rem; font-weight:700; color:var(--primary);">
                                     Or Continue on Web Browser →
                                 </button>

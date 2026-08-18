@@ -54,13 +54,13 @@ if (empty($_SESSION['csrf'])) {
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap" >
 
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.0.6">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -414,24 +414,24 @@ if (empty($_SESSION['csrf'])) {
     </div><!-- /app-container -->
 
     
-    <script src="js/utils.js"></script>
-    <script src="js/helpers.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/action_lock.js"></script>
-    <script src="js/state.js"></script>
-    <script src="js/modals.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/booking.js"></script>
-    <script src="js/vendor.js"></script>
-    <script src="js/chat.js"></script>
-    <script src="js/search.js"></script>
-    <script src="js/review.js"></script>
-    <script src="js/notification.js"></script>
-    <script src="js/payment.js"></script>
-    <script src="js/screens.js"></script>
-    <script src="js/calling.js"></script>
-    <script src="js/jobs.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/utils.js?v=1.0.6"></script>
+    <script src="js/helpers.js?v=1.0.6"></script>
+    <script src="js/api.js?v=1.0.6"></script>
+    <script src="js/action_lock.js?v=1.0.6"></script>
+    <script src="js/state.js?v=1.0.6"></script>
+    <script src="js/modals.js?v=1.0.6"></script>
+    <script src="js/auth.js?v=1.0.6"></script>
+    <script src="js/booking.js?v=1.0.6"></script>
+    <script src="js/vendor.js?v=1.0.6"></script>
+    <script src="js/chat.js?v=1.0.6"></script>
+    <script src="js/search.js?v=1.0.6"></script>
+    <script src="js/review.js?v=1.0.6"></script>
+    <script src="js/notification.js?v=1.0.6"></script>
+    <script src="js/payment.js?v=1.0.6"></script>
+    <script src="js/screens.js?v=1.0.6"></script>
+    <script src="js/calling.js?v=1.0.6"></script>
+    <script src="js/jobs.js?v=1.0.6"></script>
+    <script src="js/app.js?v=1.0.6"></script>
 
 </body>
 </html>

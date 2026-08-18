@@ -34,6 +34,8 @@ workflows:
             cp -r ios_templates/Assets.xcassets/AppIcon.appiconset/* ios/App/App/Assets.xcassets/AppIcon.appiconset/
           fi
           npx @capacitor/cli sync ios
+          echo "Setting minimum iOS deployment target to 15.0..."
+          find ios -name "project.pbxproj" -exec sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' {} + 2>/dev/null || find ios -name "project.pbxproj" -exec sed -i 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' {} + 2>/dev/null || true
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install

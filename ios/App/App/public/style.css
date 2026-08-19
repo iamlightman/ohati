@@ -312,7 +312,7 @@ body {
     transition: background var(--anim-mid) ease;
 }
 
-@media(min-width:480px) {
+@media (min-width: 480px) and (max-width: 767px) {
     .app-container {
         width: 430px;
         height: min(900px, 100dvh);
@@ -6979,8 +6979,8 @@ body.dark-theme .handpicked-card-location {
 
     /* 3. Header branding adjustment */
     .header-menu-btn {
-        pointer-events: none;
-        /* Disable sidebar toggle trigger on desktop */
+        pointer-events: auto !important;
+        cursor: pointer;
     }
 
     /* 4. Desktop Navigation link bar */

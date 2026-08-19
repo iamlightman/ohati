@@ -1,6 +1,9 @@
 <?php
 // api.php - Ohati Backend API
 date_default_timezone_set('Africa/Accra');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
@@ -89,8 +92,9 @@ if (preg_match('/Bearer\s+(.+)/i', $auth_header, $matches)) {
 if (!empty($token)) {
     $token_hash = hash('sha256', $token);
     try {
-        $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > NOW())");
-        $t_stmt->execute([$token_hash]);
+        $now_stamp = date('Y-m-d H:i:s');
+        $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > ?)");
+        $t_stmt->execute([$token_hash, $now_stamp]);
         $token_uid = $t_stmt->fetchColumn();
         if ($token_uid) {
             $u_stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");

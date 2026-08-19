@@ -229,11 +229,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['test_login'])
         <form method="POST">
             <div>
                 <label>Email or Phone Number:</label><br>
-                <input type="text" name="identifier" placeholder="e.g. demo@ohati.com or 0200000000" required value="<?= htmlspecialchars($_POST['identifier'] ?? 'demo.customer@ohati.com') ?>">
+                <input type="text" name="identifier" placeholder="e.g. demo@ohati.com or 0200000000" required value="<?= htmlspecialchars($_POST['identifier'] ?? 'demo@ohati.com') ?>">
             </div>
             <div>
                 <label>Password:</label><br>
-                <input type="password" name="password" placeholder="Password" required value="OhatiDemo2026@Customer">
+                <input type="password" name="password" placeholder="Password" required value="Ohati123!">
             </div>
             <button type="submit" name="test_login">Run Login API Test</button>
         </form>

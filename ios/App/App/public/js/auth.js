@@ -1419,17 +1419,26 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                     <form onsubmit="handleMandatoryLoginSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email or Phone Number</label>
-                            <input type="text" id="m-lock-id" required placeholder="email@example.com or phone" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                            <input type="text" id="m-lock-id" required autocomplete="off" placeholder="demo.customer@ohati.com" value="demo.customer@ohati.com" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Password</label>
-                            <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                            <input type="password" id="m-lock-pass" required autocomplete="off" placeholder="Your password" value="OhatiDemo2026@Customer" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
                         <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Sign In</button>
                     </form>
 
-                    <div style="margin-top:24px; font-size:0.85rem; color:#94A3B8;">
+                    <div style="display:flex; gap:8px; margin-top:14px;">
+                        <button type="button" onclick="document.getElementById('m-lock-id').value='demo.customer@ohati.com'; document.getElementById('m-lock-pass').value='OhatiDemo2026@Customer';" style="flex:1; padding:8px; font-size:0.75rem; font-weight:700; border-radius:8px; border:1px solid rgba(242,167,53,0.4); background:rgba(242,167,53,0.12); color:#F2A735; cursor:pointer;">
+                            Fill Customer Demo
+                        </button>
+                        <button type="button" onclick="document.getElementById('m-lock-id').value='demo.vendor@ohati.com'; document.getElementById('m-lock-pass').value='OhatiDemo2026@Vendor';" style="flex:1; padding:8px; font-size:0.75rem; font-weight:700; border-radius:8px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38BDF8; cursor:pointer;">
+                            Fill Vendor Demo
+                        </button>
+                    </div>
+
+                    <div style="margin-top:18px; font-size:0.85rem; color:#94A3B8;">
                         Don't have an account? <a href="#" onclick="renderMandatoryAuthContent('signup'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Sign up</a>
                     </div>
                 </div>

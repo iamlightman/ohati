@@ -44,6 +44,33 @@ function resolve_vendor_logo($category, $current_logo = '') {
     return $map[$category] ?? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
 }
 
+function save_base64_image($base64_str, $prefix = 'img') {
+    if (empty($base64_str) || strpos($base64_str, 'data:image/') !== 0) {
+        return $base64_str;
+    }
+    try {
+        list($type, $data) = explode(';', $base64_str);
+        list(, $data)      = explode(',', $data);
+        $data = base64_decode($data);
+        if (!$data) return $base64_str;
+
+        $ext = 'jpg';
+        if (strpos($type, 'png') !== false) $ext = 'png';
+        else if (strpos($type, 'webp') !== false) $ext = 'webp';
+
+        $dir = __DIR__ . '/uploads/kyc/';
+        if (!file_exists($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        $file_name = $prefix . '_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+        file_put_contents($dir . $file_name, $data);
+        return 'uploads/kyc/' . $file_name;
+    } catch (Exception $e) {
+        return $base64_str;
+    }
+}
+
 // Bearer Token & Persistent Authentication Middleware
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $auth_header = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
@@ -2376,6 +2403,72 @@ case 'get_blocked_users':
     } catch (Exception $e) {
         echo json_encode(['blocked' => []]);
     }
+    break;
+
+case 'update_profile':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in to update profile.']); exit; }
+
+    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+
+    // Decode and save base64 image files if provided
+    if (!empty($data['kyc_id_front']) && strpos($data['kyc_id_front'], 'data:image/') === 0) {
+        $data['kyc_id_front'] = save_base64_image($data['kyc_id_front'], 'kyc_id_front_' . $uid);
+    }
+    if (!empty($data['kyc_id_back']) && strpos($data['kyc_id_back'], 'data:image/') === 0) {
+        $data['kyc_id_back'] = save_base64_image($data['kyc_id_back'], 'kyc_id_back_' . $uid);
+    }
+    if (!empty($data['kyc_selfie']) && strpos($data['kyc_selfie'], 'data:image/') === 0) {
+        $data['kyc_selfie'] = save_base64_image($data['kyc_selfie'], 'kyc_selfie_' . $uid);
+    }
+    if (!empty($data['avatar']) && strpos($data['avatar'], 'data:image/') === 0) {
+        $data['avatar'] = save_base64_image($data['avatar'], 'avatar_' . $uid);
+    }
+
+    $allowed_fields = [
+        'name', 'email', 'phone', 'username', 'avatar', 'gender', 'dob',
+        'country', 'state', 'city', 'language', 'currency',
+        'kyc_status', 'kyc_id_type', 'kyc_id_front', 'kyc_id_back',
+        'kyc_selfie', 'kyc_submitted_at', 'kyc_reviewed_at', 'kyc_notes'
+    ];
+
+    $updates = [];
+    $params = [];
+
+    foreach ($allowed_fields as $field) {
+        if (isset($data[$field])) {
+            $updates[] = "`$field` = ?";
+            $params[] = $data[$field];
+        }
+    }
+
+    if (!empty($updates)) {
+        $params[] = $uid;
+        $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Database update error: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    // Fetch updated user
+    $u_stmt = $pdo->prepare("SELECT id, name, email, phone, username, role, active_role, avatar, gender, dob, country, state, city, language, currency, kyc_status, kyc_id_type, kyc_id_front, kyc_id_back, kyc_selfie, kyc_submitted_at FROM users WHERE id = ?");
+    $u_stmt->execute([$uid]);
+    $updated_user = $u_stmt->fetch();
+
+    if ($updated_user) {
+        $_SESSION['user'] = array_merge($_SESSION['user'] ?? [], $updated_user);
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Profile updated successfully.',
+        'user' => $updated_user ?: ($_SESSION['user'] ?? null)
+    ]);
     break;
 
 

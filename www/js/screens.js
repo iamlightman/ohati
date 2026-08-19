@@ -5246,30 +5246,41 @@ window.handleKycModalFile = function(event, type) {
 };
 
 window.submitKycFromModal = function() {
-    const idFront = window._kycModalData.id_front;
-    const selfie = window._kycModalData.selfie;
+    const idFront = window._kycModalData ? window._kycModalData.id_front : '';
+    const selfie = window._kycModalData ? window._kycModalData.selfie : '';
     if (!idFront || !selfie) {
         showPushNotification('Missing Documents', 'Please upload both your ID front and selfie before submitting.');
         return;
     }
     const btn = document.getElementById('kyc-modal-submit-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
-
     const idType = document.getElementById('kyc-modal-id-type')?.value || 'Ghana Card / National ID';
 
-    API.updateProfile({
-        kyc_status: 'pending_verification',
-        kyc_id_type: idType,
-        kyc_id_front: idFront,
-        kyc_selfie: selfie,
-        kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
-    }).then(() => {
-        API.getSession().then(res => { state.user = res.user; });
-        showPushNotification('Documents Submitted', 'Your identity documents are under review. You will be notified once approved.');
-        closeModal();
-    }).catch(err => {
-        showPushNotification('Submission Error', err.message);
-        if (btn) { btn.disabled = false; btn.textContent = 'Submit for Verification'; }
+    ActionLock.execute(btn, 'Submitting Documents...', async () => {
+        try {
+            const res = await API.updateProfile({
+                kyc_status: 'pending_verification',
+                kyc_id_type: idType,
+                kyc_id_front: idFront,
+                kyc_selfie: selfie,
+                kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+            });
+
+            if (res && res.user) {
+                state.user = res.user;
+                localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            } else {
+                const sessionRes = await API.getSession();
+                if (sessionRes && sessionRes.user) state.user = sessionRes.user;
+            }
+
+            showPushNotification('Documents Submitted', 'Your identity documents are under review. You will be notified once approved.');
+            closeModal();
+
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            if (typeof renderProfileScreen === 'function') renderProfileScreen();
+        } catch (err) {
+            showPushNotification('Submission Error', err.message || 'Failed to submit identity documents.');
+        }
     });
 };
 

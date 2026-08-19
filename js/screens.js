@@ -76,7 +76,7 @@ function renderSkeletonListHTML(count = 4) {
 }
 
 // ── Screen Manager: navigateTo ─────────────────────────────────────────
-function navigateTo(screenId) {
+function navigateTo(screenId, params = {}, options = {}) {
     // Auth Guard: Lock screen to login/signup unless authenticated
     if (!state.user) {
         if (typeof showMandatoryAuthLockScreen === 'function') {
@@ -85,16 +85,65 @@ function navigateTo(screenId) {
         return;
     }
 
-    if (state.currentScreen === screenId) return;
+    const force = typeof options === 'boolean' ? options : !!options.force;
+    const fromPopState = options && typeof options === 'object' ? !!options.fromPopState : false;
+    const replace = options && typeof options === 'object' ? !!options.replace : false;
+
+    // Check if parameters changed (e.g. vendor ID, booking ID, chat vendor ID, job ID)
+    let paramsChanged = false;
+    if (params && typeof params === 'object') {
+        if (params.id !== undefined && params.id !== null) {
+            const numId = parseInt(params.id);
+            if (screenId === 'detail' && state.selectedVendorId !== numId) paramsChanged = true;
+            if (screenId === 'bookings' && state.selectedBookingId !== numId) paramsChanged = true;
+            if (screenId === 'user-jobs' && state.selectedJobId !== numId) paramsChanged = true;
+            if (screenId === 'vendor-jobs' && state.selectedJobId !== numId) paramsChanged = true;
+        }
+        if (params.vendor_id !== undefined || params.vendorId !== undefined) {
+            const vid = parseInt(params.vendor_id || params.vendorId);
+            if (screenId === 'chat' && state.activeChatVendorId !== vid) paramsChanged = true;
+            if (screenId === 'detail' && state.selectedVendorId !== vid) paramsChanged = true;
+        }
+    }
+
+    if (state.currentScreen === screenId && !paramsChanged && !force) return;
+
+    // Apply structured parameters to state
+    if (params && typeof params === 'object') {
+        if (params.id !== undefined && params.id !== null) {
+            const numId = parseInt(params.id);
+            if (screenId === 'detail') state.selectedVendorId = numId;
+            else if (screenId === 'bookings') state.selectedBookingId = numId;
+            else if (screenId === 'user-jobs' || screenId === 'vendor-jobs') state.selectedJobId = numId;
+        }
+        if (params.vendor_id !== undefined || params.vendorId !== undefined) {
+            const vid = parseInt(params.vendor_id || params.vendorId);
+            if (screenId === 'chat') state.activeChatVendorId = vid;
+            if (screenId === 'detail') state.selectedVendorId = vid;
+        }
+    }
 
     if (screenId !== 'chat' && state.chatInterval) {
         clearInterval(state.chatInterval);
         state.chatInterval = null;
     }
 
-    // Save history
-    if (state.currentScreen && state.currentScreen !== 'loading') {
-        state.previousScreens.push(state.currentScreen);
+    // Save history with structured snapshot
+    if (!fromPopState && state.currentScreen && state.currentScreen !== 'loading') {
+        const historySnapshot = {
+            screenId: state.currentScreen,
+            params: {
+                selectedVendorId: state.selectedVendorId,
+                activeChatVendorId: state.activeChatVendorId,
+                selectedBookingId: state.selectedBookingId,
+                selectedJobId: state.selectedJobId
+            }
+        };
+        if (replace && state.previousScreens.length > 0) {
+            state.previousScreens[state.previousScreens.length - 1] = historySnapshot;
+        } else {
+            state.previousScreens.push(historySnapshot);
+        }
     }
 
     state.currentScreen = screenId;
@@ -105,7 +154,7 @@ function navigateTo(screenId) {
     else if (screenId === 'search') pageName = 'search.php';
     else if (screenId === 'detail') pageName = `detail.php${state.selectedVendorId ? '?id=' + state.selectedVendorId : ''}`;
     else if (screenId === 'chat') pageName = `chat.php${state.activeChatVendorId ? '?vendor_id=' + state.activeChatVendorId : ''}`;
-    else if (screenId === 'bookings') pageName = 'bookings.php';
+    else if (screenId === 'bookings') pageName = `bookings.php${state.selectedBookingId ? '?id=' + state.selectedBookingId : ''}`;
     else if (screenId === 'favorites') pageName = 'favorites.php';
     else if (screenId === 'compare') pageName = 'compare.php';
     else if (screenId === 'notifications') pageName = 'notifications.php';
@@ -121,9 +170,13 @@ function navigateTo(screenId) {
         return;
     }
 
-    const currentPath = window.location.pathname.split('/').pop();
-    if (currentPath !== pageName) {
-        window.history.pushState({ screenId }, '', pageName);
+    const currentUrl = window.location.pathname.split('/').pop() + window.location.search;
+    if (!fromPopState && currentUrl !== pageName) {
+        if (replace) {
+            window.history.replaceState({ screenId, params }, '', pageName);
+        } else {
+            window.history.pushState({ screenId, params }, '', pageName);
+        }
     }
 
     const appContainer = document.getElementById('ohati-app');
@@ -168,61 +221,61 @@ function navigateTo(screenId) {
     // Run screen specific initialization/render
     switch (screenId) {
         case 'home':
-            initHomeScreen();
+            initHomeScreen(params);
             break;
         case 'search':
-            initSearchScreen();
+            initSearchScreen(params);
             break;
         case 'detail':
-            initDetailScreen();
+            initDetailScreen(params);
             break;
         case 'chat':
-            initChatScreen();
+            initChatScreen(params);
             break;
         case 'bookings':
-            initBookingsScreen();
+            initBookingsScreen(params);
             break;
         case 'favorites':
-            initFavoritesScreen();
+            initFavoritesScreen(params);
             break;
         case 'event':
-            initEventScreen();
+            initEventScreen(params);
             break;
         case 'compare':
-            initCompareScreen();
+            initCompareScreen(params);
             break;
         case 'notifications':
-            initNotificationsScreen();
+            initNotificationsScreen(params);
             break;
         case 'profile':
-            initProfileScreen();
+            initProfileScreen(params);
             break;
         case 'vendor-dash':
-            initVendorDashScreen();
+            initVendorDashScreen(params);
             break;
         case 'vendor-ads':
-            initVendorAdsScreen();
+            initVendorAdsScreen(params);
             break;
         case 'vendor-auto-response':
-            initVendorAutoResponseScreen();
+            initVendorAutoResponseScreen(params);
             break;
         case 'profile-edit':
-            initProfileEditScreen();
+            initProfileEditScreen(params);
             break;
         case 'about':
-            initAboutScreen();
+            initAboutScreen(params);
             break;
         case 'help':
-            initHelpScreen();
+            initHelpScreen(params);
             break;
         case 'report-issue':
-            initReportIssueScreen();
+            initReportIssueScreen(params);
             break;
         case 'user-jobs':
-            initUserJobsScreen();
+            initUserJobsScreen(params);
             break;
         case 'vendor-jobs':
-            initVendorJobsScreen();
+            initVendorJobsScreen(params);
             break;
     }
 
@@ -256,12 +309,20 @@ function navigateTo(screenId) {
 
 function navigateBack() {
     if (state.previousScreens.length > 0) {
-        const prev = state.previousScreens.pop();
-        navigateTo(prev);
-        // pop again because navigateTo will push current back
-        state.previousScreens.pop();
+        const prevEntry = state.previousScreens.pop();
+        if (typeof prevEntry === 'string') {
+            navigateTo(prevEntry, {}, { fromPopState: true, force: true });
+        } else if (prevEntry && prevEntry.screenId) {
+            if (prevEntry.params) {
+                if (prevEntry.params.selectedVendorId) state.selectedVendorId = prevEntry.params.selectedVendorId;
+                if (prevEntry.params.activeChatVendorId) state.activeChatVendorId = prevEntry.params.activeChatVendorId;
+                if (prevEntry.params.selectedBookingId) state.selectedBookingId = prevEntry.params.selectedBookingId;
+                if (prevEntry.params.selectedJobId) state.selectedJobId = prevEntry.params.selectedJobId;
+            }
+            navigateTo(prevEntry.screenId, prevEntry.params || {}, { fromPopState: true, force: true });
+        }
     } else {
-        navigateTo('home');
+        navigateTo('home', {}, { force: true });
     }
 }
 

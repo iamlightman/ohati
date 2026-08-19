@@ -100,22 +100,38 @@ document.addEventListener('DOMContentLoaded', () => {
             state.event = results[7].status === 'fulfilled' ? results[7].value : null;
             state.faqs = results[8].status === 'fulfilled' ? results[8].value : [];
 
-            // Detect screen from URL path (e.g. planner.php -> 'event', chat.php -> 'chat')
+            // Detect screen & parameters from URL path & query string
             const path = window.location.pathname.split('/').pop();
+            const urlParams = new URLSearchParams(window.location.search);
             let startScreen = 'home';
+            let startParams = {};
+
             if (path === 'planner.php') startScreen = 'event';
             else if (path === 'search.php') startScreen = 'search';
             else if (path === 'detail.php') {
                 startScreen = 'detail';
-                const params = new URLSearchParams(window.location.search);
-                state.selectedVendorId = parseInt(params.get('id')) || null;
+                const idVal = parseInt(urlParams.get('id') || urlParams.get('vendor_id'));
+                if (idVal) {
+                    state.selectedVendorId = idVal;
+                    startParams = { id: idVal };
+                }
             }
             else if (path === 'chat.php') {
                 startScreen = 'chat';
-                const params = new URLSearchParams(window.location.search);
-                state.activeChatVendorId = parseInt(params.get('vendor_id')) || null;
+                const vid = parseInt(urlParams.get('vendor_id') || urlParams.get('id'));
+                if (vid) {
+                    state.activeChatVendorId = vid;
+                    startParams = { vendor_id: vid };
+                }
             }
-            else if (path === 'bookings.php') startScreen = 'bookings';
+            else if (path === 'bookings.php') {
+                startScreen = 'bookings';
+                const bId = parseInt(urlParams.get('id'));
+                if (bId) {
+                    state.selectedBookingId = bId;
+                    startParams = { id: bId };
+                }
+            }
             else if (path === 'favorites.php') startScreen = 'favorites';
             else if (path === 'compare.php') startScreen = 'compare';
             else if (path === 'notifications.php') startScreen = 'notifications';
@@ -123,10 +139,18 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (path === 'vendor-dash.php') startScreen = 'vendor-dash';
             else if (path === 'promotions.php') startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home';
             else if (path === 'report-issue.php') startScreen = 'report-issue';
+            else if (path === 'jobs.php') {
+                startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-jobs' : 'user-jobs';
+                const jId = parseInt(urlParams.get('id'));
+                if (jId) {
+                    state.selectedJobId = jId;
+                    startParams = { id: jId };
+                }
+            }
             else if (path === 'reviews.php') startScreen = 'home';
             else if (state.user && (state.user.active_role || state.user.role) === 'vendor') startScreen = 'vendor-dash';
 
-            navigateTo(startScreen);
+            navigateTo(startScreen, startParams, { force: true });
             if (window.OhatiNavManager) window.OhatiNavManager.init();
             dismissLoading();
             pollUnreadChats();

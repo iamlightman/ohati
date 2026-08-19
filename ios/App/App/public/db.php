@@ -297,6 +297,14 @@ try {
         duration INT DEFAULT 0,
         created_at $NOW,
         updated_at $NOW
+} catch (Exception $e) {}
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_blocks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        blocked_user_id INT NOT NULL,
+        reason VARCHAR(255) DEFAULT '',
+        created_at $NOW
     )");
 } catch (Exception $e) {}
 try {

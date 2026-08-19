@@ -111,40 +111,179 @@ window.getBlockedUsers = function() {
     } catch(e) { return []; }
 };
 
-window.blockVendorUser = function(vendorId, vendorName) {
-    if (!vendorId) return;
-    if (confirm('Block ' + (vendorName || 'this user') + '? You will no longer see messages or listings from this user.')) {
+window.openBlockUserModal = function(targetId, targetName, targetAvatar, targetRole) {
+    if (!targetId) return;
+    if (!state.user) {
+        if (typeof openLoginModal === 'function') openLoginModal();
+        return;
+    }
+    
+    const blockedList = window.getBlockedUsers();
+    const isBlocked = blockedList.includes(targetId) || blockedList.includes(Number(targetId));
+    
+    if (isBlocked) {
+        // Unblock Pop Up Modal
+        const html = `
+            <div style="padding:28px 22px; text-align:center;">
+                <div style="width:68px; height:68px; border-radius:50%; background:rgba(16, 185, 129, 0.12); color:#10B981; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 16px; box-shadow:0 6px 18px rgba(16,185,129,0.18);">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <h3 style="margin:0 0 6px 0; font-size:1.25rem; font-weight:800; color:var(--gray-900,#111827);">Unblock ${targetName || 'User'}?</h3>
+                <p style="margin:0 0 20px 0; font-size:0.83rem; color:var(--gray-500,#6B7280); line-height:1.5;">
+                    Unblocking will allow <strong>${targetName || 'this user'}</strong> to view your profile, send you messages, and appear in your active chats.
+                </p>
+                <div style="display:flex; gap:10px; margin-top:24px;">
+                    <button class="btn btn-outline btn-full" onclick="closeModal()" style="padding:12px; font-weight:700;">Cancel</button>
+                    <button class="btn btn-primary btn-full" id="confirm-unblock-btn" onclick="submitUnblockUserAction(${targetId}, '${(targetName||'').replace(/'/g, "\\'")}')" style="padding:12px; font-weight:700; background:#10B981; border-color:#10B981; color:#fff;">
+                        <i class="fa-solid fa-unlock" style="margin-right:6px;"></i> Unblock User
+                    </button>
+                </div>
+            </div>
+        `;
+        openModal(html);
+        return;
+    }
+
+    const avatarUrl = targetAvatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+    const roleLabel = targetRole || 'Vendor';
+
+    const html = `
+        <div style="padding:24px 20px; text-align:left;">
+            <!-- Header Icon & Title -->
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                <div style="width:48px; height:48px; border-radius:50%; background:rgba(239, 68, 68, 0.12); color:#EF4444; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                    <i class="fa-solid fa-user-slash"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--gray-900,#111827);">Block & Report User</h3>
+                    <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--gray-500,#6B7280);">Prevent unwanted messages & submit reports</p>
+                </div>
+            </div>
+
+            <!-- Target User Card -->
+            <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--gray-100,#F8FAFC); border-radius:14px; margin-bottom:18px; border:1px solid var(--gray-200,#E2E8F0);">
+                <img src="${avatarUrl}" style="width:44px; height:44px; border-radius:50%; object-fit:cover;" alt="${targetName || 'User'}">
+                <div style="overflow:hidden;">
+                    <div style="font-weight:800; font-size:0.92rem; color:var(--gray-900,#111827); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">${targetName || 'User'}</div>
+                    <div style="font-size:0.72rem; color:var(--gray-500,#6B7280); font-weight:600;">${roleLabel} Profile</div>
+                </div>
+            </div>
+
+            <!-- Block Reason Selection -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.78rem; font-weight:700; color:var(--gray-700,#374151); margin-bottom:6px;">Select reason for blocking:</label>
+                <select id="block-reason-select" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--gray-300,#CBD5E1); background:#fff; font-size:0.85rem; color:var(--gray-800,#1E293B); outline:none;" onchange="toggleBlockNotesField(this.value)">
+                    <option value="Inappropriate Messages or Behavior">Inappropriate Messages or Behavior</option>
+                    <option value="Spam or Unsolicited Advertisements">Spam or Unsolicited Advertisements</option>
+                    <option value="Suspected Fraud, Scam or Fake Profile">Suspected Fraud, Scam or Fake Profile</option>
+                    <option value="Harassment or Offensive Language">Harassment or Offensive Language</option>
+                    <option value="No Longer Wish to Communicate">No Longer Wish to Communicate</option>
+                    <option value="Other Reason">Other Reason</option>
+                </select>
+            </div>
+
+            <!-- Additional Notes / Details -->
+            <div id="block-notes-wrap" style="margin-bottom:16px; display:none;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--gray-700,#374151); margin-bottom:4px;">Additional Details (Optional):</label>
+                <textarea id="block-reason-notes" rows="2" placeholder="Provide extra details for moderation team..." style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--gray-300,#CBD5E1); font-size:0.82rem; outline:none; box-sizing:border-box; resize:none;"></textarea>
+            </div>
+
+            <!-- Checkbox: Report to Admin -->
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--gray-700,#374151); margin-bottom:18px; cursor:pointer; font-weight:600;">
+                <input type="checkbox" id="block-report-checkbox" checked style="accent-color:#EF4444; width:16px; height:16px; cursor:pointer;">
+                <span>Submit a confidential report to Ohati Moderation</span>
+            </label>
+
+            <!-- Warning Notice -->
+            <div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:10px 12px; margin-bottom:20px; font-size:0.74rem; color:var(--gray-700,#374151); line-height:1.4;">
+                <i class="fa-solid fa-shield-halved" style="color:#EF4444; margin-right:6px;"></i>
+                This user will be blocked immediately and hidden from your chat inbox and feeds.
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-outline btn-full" onclick="closeModal()" style="padding:12px; font-weight:700;">Cancel</button>
+                <button class="btn btn-primary btn-full" id="confirm-block-btn" onclick="submitBlockUserAction(${targetId}, '${(targetName||'').replace(/'/g, "\\'")}')" style="padding:12px; font-weight:700; background:#EF4444; border-color:#EF4444; color:#fff;">
+                    <i class="fa-solid fa-ban" style="margin-right:6px;"></i> Block User
+                </button>
+            </div>
+        </div>
+    `;
+
+    openModal(html);
+};
+
+window.blockVendorUser = function(vendorId, vendorName, avatar, category) {
+    window.openBlockUserModal(vendorId, vendorName, avatar, category);
+};
+
+window.toggleBlockNotesField = function(val) {
+    const wrap = document.getElementById('block-notes-wrap');
+    if (wrap) wrap.style.display = (val === 'Other Reason') ? 'block' : 'none';
+};
+
+window.submitBlockUserAction = function(targetId, targetName) {
+    const btn = document.getElementById('confirm-block-btn');
+    const reasonSelect = document.getElementById('block-reason-select');
+    const notesInput = document.getElementById('block-reason-notes');
+    const reportCb = document.getElementById('block-report-checkbox');
+
+    const reason = reasonSelect ? reasonSelect.value : 'User Blocked';
+    const notes = notesInput ? notesInput.value.trim() : '';
+    const isReported = reportCb ? reportCb.checked : true;
+
+    ActionLock.execute(btn, 'Blocking...', async () => {
+        // Save locally
         const blocked = window.getBlockedUsers();
-        if (!blocked.includes(vendorId)) {
-            blocked.push(vendorId);
+        if (!blocked.includes(targetId) && !blocked.includes(Number(targetId))) {
+            blocked.push(Number(targetId));
             localStorage.setItem('ohati_blocked_users', JSON.stringify(blocked));
         }
-        if (typeof showPushNotification === 'function') {
-            showPushNotification('User Blocked', (vendorName || 'User') + ' has been blocked.');
-        } else {
-            alert((vendorName || 'User') + ' has been blocked.');
+
+        // Notify backend
+        try {
+            if (typeof API !== 'undefined' && API.post) {
+                await API.post('block_user', {
+                    target_id: targetId,
+                    reason: reason,
+                    notes: notes,
+                    report: isReported ? 1 : 0
+                });
+            }
+        } catch(e) {}
+
+        showPushNotification('User Blocked', `${targetName || 'User'} has been blocked successfully.`);
+        closeModal();
+
+        // Refresh active chat/screen
+        if (state.activeChatVendorId == targetId) {
+            if (typeof closeActiveChat === 'function') closeActiveChat();
         }
         if (typeof navigateTo === 'function') navigateTo('chat');
-    }
+    });
+};
+
+window.submitUnblockUserAction = function(targetId, targetName) {
+    const btn = document.getElementById('confirm-unblock-btn');
+
+    ActionLock.execute(btn, 'Unblocking...', async () => {
+        let blocked = window.getBlockedUsers();
+        blocked = blocked.filter(id => Number(id) !== Number(targetId));
+        localStorage.setItem('ohati_blocked_users', JSON.stringify(blocked));
+
+        try {
+            if (typeof API !== 'undefined' && API.post) {
+                await API.post('unblock_user', { target_id: targetId });
+            }
+        } catch(e) {}
+
+        showPushNotification('User Unblocked', `${targetName || 'User'} has been unblocked.`);
+        closeModal();
+
+        if (typeof navigateTo === 'function') navigateTo('chat');
+    });
 };
 
 window.reportVendorContent = function(vendorId, vendorName) {
-    const reason = prompt('Please describe why you are reporting ' + (vendorName || 'this content') + ' (e.g. offensive content, fraud, inappropriate language):');
-    if (reason && reason.trim()) {
-        if (typeof API !== 'undefined' && API.post) {
-            API.post('report_issue', {
-                title: 'Report Content: Vendor #' + vendorId,
-                category: 'Content Moderation',
-                description: 'User report against vendor ' + vendorName + ' (ID: ' + vendorId + '): ' + reason.trim()
-            }).then(() => {
-                if (typeof showPushNotification === 'function') showPushNotification('Report Received', 'Thank you. Our moderation team will review this within 24 hours.');
-                else alert('Thank you. Our moderation team will review this within 24 hours.');
-            }).catch(() => {
-                if (typeof showPushNotification === 'function') showPushNotification('Report Submitted', 'Thank you. Your report has been submitted to moderation.');
-                else alert('Thank you. Your report has been submitted to moderation.');
-            });
-        } else {
-            alert('Thank you. Your report has been submitted to moderation.');
-        }
-    }
+    window.openBlockUserModal(vendorId, vendorName);
 };

@@ -2325,6 +2325,59 @@ case 'upload_chat_file':
     }
     break;
 
+case 'block_user':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in to block users.']); exit; }
+    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+    $target_id = intval($data['target_id'] ?? $data['vendor_id'] ?? 0);
+    $reason = trim($data['reason'] ?? 'User Blocked');
+    $notes = trim($data['notes'] ?? '');
+    $report = !empty($data['report']);
+
+    if ($target_id && $target_id !== $uid) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO user_blocks (user_id, blocked_user_id, reason, created_at) VALUES (?, ?, ?, NOW())");
+            $stmt->execute([$uid, $target_id, $reason]);
+        } catch (Exception $e) {}
+
+        if ($report) {
+            try {
+                $r_stmt = $pdo->prepare("INSERT INTO issues (user_id, title, category, description, status, created_at) VALUES (?, ?, 'User Moderation Report', ?, 'Open', NOW())");
+                $r_stmt->execute([$uid, "User Report against Target #$target_id", "Reason: $reason. Notes: $notes", 'Open']);
+            } catch (Exception $e) {}
+        }
+    }
+    echo json_encode(['success' => true, 'message' => 'User blocked successfully.']);
+    break;
+
+case 'unblock_user':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in.']); exit; }
+    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+    $target_id = intval($data['target_id'] ?? $data['vendor_id'] ?? 0);
+
+    if ($target_id) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?");
+            $stmt->execute([$uid, $target_id]);
+        } catch (Exception $e) {}
+    }
+    echo json_encode(['success' => true, 'message' => 'User unblocked successfully.']);
+    break;
+
+case 'get_blocked_users':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if (!$uid) { echo json_encode(['blocked' => []]); exit; }
+    try {
+        $stmt = $pdo->prepare("SELECT blocked_user_id FROM user_blocks WHERE user_id = ?");
+        $stmt->execute([$uid]);
+        $list = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        echo json_encode(['blocked' => array_map('intval', $list)]);
+    } catch (Exception $e) {
+        echo json_encode(['blocked' => []]);
+    }
+    break;
+
 
 
 // ── TRACKER ────────────────────────────────────────────────────────────

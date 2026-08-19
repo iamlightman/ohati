@@ -1314,7 +1314,7 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'mandatory-auth-lock-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:#081729; z-index:9999999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; overflow-y:auto;';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:#081729; z-index:9999999; display:flex; align-items:center; justify-content:center; padding:calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px; box-sizing:border-box; overflow-y:auto;';
         document.body.appendChild(overlay);
     }
 

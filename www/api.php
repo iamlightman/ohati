@@ -45,7 +45,7 @@ function resolve_vendor_logo($category, $current_logo = '') {
 }
 
 function save_base64_image($base64_str, $prefix = 'img') {
-    if (empty($base64_str) || strpos($base64_str, 'data:image/') !== 0) {
+    if (empty($base64_str) || (strpos($base64_str, 'data:image/') !== 0 && strpos($base64_str, 'data:application/pdf') !== 0)) {
         return $base64_str;
     }
     try {
@@ -57,15 +57,17 @@ function save_base64_image($base64_str, $prefix = 'img') {
         $ext = 'jpg';
         if (strpos($type, 'png') !== false) $ext = 'png';
         else if (strpos($type, 'webp') !== false) $ext = 'webp';
+        else if (strpos($type, 'pdf') !== false) $ext = 'pdf';
 
-        $dir = __DIR__ . '/uploads/kyc/';
+        $sub = (strpos($prefix, 'receipt') !== false) ? 'receipts' : 'kyc';
+        $dir = __DIR__ . '/uploads/' . $sub . '/';
         if (!file_exists($dir)) {
             @mkdir($dir, 0755, true);
         }
 
         $file_name = $prefix . '_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
         file_put_contents($dir . $file_name, $data);
-        return 'uploads/kyc/' . $file_name;
+        return 'uploads/' . $sub . '/' . $file_name;
     } catch (Exception $e) {
         return $base64_str;
     }
@@ -2471,6 +2473,45 @@ case 'update_profile':
     ]);
     break;
 
+case 'request_premium_upgrade':
+case 'submit_premium_request':
+case 'submit_payment_receipt':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in to submit payment receipt.']); exit; }
+
+    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+    $amount = floatval($data['amount'] ?? 250.0);
+    $notes = trim($data['payment_notes'] ?? $data['notes'] ?? '');
+    $receipt_data = trim($data['receipt_image'] ?? $data['receipt_data'] ?? '');
+
+    $receipt_url = '';
+    if (!empty($receipt_data) && strpos($receipt_data, 'data:') === 0) {
+        $receipt_url = save_base64_image($receipt_data, 'receipt_' . $uid);
+    } else {
+        $receipt_url = $receipt_data;
+    }
+
+    // Lookup vendor id
+    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_stmt->execute([$uid]);
+    $vid = intval($v_stmt->fetchColumn() ?: 0);
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO premium_requests (user_id, vendor_id, amount, receipt_url, payment_notes, status, created_at) VALUES (?, ?, ?, ?, ?, 'Pending Review', NOW())");
+        $stmt->execute([$uid, $vid, $amount, $receipt_url, $notes]);
+
+        // Also record issue log for admin review
+        $r_stmt = $pdo->prepare("INSERT INTO issues (user_id, title, category, description, status, created_at) VALUES (?, ?, 'Premium Upgrade Receipt', ?, 'Open', NOW())");
+        $r_stmt->execute([$uid, "Payment Receipt Submitted ($amount GHS)", "Vendor #$vid submitted payment receipt ($receipt_url). Notes: $notes", 'Open']);
+    } catch (Exception $e) {}
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Your payment receipt was uploaded successfully. Admin will review and activate your Gold Badge.',
+        'receipt_url' => $receipt_url
+    ]);
+    break;
+
 
 
 // ── TRACKER ────────────────────────────────────────────────────────────
@@ -3292,6 +3333,9 @@ case 'get_vendor_analytics':
     } elseif ($period === 'this_month') {
         $start_dt = date('Y-m-01 00:00:00');
         $end_dt = date('Y-m-t 23:59:59');
+    } elseif ($period === 'all_time' || $period === 'alltime') {
+        $start_dt = '2020-01-01 00:00:00';
+        $end_dt = date('Y-m-d 23:59:59');
     } elseif ($period === 'custom' && !empty($start_param) && !empty($end_param)) {
         $start_dt = date('Y-m-d 00:00:00', strtotime($start_param));
         $end_dt = date('Y-m-d 23:59:59', strtotime($end_param));

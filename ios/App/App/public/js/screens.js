@@ -5010,7 +5010,7 @@ function renderVendorDashScreen(user) {
                         <h4 style="margin:0; font-size:0.9rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:6px;">
                             <i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> Real-Time Analytics
                         </h4>
-                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, chats, bookings, revenue</div>
+                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, chat inquiries, and bookings</div>
                     </div>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
                         <button class="btn btn-xs btn-outline date-filter-btn" onclick="filterVendorStats('today', this)">Today</button>
@@ -5020,7 +5020,7 @@ function renderVendorDashScreen(user) {
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Views</div>
                         <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
@@ -5032,10 +5032,6 @@ function renderVendorDashScreen(user) {
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
                         <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
-                    </div>
-                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
-                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-coins" style="color:#F59E0B;"></i> Revenue</div>
-                        <div class="vd-stat-value" id="vd-stat-revenue" style="font-size:1rem; font-weight:800; color:var(--accent); margin-top:2px;">GH₵ 0</div>
                     </div>
                 </div>
             </div>
@@ -5361,12 +5357,12 @@ window.openPremiumUpgradeModal = function() {
 
                 <!-- Payment Form -->
                 <div class="form-group mb-12">
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Mobile Money / Bank Transaction Ref (TxID)</label>
-                    <input type="text" id="premium-modal-txid" class="form-input" placeholder="e.g. 29304918239 or Transfer Ref">
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Payment Notes / Transaction Details</label>
+                    <textarea id="premium-modal-notes" class="form-input" placeholder="e.g. Paid via MoMo from 024XXXXXXX" style="width:100%; padding:10px; resize:none;" rows="2"></textarea>
                 </div>
 
                 <div class="form-group mb-16">
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt Screenshot (Image or PDF)</label>
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt (Image or PDF)</label>
                     <div class="kyc-upload-zone" onclick="document.getElementById('premium-modal-receipt-file').click()" style="cursor:pointer; padding:14px; text-align:center; border:2px dashed var(--gray-300); border-radius:10px; background:#fff;">
                         <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.5rem; color:var(--accent); margin-bottom:6px;"></i>
                         <p id="premium-modal-receipt-status" style="margin:0; font-size:0.75rem; color:var(--gray-600);">Click to Choose Payment Receipt File</p>
@@ -5935,7 +5931,7 @@ function renderPromoAnalytics() {
 }
 
 function purchasePromoPackage(packageName, days, price) {
-    window.currentAdBannerBase64 = 'img/ads/default.jpg';
+    window.currentAdBannerBase64 = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800';
     window.currentAdCost = price;
     window.currentAdDuration = days;
     window._adReceiptData = '';
@@ -5968,8 +5964,8 @@ function purchasePromoPackage(packageName, days, price) {
                         </span>
                     </div>
                     <div style="padding:12px;">
-                        <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Summer Bridal Special</h4>
-                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
+                        <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Ghana Grand Event Hall Special</h4>
+                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Book Ghana's premier luxury event hall venue for grand weddings, corporate galas & celebrations.</p>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-size:0.7rem; color:var(--gray-400);"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
                             <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:4px 10px; font-size:0.7rem; font-weight:700; background:var(--accent); border-color:var(--accent);">Learn More</button>
@@ -5980,11 +5976,11 @@ function purchasePromoPackage(packageName, days, price) {
 
             <div class="form-group mb-12">
                 <label class="form-label">Campaign Title</label>
-                <input type="text" class="form-input" id="ad-title" placeholder="e.g. Summer Bridal Special" oninput="updateAdPreview()" value="Summer Bridal Special">
+                <input type="text" class="form-input" id="ad-title" placeholder="e.g. Ghana Grand Event Hall Special" oninput="updateAdPreview()" value="Ghana Grand Event Hall Special">
             </div>
             <div class="form-group mb-12">
                 <label class="form-label">Ad Banner Description</label>
-                <textarea class="form-textarea" id="ad-desc" placeholder="Write a catchy line to display on your banner..." style="min-height:50px;" oninput="updateAdPreview()">Premium makeup packages and flawless skin styling for your big day.</textarea>
+                <textarea class="form-textarea" id="ad-desc" placeholder="Write a catchy line to display on your banner..." style="min-height:50px;" oninput="updateAdPreview()">Book Ghana's premier luxury event hall venue for grand weddings, corporate galas & celebrations.</textarea>
             </div>
             
             <div class="form-group mb-12">

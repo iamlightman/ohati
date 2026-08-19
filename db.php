@@ -305,6 +305,17 @@ try {
         blocked_user_id INT NOT NULL,
         reason VARCHAR(255) DEFAULT '',
         created_at $NOW
+} catch (Exception $e) {}
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS premium_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        vendor_id INT DEFAULT 0,
+        amount FLOAT DEFAULT 250.0,
+        receipt_url VARCHAR(500) DEFAULT '',
+        payment_notes TEXT,
+        status VARCHAR(30) DEFAULT 'Pending Review',
+        created_at $NOW
     )");
 } catch (Exception $e) {}
 try {

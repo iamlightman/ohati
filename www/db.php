@@ -146,6 +146,9 @@ try {
 try {
     $pdo->exec("ALTER TABLE users ADD COLUMN referral_balance FLOAT DEFAULT 0");
 } catch (Exception $e) {}
+try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN status VARCHAR(30) DEFAULT 'active'");
+} catch (Exception $e) {}
 
 $pdo->exec("CREATE TABLE IF NOT EXISTS auth_tokens (
     id $AI,

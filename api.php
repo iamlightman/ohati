@@ -2519,6 +2519,89 @@ case 'submit_payment_receipt':
     ]);
     break;
 
+// ── EVENT JOBS API ENDPOINTS ──────────────────────────────────────────────
+case 'job_post_create':
+    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
+    if (!$uid) {
+        $first_u = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
+        $uid = intval($first_u ?: 1);
+    }
+    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+    $title = clean($data['title'] ?? '');
+    $cat = clean($data['category'] ?? '');
+    $subcat = clean($data['subcategory'] ?? '');
+    $desc = clean($data['description'] ?? '');
+    $skills = clean($data['required_skills'] ?? '');
+    $budget = floatval($data['budget'] ?? 0);
+    $negotiable = intval($data['negotiable'] ?? 1);
+    $event_type = clean($data['event_type'] ?? 'physical');
+    $location = clean($data['location'] ?? '');
+    $event_date = clean($data['event_date'] ?? '');
+    $deadline = clean($data['deadline'] ?? '');
+    $num_vendors = intval($data['num_vendors'] ?? 1);
+    $visibility = clean($data['visibility'] ?? 'public');
+    $is_urgent = intval($data['is_urgent'] ?? 0);
+    $status = clean($data['status'] ?? 'open');
+    $attachments = json_encode($data['attachments'] ?? []);
+
+    if (empty($title) || empty($desc)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Title and Description are required.']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO jobs (user_id, title, category, subcategory, description, required_skills, budget, negotiable, event_type, location, event_date, deadline, num_vendors, visibility, is_urgent, status, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$uid, $title, $cat, $subcat, $desc, $skills, $budget, $negotiable, $event_type, $location, $event_date, $deadline, $num_vendors, $visibility, $is_urgent, $status, $attachments]);
+        $job_id = $pdo->lastInsertId();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Event job posted successfully!',
+            'job_id' => $job_id
+        ]);
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    break;
+
+case 'get_jobs':
+    $stmt = $pdo->query("SELECT j.*, u.name as user_name, u.avatar as user_avatar FROM jobs j LEFT JOIN users u ON j.user_id = u.id ORDER BY j.id DESC");
+    $jobs = $stmt->fetchAll();
+    echo json_encode(['success' => true, 'jobs' => $jobs ?: []]);
+    break;
+
+case 'get_my_posted_jobs':
+    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
+    $stmt = $pdo->prepare("SELECT * FROM jobs WHERE user_id = ? ORDER BY id DESC");
+    $stmt->execute([$uid]);
+    $jobs = $stmt->fetchAll();
+    echo json_encode(['success' => true, 'jobs' => $jobs ?: []]);
+    break;
+
+case 'submit_job_proposal':
+case 'submit_proposal':
+    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
+    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+    $job_id = intval($data['job_id'] ?? 0);
+    $bid_amount = floatval($data['bid_amount'] ?? 0);
+    $cover_letter = clean($data['cover_letter'] ?? '');
+
+    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_stmt->execute([$uid]);
+    $vid = intval($v_stmt->fetchColumn() ?: 0);
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO job_proposals (job_id, vendor_id, user_id, bid_amount, cover_letter, status, created_at) VALUES (?, ?, ?, ?, ?, 'pending', NOW())");
+        $stmt->execute([$job_id, $vid, $uid, $bid_amount, $cover_letter]);
+        echo json_encode(['success' => true, 'message' => 'Proposal submitted successfully!']);
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    break;
+
 
 
 // ── TRACKER ────────────────────────────────────────────────────────────

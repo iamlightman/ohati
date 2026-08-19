@@ -319,6 +319,40 @@ try {
     )");
 } catch (Exception $e) {}
 try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS jobs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        subcategory VARCHAR(100) DEFAULT '',
+        description TEXT NOT NULL,
+        required_skills TEXT,
+        budget FLOAT DEFAULT 0.0,
+        negotiable TINYINT DEFAULT 1,
+        event_type VARCHAR(50) DEFAULT 'physical',
+        location VARCHAR(255) DEFAULT '',
+        event_date VARCHAR(50) DEFAULT '',
+        deadline VARCHAR(50) DEFAULT '',
+        num_vendors INT DEFAULT 1,
+        visibility VARCHAR(50) DEFAULT 'public',
+        is_urgent TINYINT DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'open',
+        attachments TEXT,
+        created_at $NOW
+    )");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS job_proposals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        job_id INT NOT NULL,
+        vendor_id INT NOT NULL,
+        user_id INT NOT NULL,
+        bid_amount FLOAT NOT NULL,
+        cover_letter TEXT NOT NULL,
+        delivery_days INT DEFAULT 1,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at $NOW
+    )");
+} catch (Exception $e) {}
+try {
     $pdo->exec("ALTER TABLE calls ADD COLUMN duration INT DEFAULT 0");
 } catch (Exception $e) {}
 try {

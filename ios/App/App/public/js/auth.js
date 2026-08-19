@@ -648,7 +648,10 @@ function renderVendorOnboardingStep() {
                     <label class="form-label">Years in Business</label>
                     <input type="number" class="form-input" id="v-experience" placeholder="e.g. 5" value="${state.authData.experience || ''}">
                 </div>
-                <button class="btn btn-primary btn-full mt-12" onclick="saveVendorStep1()">Next Step</button>
+                <div style="display:flex;gap:10px;" class="mt-12">
+                    <button class="btn btn-outline btn-full" onclick="state.authMode='account-type'; renderAuthModal();">Back</button>
+                    <button class="btn btn-primary btn-full" onclick="saveVendorStep1()">Next Step</button>
+                </div>
             `;
             break;
 

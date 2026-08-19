@@ -1,36 +1,10 @@
 // js/payment.js — Admin-Controlled Manual Payment & Verification Module
 
 window.initiateBookingPayment = function(bid, amount, type = 'deposit') {
-    if (!bid || !amount || parseFloat(amount) <= 0) {
-        if (typeof showPushNotification === 'function') {
-            showPushNotification('Payment Error', 'Invalid booking or payment amount.');
-        }
-        return Promise.reject(new Error('Invalid amount'));
-    }
-
     if (typeof showPushNotification === 'function') {
-        showPushNotification('Payment Instructions', 'Fetching Admin payment instructions...');
+        showPushNotification('Booking Request Confirmed', 'Your booking request and invoice have been generated.');
     }
-
-    return API.post('initiate_manual_payment', {
-        booking_id: bid,
-        amount: amount,
-        type: type
-    })
-    .then(res => {
-        if (res.success && res.bank_details) {
-            renderManualPaymentModal(bid, res.reference, res.amount, res.bank_details);
-        } else {
-            throw new Error(res.error || 'Failed to generate payment reference.');
-        }
-        return res;
-    })
-    .catch(err => {
-        if (typeof showPushNotification === 'function') {
-            showPushNotification('Payment Failed', err.message || 'Transaction initiation failed.');
-        }
-        throw err;
-    });
+    return Promise.resolve({ success: true, direct_booking: true });
 };
 
 function renderManualPaymentModal(bookingId, reference, amount, details) {

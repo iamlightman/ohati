@@ -57,8 +57,8 @@ window.openBookingDetailsModal = function(bid) {
                     <span style="color:var(--gray-500); font-size:0.68rem; display:block;">EVENT & PRICING</span>
                     <div style="margin-top:2px;"><i class="fa-solid fa-calendar-day" style="color:var(--primary);"></i> Date: <strong>${formatFriendlyDate(booking.event_date)}</strong></div>
                     <div style="margin-top:2px;"><i class="fa-solid fa-tag" style="color:var(--primary);"></i> Total: <strong>GH₵ ${negPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</strong></div>
-                    <div style="margin-top:2px; font-size:0.7rem; color:${remaining <= 0 ? 'var(--success)' : 'var(--error)'}; font-weight:700;">
-                        ${remaining <= 0 ? 'Fully Paid ✓' : 'Balance: GH₵ ' + remaining.toLocaleString(undefined,{minimumFractionDigits:2})}
+                    <div style="margin-top:2px; font-size:0.7rem; color:var(--primary); font-weight:700;">
+                        <i class="fa-solid fa-file-invoice"></i> Invoice Generated
                     </div>
                 </div>
             </div>

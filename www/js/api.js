@@ -48,6 +48,11 @@ const API = {
             throw new Error('Invalid JSON response from server');
         }
         if (!res.ok) {
+            if (res.status === 401 && !['login', 'register', 'send_otp', 'verify_otp', 'session'].includes(action)) {
+                if (typeof window.handleLogout === 'function' && window.state && window.state.user) {
+                    window.handleLogout();
+                }
+            }
             throw new Error(json.error || 'Request failed');
         }
         return json;
@@ -84,6 +89,11 @@ const API = {
                 window.state.csrfToken = json.csrf;
             }
             if (!res.ok) {
+                if (res.status === 401 && !['login', 'register', 'send_otp', 'verify_otp', 'session'].includes(action)) {
+                    if (typeof window.handleLogout === 'function' && window.state && window.state.user) {
+                        window.handleLogout();
+                    }
+                }
                 const errObj = new Error((json && json.error) ? json.error : 'Request failed');
                 if (json && typeof json === 'object') {
                     Object.assign(errObj, json);
@@ -103,7 +113,12 @@ const API = {
 
     // ── Auth ──
     register(data) { return this.post('register', data); },
-    login(data) { return this.post('login', data); },
+    login(data, password) {
+        if (typeof data === 'string') {
+            data = { identifier: data, password: password };
+        }
+        return this.post('login', data);
+    },
     logout() { return this.get('logout'); },
     deleteAccount() { return this.get('delete_account'); },
     getVendorFollowers(vendorId = 0) { return this.get(`get_vendor_followers${vendorId ? '?vendor_id=' + vendorId : ''}`); },
@@ -159,15 +174,15 @@ const API = {
     deleteTask(id) { return this.post('delete_task', { id }); },
     getTrackerStats() { return this.get('tracker_stats'); },
 
-    // ── Payments & Escrow ──
-    recordPayment(data) { return this.post('record_payment', data); },
-    getPaymentHistory(bookingId) { return this.get('payment_history', { booking_id: bookingId || '' }); },
-    initiatePaystackPayment(bookingId, type) { return this.post('initiate_paystack_payment', { booking_id: bookingId, type }); },
-    verifyPaystackPayment(reference, txId) { return this.post('verify_paystack_payment', { reference, tx_id: txId || '' }); },
-    submitManualPayment(reference, txId) { return this.post('submit_manual_payment', { reference, tx_id: txId || '' }); },
-    getVendorWallet() { return this.get('get_vendor_wallet'); },
-    requestWithdrawal(amount) { return this.post('request_withdrawal', { amount }); },
-    releaseEscrow(escrowId) { return this.post('release_escrow', { escrow_id: escrowId }); },
+    // ── Direct Bookings & Invoicing ──
+    recordPayment(data) { return Promise.resolve({ success: true, message: 'Direct booking model active.' }); },
+    getPaymentHistory(bookingId) { return Promise.resolve([]); },
+    initiatePaystackPayment(bookingId, type) { return Promise.resolve({ success: true, direct_booking: true }); },
+    verifyPaystackPayment(reference, txId) { return Promise.resolve({ success: true }); },
+    submitManualPayment(reference, txId) { return Promise.resolve({ success: true }); },
+    getVendorWallet() { return Promise.resolve({ success: true, wallet: { escrow_balance: 0, available_balance: 0, pending_balance: 0, total_withdrawn: 0 }, transactions: [], withdrawals: [] }); },
+    requestWithdrawal(amount) { return Promise.resolve({ success: true, message: 'Withdrawals not applicable.' }); },
+    releaseEscrow(escrowId) { return Promise.resolve({ success: true }); },
     raiseDispute(bookingId, subject, description) { return this.post('raise_dispute', { booking_id: bookingId, subject, description }); },
 
     // ── Notifications ──

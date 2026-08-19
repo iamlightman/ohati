@@ -273,6 +273,10 @@ try {
     $pdo->exec("ALTER TABLE vendors ADD COLUMN premium_expires_at VARCHAR(50) DEFAULT ''");
 } catch (Exception $e) {}
 
+try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN active_role VARCHAR(20) DEFAULT 'customer'");
+} catch (Exception $e) {}
+
 // Advertisement manual payment updates
 try {
     $pdo->exec("ALTER TABLE advertisements ADD COLUMN payment_method VARCHAR(50) DEFAULT 'paystack'");

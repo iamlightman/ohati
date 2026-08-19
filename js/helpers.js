@@ -85,10 +85,12 @@ function formatRelativeTime(dateStr) {
 }
 
 /** Global 30-second ticker to keep live relative timestamps fresh on screen */
-let liveTimeTicker = null;
+if (typeof window.liveTimeTicker === 'undefined') {
+    window.liveTimeTicker = null;
+}
 function initLiveTimeTicker() {
-    if (liveTimeTicker) return;
-    liveTimeTicker = setInterval(() => {
+    if (window.liveTimeTicker) return;
+    window.liveTimeTicker = setInterval(() => {
         const els = document.querySelectorAll('.live-relative-time');
         els.forEach(el => {
             const stamp = el.getAttribute('data-timestamp');

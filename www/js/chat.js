@@ -57,9 +57,10 @@ window.handleChatFileSelected = function(inputEl) {
     const processUpload = (fileToUpload) => {
         const formData = new FormData();
         formData.append('file', fileToUpload);
+        const token = localStorage.getItem('ohati_auth_token');
+        if (token) formData.append('auth_token', token);
 
         const getHeaders = () => {
-            const token = localStorage.getItem('ohati_auth_token');
             return token ? { 'Authorization': `Bearer ${token}` } : {};
         };
 

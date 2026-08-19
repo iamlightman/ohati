@@ -23,6 +23,10 @@ if ($active_role !== 'vendor') {
     header('Location: index.php');
     exit;
 }
+if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']['vendor_onboarding_completed'] === false) {
+    header('Location: vendor-register.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

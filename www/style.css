@@ -42,6 +42,91 @@
     --champagne-gold: #F2A735;
 }
 
+/* ===== SPLASH / LOADING SCREEN STYLES ===== */
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999999;
+    background: #081729;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.splash-screen.hide {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 24px;
+}
+
+.splash-logo-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 22px;
+    object-fit: cover;
+    border: 2.5px solid var(--accent, #F2A735);
+    box-shadow: 0 12px 32px rgba(242, 167, 53, 0.35);
+    animation: splashPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes splashPulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.15); }
+}
+
+.splash-loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.splash-loader-bar {
+    width: 140px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.splash-loader-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent, #F2A735), transparent);
+    animation: splashLoading 1.2s infinite linear;
+}
+
+@keyframes splashLoading {
+    0% { left: -50%; }
+    100% { left: 100%; }
+}
+
+.splash-loader-text {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #94A3B8;
+    text-transform: uppercase;
+}
+
 /* Dark theme variables */
 body.dark-theme {
     --primary: #E8EEF8;
@@ -5138,12 +5223,12 @@ body.dark-theme .auth-card .text-muted {
 
 /* WELCOME POPUP MODAL */
 .welcome-popup-overlay {
+    display: none !important;
     position: absolute;
     inset: 0;
     background: rgba(15, 25, 35, 0);
     visibility: hidden;
     z-index: 9500;
-    display: flex;
     align-items: center;
     justify-content: center;
     transition: background var(--anim-mid) ease, visibility var(--anim-mid) ease;
@@ -5153,8 +5238,9 @@ body.dark-theme .auth-card .text-muted {
 }
 
 .welcome-popup-overlay.open {
+    display: none !important;
     background: rgba(15, 25, 35, 0.7);
-    visibility: visible;
+    visibility: hidden;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }

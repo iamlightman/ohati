@@ -3038,20 +3038,24 @@ function openNotificationsModal() {
 }
 
 function toggleSidebar(show) {
-    const overlay = document.getElementById('app-sidebar-overlay');
+    const overlay = document.getElementById('sidebar-overlay') || document.getElementById('app-sidebar-overlay');
     if (!overlay) return;
-    if (show) {
+    const shouldOpen = (show === undefined) ? (!overlay.classList.contains('open') && !overlay.classList.contains('active')) : !!show;
+    if (shouldOpen) {
+        overlay.classList.add('open');
         overlay.classList.add('active');
-        // Refresh active state of sidebar items based on currentScreen
+        if (typeof updateSidebarUI === 'function') updateSidebarUI();
+        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
         document.querySelectorAll('.sidebar-item').forEach(item => {
             const screen = item.getAttribute('onclick');
-            if (screen && screen.includes(`navigateTo('${state.currentScreen}')`)) {
+            if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
             }
         });
     } else {
+        overlay.classList.remove('open');
         overlay.classList.remove('active');
     }
 }

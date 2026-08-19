@@ -442,7 +442,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
                                         <td style="text-align:right;">
                                             <div style="display:flex; justify-content:flex-end; gap:6px;">
                                                 <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700;" onclick='viewPromotionDetails(<?= json_encode($a, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)' title="View Full Promotion Specification"><i class="fa-solid fa-eye"></i> Details</button>
-                                                <?php if (($a['payment_method'] ?? 'paystack') === 'manual' && !empty($a['receipt_url'])): ?>
+                                                <?php if (($a['payment_method'] ?? 'manual') === 'manual' && !empty($a['receipt_url'])): ?>
                                                     <button class="btn btn-primary btn-sm" style="padding:6px 10px; font-size:0.75rem; background:#D4AF37; border-color:#D4AF37;" onclick="viewReceipt(<?= $a['id'] ?>, '<?= htmlspecialchars(addslashes($a['title'])) ?>', '<?= htmlspecialchars(addslashes($a['receipt_url'])) ?>', '<?= htmlspecialchars(addslashes($a['payment_ref'])) ?>', '<?= htmlspecialchars(addslashes($a['payment_date'])) ?>', '<?= htmlspecialchars(addslashes($a['payment_notes'] ?? '')) ?>')" title="Review Receipt">
                                                         <i class="fa-solid fa-receipt"></i>
                                                     </button>
@@ -704,7 +704,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
                     <div><strong>Destination Link:</strong> ${a.destination_url || 'Vendor Profile'}</div>
                     <div><strong>Start Date:</strong> ${a.start_date || 'N/A'}</div>
                     <div><strong>End Date:</strong> ${a.end_date || 'N/A'}</div>
-                    <div style="grid-column: span 2;"><strong>Payment Method & Ref:</strong> ${(a.payment_method || 'paystack').toUpperCase()} (${a.payment_ref || 'N/A'})</div>
+                    <div style="grid-column: span 2;"><strong>Payment Method & Ref:</strong> ${(a.payment_method || 'manual').toUpperCase()} (${a.payment_ref || 'N/A'})</div>
                 </div>
 
                 <button class="btn btn-outline btn-full" onclick="closePromotionDetailsModal()" style="font-weight:700;">Close</button>

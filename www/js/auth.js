@@ -1,6 +1,12 @@
 // js/auth.js — Ohati Authentication, Registration, OTP, KYC, and Vendor Onboarding Flows
 
 function renderAuthModal() {
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        const mode = (state.authMode === 'register' || state.authMode === 'account-type' || state.authMode === 'vendor-register' || state.authMode === 'welcome') ? 'signup' : 'login';
+        showMandatoryAuthLockScreen(mode);
+        return;
+    }
+
     const modalContent = document.getElementById('modal-content');
     if (!modalContent) return;
 
@@ -461,9 +467,14 @@ function submitOTPVerify(event) {
         closeModal();
         updateAppHeader();
         if (state.user && (state.user.active_role || state.user.role) === 'vendor') {
-            state.authMode = 'vendor-register';
-            state.authStep = 1;
-            renderAuthModal();
+            if (state.user.vendor_onboarding_completed) {
+                navigateTo('vendor-dash');
+            } else {
+                showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
+                state.authMode = 'vendor-register';
+                state.authStep = 1;
+                renderAuthModal();
+            }
         } else {
             navigateTo('home');
         }
@@ -499,7 +510,14 @@ function submitLogin(event) {
             closeModal();
             updateAppHeader();
             if ((state.user.active_role || state.user.role) === 'vendor') {
-                navigateTo('vendor-dash');
+                if (state.user.vendor_onboarding_completed) {
+                    navigateTo('vendor-dash');
+                } else {
+                    showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
+                    state.authMode = 'vendor-register';
+                    state.authStep = 1;
+                    renderAuthModal();
+                }
             } else {
                 navigateTo('home');
             }
@@ -582,6 +600,13 @@ function handleLogout() {
     console.log("Signing out user...");
     state.user = null;
     state.currentUser = null;
+    state.bookings = [];
+    state.favorites = [];
+    state.unreadChats = 0;
+
+    // Clear all auth keys & stored user tokens
+    localStorage.removeItem('ohati_auth_token');
+    localStorage.removeItem('ohati_user_session');
     localStorage.removeItem('ohati_user');
     localStorage.removeItem('wedmi_user');
     sessionStorage.clear();
@@ -590,8 +615,19 @@ function handleLogout() {
         if (typeof updateAppHeader === 'function') updateAppHeader();
         if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
         if (typeof renderSidebar === 'function') renderSidebar();
+        
+        // Lock screen to Login overlay
+        if (typeof unlockMandatoryAuthScreen === 'function') unlockMandatoryAuthScreen();
+        if (typeof showMandatoryAuthLockScreen === 'function') {
+            showMandatoryAuthLockScreen('login');
+        }
+
         showPushNotification('Signed Out', 'You have successfully signed out.');
-        if (typeof navigateTo === 'function') navigateTo('home');
+
+        // Prevent browser Back button from revealing protected content
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
     };
 
     if (window.API && typeof API.logout === 'function') {
@@ -613,16 +649,16 @@ function renderVendorOnboardingStep() {
     let html = `
         <div class="auth-modal-header">
             <h2 class="auth-modal-title">Vendor Setup</h2>
-            <p class="auth-modal-subtitle">Step ${step} of 6</p>
+            <p class="auth-modal-subtitle">Step ${step} of 5</p>
         </div>
         <div class="vendor-steps">
-            ${[1, 2, 3, 4, 5, 6].map(i => `
+            ${[1, 2, 3, 4, 5].map(i => `
                 <div class="vendor-step-item">
                     <div class="vendor-step-circle ${i === step ? 'active' : (i < step ? 'done' : '')}">
                         ${i < step ? '<i class="fa-solid fa-check"></i>' : i}
                     </div>
                 </div>
-                ${i < 6 ? `<div class="vendor-step-line ${i < step ? 'done' : ''}"></div>` : ''}
+                ${i < 5 ? `<div class="vendor-step-line ${i < step ? 'done' : ''}"></div>` : ''}
             `).join('')}
         </div>
     `;
@@ -796,71 +832,13 @@ function renderVendorOnboardingStep() {
                 </div>
                 <div style="display:flex;gap:10px;">
                     <button class="btn btn-outline btn-full" onclick="state.authStep=4; renderAuthModal();">Back</button>
-                    <button class="btn btn-primary btn-full" onclick="saveVendorStep5()">Next Step</button>
-                </div>
-            `;
-            break;
-
-        case 6:
-            html += `
-                <h4 style="font-size:0.9rem;margin-bottom:12px;">Payout Details</h4>
-                <div class="form-group">
-                    <label class="form-label">Payment Method</label>
-                    <select class="form-select" id="v-paymethod" onchange="toggleMomoBankUI()">
-                        <option value="momo">Mobile Money (MTN, Telecel, AT)</option>
-                        <option value="bank">Bank Transfer</option>
-                    </select>
-                </div>
-                <div id="v-momo-fields">
-                    <div class="form-group">
-                        <label class="form-label">Mobile Money Provider</label>
-                        <select class="form-select" id="v-momo-prov">
-                            <option value="MTN Mobile Money">MTN MoMo</option>
-                            <option value="Telecel Cash">Telecel Cash</option>
-                            <option value="AT Money">AT Money</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Mobile Money Number</label>
-                        <input type="text" class="form-input" id="v-momo-num" placeholder="024..." value="${state.authData.momonum || ''}">
-                    </div>
-                </div>
-                <div id="v-bank-fields" style="display:none;">
-                    <div class="form-group">
-                        <label class="form-label">Bank Name</label>
-                        <input type="text" class="form-input" id="v-bank-name" placeholder="e.g. Ecobank, GCB..." value="${state.authData.bankname || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Account Name</label>
-                        <input type="text" class="form-input" id="v-bank-accname" placeholder="Account Name" value="${state.authData.bankaccname || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Account Number</label>
-                        <input type="text" class="form-input" id="v-bank-accnum" placeholder="Account Number" value="${state.authData.bankaccnum || ''}">
-                    </div>
-                </div>
-                <div style="display:flex;gap:10px;" class="mt-16">
-                    <button class="btn btn-outline btn-full" onclick="state.authStep=5; renderAuthModal();">Back</button>
-                    <button class="btn btn-primary btn-full" onclick="saveVendorStep6()">Submit Application</button>
+                    <button class="btn btn-primary btn-full" onclick="saveVendorStep5()">Submit Application</button>
                 </div>
             `;
             break;
     }
 
     return html;
-}
-
-function toggleMomoBankUI() {
-    const val = document.getElementById('v-paymethod')?.value;
-    const momo = document.getElementById('v-momo-fields');
-    const bank = document.getElementById('v-bank-fields');
-    if (val === 'momo') {
-        if (momo) momo.style.display = 'block';
-        if (bank) bank.style.display = 'none';
-    } else {
-        if (momo) momo.style.display = 'none';
-        if (bank) bank.style.display = 'block';
-    }
 }
 
 function simulateFileUpload(type) {
@@ -1051,78 +1029,57 @@ function saveVendorStep5() {
     state.authData.id_front = idFront;
     state.authData.selfie = selfie;
 
-    state.authStep = 6;
-    renderAuthModal();
-}
-
-/************* VENDOR REGISTRATION STEP 6 (FINAL SUBMIT) *************/
-function saveVendorStep6() {
-    const pm = document.getElementById('v-paymethod').value;
-    let payout = {};
-    if (pm === 'momo') {
-        payout = {
-            momo_provider: document.getElementById('v-momo-prov').value,
-            momo_number: document.getElementById('v-momo-num').value.trim()
-        };
-    } else {
-        payout = {
-            bank_name: document.getElementById('v-bank-name').value.trim(),
-            account_name: document.getElementById('v-bank-accname').value.trim(),
-            account_number: document.getElementById('v-bank-accnum').value.trim()
-        };
-    }
-
-    const btn = document.querySelector('button[onclick="saveVendorStep6()"]');
+    const btn = document.querySelector('button[onclick="saveVendorStep5()"]');
 
     ActionLock.execute(btn, 'Submitting Application...', async () => {
-        const payload = {
-            business_name: state.authData.bizname,
-            category: state.authData.category,
-            description: state.authData.desc,
-            location: state.authData.address,
-            phone: state.authData.phone,
-            email: state.authData.email,
-            experience: state.authData.experience
-        };
+        try {
+            const payload = {
+                business_name: state.authData.bizname,
+                category: state.authData.category,
+                description: state.authData.desc,
+                location: state.authData.address,
+                phone: state.authData.phone,
+                email: state.authData.email,
+                experience: state.authData.experience
+            };
 
-        const res = await API.registerVendor(payload);
-        const vid = res.vendor_id;
-        const pkgs = state.authData.packages.map(p => ({
-            name: p[0],
-            price: p[1],
-            details: p[2]
-        }));
+            const res = await API.registerVendor(payload);
+            const vid = res.vendor_id;
+            const pkgs = (state.authData.packages || []).map(p => ({
+                name: p[0],
+                price: p[1],
+                details: p[2]
+            }));
 
-        const updatePayload = {
-            id: vid,
-            whatsapp: state.authData.whatsapp,
-            website: state.authData.website,
-            service_radius: state.authData.radius,
-            packages_pricing: pkgs,
-            instant_booking: 0,
-            verification_status: 'pending',
-            verification_badge: 'blue',
-            payout_method: pm,
-            ...payout
-        };
+            const updatePayload = {
+                id: vid,
+                whatsapp: state.authData.whatsapp,
+                website: state.authData.website,
+                service_radius: state.authData.radius,
+                packages_pricing: pkgs,
+                instant_booking: 0,
+                verification_status: 'pending',
+                verification_badge: 'blue'
+            };
 
-        await API.updateVendor(updatePayload);
-        await API.updateProfile({
-            kyc_status: 'pending_verification',
-            kyc_id_type: state.authData.id_type,
-            kyc_id_front: state.authData.id_front,
-            kyc_selfie: state.authData.selfie,
-            kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
-        });
+            await API.updateVendor(updatePayload);
+            await API.updateProfile({
+                kyc_status: 'pending_verification',
+                kyc_id_type: state.authData.id_type,
+                kyc_id_front: state.authData.id_front,
+                kyc_selfie: state.authData.selfie,
+                kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+            });
 
-        const sessionRes = await API.getSession();
-        state.user = sessionRes.user;
-        showPushNotification('Application Submitted', 'Our moderation team will review your application.');
-        closeModal();
-        updateSidebarUI();
-        navigateTo('vendor-dash');
-    }).catch(e => {
-        showPushNotification('Registration Error', e.message || 'Failed to submit application.');
+            const sessionRes = await API.getSession();
+            state.user = sessionRes.user;
+            showPushNotification('Application Submitted', 'Our moderation team will review your application.');
+            closeModal();
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            if (typeof navigateTo === 'function') navigateTo('vendor-dash');
+        } catch (e) {
+            showPushNotification('Submission Error', e.message || 'Error completing application');
+        }
     });
 }
 
@@ -1313,12 +1270,13 @@ window.triggerAccountDeletionFlow = function() {
 
 window.showMandatoryAuthLockScreen = function(initialMode) {
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
-    const alreadyExists = !!overlay;
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'mandatory-auth-lock-overlay';
         overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:#081729; z-index:9999999; display:flex; align-items:center; justify-content:center; padding:calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px; box-sizing:border-box; overflow-y:auto;';
         document.body.appendChild(overlay);
+    } else {
+        overlay.style.display = 'flex';
     }
 
     if (!window._mandatorySignupDraft) window._mandatorySignupDraft = {};
@@ -1326,15 +1284,19 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
     window.renderMandatoryAuthContent = function(currentMode) {
         const mode = currentMode || 'login';
         window._currentAuthLockMode = mode;
+        if (overlay) overlay.style.display = 'flex';
 
         if (mode === 'otp') {
             const email = window._mandatorySignupDraft.email || '';
             const phone = window._mandatorySignupDraft.phone || '';
+            const role = window._mandatorySignupDraft.role || 'customer';
+            const stepLabel = (role === 'vendor') ? 'Step 3 of 3' : 'Step 2 of 2';
             overlay.innerHTML = `
                 <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
                     <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
                         <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
                     </div>
+                    <div style="font-size:0.75rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">${stepLabel}</div>
                     <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Verify Your Account</h2>
                     <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">A 6-digit verification code was sent to <strong>${phone || email}</strong> via SMS & Email.</p>
 
@@ -1351,16 +1313,58 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                         Didn't receive the code? <a href="#" onclick="handleResendSignupOTP(event); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Resend OTP</a>
                     </div>
                     <div style="margin-top:10px; font-size:0.85rem; color:#94A3B8;">
-                        <a href="#" onclick="renderMandatoryAuthContent('signup'); return false;" style="color:#CBD5E1; text-decoration:underline;">Back to Sign Up</a>
+                        <a href="#" onclick="renderMandatoryAuthContent('${role === 'vendor' ? 'vendor-details' : 'signup'}'); return false;" style="color:#CBD5E1; text-decoration:underline;">Back</a>
                     </div>
                 </div>
             `;
-        } else if (mode === 'signup') {
+        } else if (mode === 'vendor-details') {
+            const draft = window._mandatorySignupDraft || {};
             overlay.innerHTML = `
                 <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
                     <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
                         <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
                     </div>
+                    <div style="font-size:0.75rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Step 2 of 3 — Vendor Profile</div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Vendor Profile Details</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">Tell clients about your business & primary service</p>
+
+                    <form onsubmit="handleMandatoryVendorDetailsSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Business / Brand Name *</label>
+                            <input type="text" id="m-lock-bname" required placeholder="e.g. Royal Crown Event Services" value="${draft.business_name || draft.bname || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Primary Service Category *</label>
+                            <select id="m-lock-category" required style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
+                                ${['Photography & Videography', 'Catering & Drinks', 'DJ & Sound System', 'Event Planning & Decor', 'Makeup & Hair Styling', 'Venues & Halls', 'Ushering & Security', 'MC & Entertainment', 'Other Event Services'].map(c => `<option value="${c}" ${(draft.category === c) ? 'selected' : ''} style="background:#0F1923; color:#FFF;">${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">City / Business Location *</label>
+                            <input type="text" id="m-lock-location" required placeholder="e.g. Accra, Ghana" value="${draft.location || draft.city || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Short Service Description</label>
+                            <textarea id="m-lock-desc" rows="2" placeholder="Brief description of services offered..." style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.85rem; outline:none; box-sizing:border-box; resize:none;">${draft.description || ''}</textarea>
+                        </div>
+                        <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Continue to Verification</button>
+                    </form>
+
+                    <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
+                        <a href="#" onclick="renderMandatoryAuthContent('signup'); return false;" style="color:#CBD5E1; text-decoration:underline;">Back to Step 1</a>
+                    </div>
+                </div>
+            `;
+        } else if (mode === 'signup') {
+            const draft = window._mandatorySignupDraft || {};
+            const isVendorSelected = (draft.role === 'vendor');
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
+                    </div>
+                    <div style="font-size:0.75rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Step 1 — Basic Credentials</div>
                     <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Create Your Account</h2>
                     <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">Join Ohati to discover and book verified event services</p>
 
@@ -1368,64 +1372,34 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Account Role</label>
                             <select id="m-lock-role" onchange="toggleVendorAuthFields(this.value)" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
-                                <option value="customer" style="background:#0F1923; color:#FFF;">Customer (Planning Events)</option>
-                                <option value="vendor" style="background:#0F1923; color:#FFF;">Vendor (Offering Event Services)</option>
+                                <option value="customer" ${(draft.role === 'customer' || !draft.role) ? 'selected' : ''} style="background:#0F1923; color:#FFF;">Customer (Planning Events)</option>
+                                <option value="vendor" ${(draft.role === 'vendor') ? 'selected' : ''} style="background:#0F1923; color:#FFF;">Vendor (Offering Event Services)</option>
                             </select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Full Name</label>
-                            <input type="text" id="m-lock-name" required placeholder="John Doe" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Full Name *</label>
+                            <input type="text" id="m-lock-name" required placeholder="John Doe" value="${draft.name || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Email Address</label>
-                            <input type="email" id="m-lock-email" required placeholder="email@example.com" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Email Address *</label>
+                            <input type="email" id="m-lock-email" required placeholder="email@example.com" value="${draft.email || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Phone Number</label>
-                            <input type="tel" id="m-lock-phone" required placeholder="+233 24 123 4567" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Phone Number *</label>
+                            <input type="tel" id="m-lock-phone" required placeholder="+233 24 123 4567" value="${draft.phone || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
-
-                        <!-- Vendor Specific Registration Fields -->
-                        <div id="m-lock-vendor-fields" style="display:none; flex-direction:column; gap:12px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:12px; margin-top:4px;">
-                            <div style="font-size:0.8rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:0.5px; text-align:left;">Vendor Profile Details</div>
-                            <div>
-                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Business / Brand Name *</label>
-                                <input type="text" id="m-lock-bname" placeholder="e.g. Royal Crown Event Services" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Primary Service Category *</label>
-                                <select id="m-lock-category" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
-                                    <option value="Photography & Videography" style="background:#0F1923; color:#FFF;">Photography & Videography</option>
-                                    <option value="Catering & Drinks" style="background:#0F1923; color:#FFF;">Catering & Drinks</option>
-                                    <option value="DJ & Sound System" style="background:#0F1923; color:#FFF;">DJ & Sound System</option>
-                                    <option value="Event Planning & Decor" style="background:#0F1923; color:#FFF;">Event Planning & Decor</option>
-                                    <option value="Makeup & Hair Styling" style="background:#0F1923; color:#FFF;">Makeup & Hair Styling</option>
-                                    <option value="Venues & Halls" style="background:#0F1923; color:#FFF;">Venues & Halls</option>
-                                    <option value="Ushering & Security" style="background:#0F1923; color:#FFF;">Ushering & Security</option>
-                                    <option value="MC & Entertainment" style="background:#0F1923; color:#FFF;">MC & Entertainment</option>
-                                    <option value="Other Event Services" style="background:#0F1923; color:#FFF;">Other Event Services</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">City / Business Location *</label>
-                                <input type="text" id="m-lock-location" placeholder="e.g. Accra, Ghana" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Short Service Description</label>
-                                <textarea id="m-lock-desc" rows="2" placeholder="Brief description of services offered..." style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.85rem; outline:none; box-sizing:border-box; resize:none;"></textarea>
-                            </div>
-                        </div>
-
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password</label>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password *</label>
                             <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password</label>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password *</label>
                             <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
-                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Verification Code</button>
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">
+                            ${isVendorSelected ? 'Continue to Vendor Details' : 'Send Verification Code'}
+                        </button>
                     </form>
 
                     <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
@@ -1463,16 +1437,16 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
         }
     };
 
-    if (alreadyExists && window._currentAuthLockMode) {
-        return;
-    }
-
     window.renderMandatoryAuthContent(initialMode || 'login');
 };
 
 window.unlockMandatoryAuthScreen = function() {
+    window._currentAuthLockMode = null;
     const overlay = document.getElementById('mandatory-auth-lock-overlay');
-    if (overlay) overlay.remove();
+    if (overlay) {
+        overlay.style.display = 'none';
+        try { overlay.remove(); } catch(e) {}
+    }
 };
 
 window.handleMandatoryLoginSubmit = function(e) {
@@ -1512,14 +1486,35 @@ window.handleMandatoryLoginSubmit = function(e) {
         if (passInput) passInput.disabled = false;
     }
 
-    API.login(identifier, password).then(res => {
+    API.login({ identifier, password }).then(res => {
         if (res.user) {
             state.user = res.user;
-            if (res.token) localStorage.setItem('ohati_auth_token', res.token);
+            const token = res.auth_token || res.token;
+            if (token) localStorage.setItem('ohati_auth_token', token);
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
             window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
-            if (typeof navigateTo === 'function') navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+            
+            Promise.allSettled([
+                API.getCategories(),
+                API.getVendors(),
+                API.getVendors({ premium_only: 1 }),
+                API.get('get_advertisements'),
+                API.getPopularVendors(),
+                API.getBookings(),
+                API.getFavorites(),
+                API.getEvent(),
+                API.get('get_faqs')
+            ]).then(results => {
+                state.categories = results[0].status === 'fulfilled' ? results[0].value : [];
+                state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
+                state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
+                state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
+                
+                if (typeof navigateTo === 'function') {
+                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+                }
+            });
         } else {
             unlockLogin();
             throw new Error(res.error || 'Login failed.');
@@ -1544,9 +1539,9 @@ window.handleMandatoryLoginSubmit = function(e) {
 };
 
 window.toggleVendorAuthFields = function(role) {
-    const vFields = document.getElementById('m-lock-vendor-fields');
-    if (vFields) {
-        vFields.style.display = (role === 'vendor') ? 'flex' : 'none';
+    const btn = document.getElementById('m-lock-btn');
+    if (btn) {
+        btn.textContent = (role === 'vendor') ? 'Continue to Vendor Details' : 'Send Verification Code';
     }
 };
 
@@ -1558,12 +1553,7 @@ window.handleMandatorySignupSubmit = function(e) {
     const passInput = document.getElementById('m-lock-pass');
     const confirmInput = document.getElementById('m-lock-confirm');
     const roleSelect = document.getElementById('m-lock-role');
-    const bnameInput = document.getElementById('m-lock-bname');
-    const catSelect = document.getElementById('m-lock-category');
-    const locInput = document.getElementById('m-lock-location');
-    const descInput = document.getElementById('m-lock-desc');
     const errBox = document.getElementById('m-lock-error');
-    const btn = document.getElementById('m-lock-btn');
 
     if (errBox) errBox.style.display = 'none';
 
@@ -1574,11 +1564,6 @@ window.handleMandatorySignupSubmit = function(e) {
     const confirm = confirmInput ? confirmInput.value : '';
     const role = roleSelect ? roleSelect.value : 'customer';
 
-    const business_name = bnameInput ? bnameInput.value.trim() : '';
-    const category = catSelect ? catSelect.value : '';
-    const location = locInput ? locInput.value.trim() : '';
-    const description = descInput ? descInput.value.trim() : '';
-
     const parts = name.split(' ');
     const fname = parts[0] || '';
     const lname = parts.slice(1).join(' ') || '';
@@ -1586,13 +1571,6 @@ window.handleMandatorySignupSubmit = function(e) {
     if (!name || !email || !phone || !password || !confirm) {
         if (errBox) { errBox.textContent = 'Please fill out all required fields.'; errBox.style.display = 'block'; }
         return;
-    }
-
-    if (role === 'vendor') {
-        if (!business_name || !location) {
-            if (errBox) { errBox.textContent = 'Please enter your business name and location.'; errBox.style.display = 'block'; }
-            return;
-        }
     }
 
     if (password.length < 6) {
@@ -1605,29 +1583,24 @@ window.handleMandatorySignupSubmit = function(e) {
         return;
     }
 
-    const fields = [nameInput, emailInput, phoneInput, passInput, confirmInput, roleSelect, bnameInput, catSelect, locInput, descInput];
+    if (!window._mandatorySignupDraft) window._mandatorySignupDraft = {};
+    Object.assign(window._mandatorySignupDraft, {
+        name, fname, lname, email, phone, password, confirm, confirm_password: confirm, role
+    });
+
+    if (role === 'vendor') {
+        window.renderMandatoryAuthContent('vendor-details');
+        return;
+    }
+
+    // Customer flow: Send OTP immediately
+    const btn = document.getElementById('m-lock-btn');
     if (btn) {
         btn.disabled = true;
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.65';
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending Code...';
     }
-    fields.forEach(f => { if (f) f.disabled = true; });
-
-    function unlockSignup() {
-        if (btn) {
-            btn.disabled = false;
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
-            btn.textContent = 'Send Verification Code';
-        }
-        fields.forEach(f => { if (f) f.disabled = false; });
-    }
-
-    window._mandatorySignupDraft = { 
-        name, fname, lname, email, phone, password, confirm, confirm_password: confirm, role,
-        business_name, bname: business_name, category, location, city: location, description
-    };
 
     API.post('send_otp', {
         target: email || phone,
@@ -1636,7 +1609,64 @@ window.handleMandatorySignupSubmit = function(e) {
     }).then(res => {
         window.renderMandatoryAuthContent('otp');
     }).catch(err => {
-        unlockSignup();
+        if (btn) {
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Send Verification Code';
+        }
+        if (errBox) { errBox.textContent = err.message || 'Failed to send OTP code. Please try again.'; errBox.style.display = 'block'; }
+    });
+};
+
+window.handleMandatoryVendorDetailsSubmit = function(e) {
+    if (e) e.preventDefault();
+    const bnameInput = document.getElementById('m-lock-bname');
+    const catSelect = document.getElementById('m-lock-category');
+    const locInput = document.getElementById('m-lock-location');
+    const descInput = document.getElementById('m-lock-desc');
+    const errBox = document.getElementById('m-lock-error');
+    const btn = document.getElementById('m-lock-btn');
+
+    if (errBox) errBox.style.display = 'none';
+
+    const business_name = bnameInput ? bnameInput.value.trim() : '';
+    const category = catSelect ? catSelect.value : '';
+    const location = locInput ? locInput.value.trim() : '';
+    const description = descInput ? descInput.value.trim() : '';
+
+    if (!business_name || !location) {
+        if (errBox) { errBox.textContent = 'Please enter your business name and location.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (!window._mandatorySignupDraft) window._mandatorySignupDraft = {};
+    Object.assign(window._mandatorySignupDraft, {
+        business_name, bname: business_name, category, location, city: location, description
+    });
+
+    const draft = window._mandatorySignupDraft;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.65';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending Code...';
+    }
+
+    API.post('send_otp', {
+        target: draft.email || draft.phone,
+        email: draft.email,
+        phone: draft.phone
+    }).then(res => {
+        window.renderMandatoryAuthContent('otp');
+    }).catch(err => {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Continue to Verification';
+        }
         if (errBox) { errBox.textContent = err.message || 'Failed to send OTP code. Please try again.'; errBox.style.display = 'block'; }
     });
 };
@@ -1683,11 +1713,32 @@ window.handleMandatoryOTPVerifySubmit = function(e) {
     }).then(res => {
         if (res.user) {
             state.user = res.user;
-            if (res.token) localStorage.setItem('ohati_auth_token', res.token);
+            const token = res.auth_token || res.token;
+            if (token) localStorage.setItem('ohati_auth_token', token);
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
             window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
-            if (typeof navigateTo === 'function') navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+
+            Promise.allSettled([
+                API.getCategories(),
+                API.getVendors(),
+                API.getVendors({ premium_only: 1 }),
+                API.get('get_advertisements'),
+                API.getPopularVendors(),
+                API.getBookings(),
+                API.getFavorites(),
+                API.getEvent(),
+                API.get('get_faqs')
+            ]).then(results => {
+                state.categories = results[0].status === 'fulfilled' ? results[0].value : [];
+                state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
+                state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
+                state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
+
+                if (typeof navigateTo === 'function') {
+                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+                }
+            });
         } else {
             unlockOTP();
             throw new Error(res.error || 'Registration failed.');

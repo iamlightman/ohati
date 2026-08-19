@@ -2261,7 +2261,7 @@ function triggerChatAttachment() {
 
 function handleChatFileSelected(input) {
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file || !state.activeChatVendorId) return;
 
     // Validate size (20MB limit)
     const max_size = 20 * 1024 * 1024;
@@ -2273,18 +2273,28 @@ function handleChatFileSelected(input) {
 
     const formData = new FormData();
     formData.append('file', file);
+    const token = localStorage.getItem('ohati_auth_token');
+    if (token) formData.append('auth_token', token);
 
     const inputBarField = document.getElementById('chat-input-field');
     if (inputBarField) inputBarField.placeholder = "Uploading file...";
 
-    fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file', {
+    const headers = (typeof API !== 'undefined' && API.getAuthHeaders) ? API.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
+    const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+
+    fetch(apiUrl, {
         method: 'POST',
+        credentials: 'include',
+        headers: headers,
         body: formData
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) return r.json().then(errData => { throw new Error(errData.error || `Server error (${r.status})`); });
+        return r.json();
+    })
     .then(res => {
         if (res.success && state.activeChatVendorId) {
-            API.sendMessage(state.activeChatVendorId, res.url, res.type).then(() => {
+            API.sendMessage(state.activeChatVendorId, res.url, res.type || 'image').then(() => {
                 API.getChatHistory(state.activeChatVendorId).then(history => {
                     updateChatMessages(history);
                 });
@@ -2297,7 +2307,7 @@ function handleChatFileSelected(input) {
     })
     .catch(err => {
         console.error("File upload error:", err);
-        showPushNotification("Upload Failed", "An error occurred during upload.");
+        showPushNotification("Upload Failed", err.message || "An error occurred during upload.");
         if (inputBarField) inputBarField.placeholder = "Type a message...";
         input.value = '';
     });
@@ -2566,14 +2576,21 @@ function sendVoiceRecording() {
     
     const formData = new FormData();
     formData.append('file', recordedAudioBlob, `voicenote.${ext}`);
+    const token = localStorage.getItem('ohati_auth_token');
+    if (token) formData.append('auth_token', token);
     
     const bars = document.querySelectorAll('.chat-input-bar');
     bars.forEach(bar => {
         bar.innerHTML = `<div style="padding:10px; text-align:center; width:100%; color:var(--gray-500); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Sending voice note...</div>`;
     });
     
-    fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file', {
+    const headers = (typeof API !== 'undefined' && API.getAuthHeaders) ? API.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
+    const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+
+    fetch(apiUrl, {
         method: 'POST',
+        credentials: 'include',
+        headers: headers,
         body: formData
     })
     .then(r => r.json())
@@ -3251,6 +3268,7 @@ window.submitSwitchToCustomer = function(vid, pkgName, price) {
             })
             .then(res => {
                 state.user = res.user;
+                localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
                 updateSidebarUI();
                 showPushNotification('Success', 'Profile updated and switched to Customer Mode.');
                 closeModal();
@@ -3277,6 +3295,7 @@ window.submitSwitchToCustomer = function(vid, pkgName, price) {
         })
         .then(res => {
             state.user = res.user;
+            localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
             updateSidebarUI();
             showPushNotification('Success', 'Switched to Customer Mode.');
             closeModal();
@@ -3492,147 +3511,115 @@ function openBookingInvoice(bid) {
     const booking = state.bookings.find(b => b.id === bid);
     if (!booking) return;
 
-    API.getPaymentHistory(bid).then(payments => {
-        const totalCost = parseFloat(booking.negotiated_price || booking.price || 0);
-        const totalPaid = parseFloat(booking.total_paid || 0);
-        const remaining = Math.max(0, totalCost - totalPaid);
-        const isFullyPaid = remaining <= 0;
-        const invoiceNo = 'INV-OHT-' + String(booking.id).padStart(5, '0');
-        const createdDate = booking.timeline && booking.timeline.length > 0
-            ? new Date(booking.timeline[0].timestamp)
-            : new Date(booking.created_at || Date.now());
-        const vendorLogo = booking.vendor_logo || 'img/logo black transparent small.png';
+    const totalCost = parseFloat(booking.negotiated_price || booking.price || 0);
+    const invoiceNo = 'INV-OHT-' + String(booking.id).padStart(5, '0');
+    const createdDate = booking.timeline && booking.timeline.length > 0
+        ? new Date(booking.timeline[0].timestamp)
+        : new Date(booking.created_at || Date.now());
+    const timeFormatted = createdDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const vendorLogo = booking.vendor_logo || 'img/logo black transparent small.png';
 
-        let txRows = '';
-        if (payments && payments.length > 0) {
-            txRows = payments.map(p => `
-                <tr>
-                    <td style="padding:6px 8px;font-size:0.7rem;border-bottom:1px solid var(--gray-100);">${formatFriendlyDate(p.created_at || new Date())}</td>
-                    <td style="padding:6px 8px;font-size:0.7rem;border-bottom:1px solid var(--gray-100);">${p.method || 'Paystack'}</td>
-                    <td style="padding:6px 8px;font-size:0.7rem;border-bottom:1px solid var(--gray-100);font-size:0.6rem;color:var(--gray-500);">${p.provider_ref || '—'}</td>
-                    <td style="padding:6px 8px;font-size:0.7rem;border-bottom:1px solid var(--gray-100);font-weight:700;color:var(--success);text-align:right;">+GH₵ ${parseFloat(p.amount).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                </tr>
-            `).join('');
-        } else {
-            txRows = `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--gray-400);font-size:0.75rem;">No payments recorded yet</td></tr>`;
-        }
+    const statusBadge = booking.status === 'Confirmed'
+        ? '<span style="color:var(--success); font-weight:800;">✓ CONFIRMED</span>'
+        : (booking.status === 'Cancelled' ? '<span style="color:var(--error); font-weight:800;">✕ CANCELLED</span>' : '<span style="color:var(--primary); font-weight:800;">● INQUIRY SUBMITTED</span>');
 
-        const html = `
-            <div id="invoice-printable" style="max-width:460px;margin:0 auto;">
-                <!-- INVOICE HEADER: Two-column logo layout -->
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid var(--primary);margin-bottom:16px;">
-                    <!-- Ohati Side -->
-                    <div style="flex:1;">
-                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-                            <img src="img/logo black transparent small.png" alt="Ohati" style="height:28px;width:auto;">
-                            <span style="font-family:'Fraunces',serif;font-size:1rem;font-weight:800;color:var(--primary);">OHATI</span>
-                        </div>
-                        <div style="font-size:0.6rem;color:var(--gray-500);line-height:1.5;">
-                            Ghana's Event Marketplace<br>
-                            support@ohati.com<br>
-                            +233 54 337 7470
-                        </div>
+    const html = `
+        <div id="invoice-printable" style="max-width:460px;margin:0 auto;">
+            <!-- INVOICE HEADER: Two-column logo layout -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid var(--primary);margin-bottom:16px;">
+                <!-- Ohati Side -->
+                <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                        <img src="img/logo black transparent small.png" alt="Ohati" style="height:28px;width:auto;">
+                        <span style="font-family:'Fraunces',serif;font-size:1rem;font-weight:800;color:var(--primary);">OHATI</span>
                     </div>
-                    <!-- Vendor Side -->
-                    <div style="flex:1;text-align:right;">
-                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:6px;">
-                            <span style="font-size:0.9rem;font-weight:800;color:var(--gray-800);">${booking.vendor_name}</span>
-                            <img src="${vendorLogo}" alt="${booking.vendor_name}" style="height:28px;width:28px;border-radius:50%;object-fit:cover;border:2px solid var(--gray-200);" onerror="this.src='img/logo black transparent small.png'">
-                        </div>
-                        <div style="font-size:0.6rem;color:var(--gray-500);line-height:1.5;">
-                            ${booking.vendor_category}<br>
-                            ${booking.vendor_location || 'Ghana'}<br>
-                            ${booking.vendor_phone || booking.vendor_whatsapp || ''}
-                        </div>
+                    <div style="font-size:0.6rem;color:var(--gray-500);line-height:1.5;">
+                        Ghana's Event Marketplace<br>
+                        support@ohati.com<br>
+                        +233 54 337 7470
                     </div>
                 </div>
-
-                <!-- INVOICE META -->
-                <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding:10px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;">
-                    <div>
-                        <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Invoice No.</div>
-                        <div style="font-size:0.8rem;font-weight:800;color:var(--primary);">${invoiceNo}</div>
+                <!-- Vendor Side -->
+                <div style="flex:1;text-align:right;">
+                    <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:6px;">
+                        <span style="font-size:0.9rem;font-weight:800;color:var(--gray-800);">${booking.vendor_name}</span>
+                        <img src="${vendorLogo}" alt="${booking.vendor_name}" style="height:28px;width:28px;border-radius:50%;object-fit:cover;border:2px solid var(--gray-200);" onerror="this.src='img/logo black transparent small.png'">
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Date Issued</div>
-                        <div style="font-size:0.8rem;font-weight:700;color:var(--gray-800);">${createdDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Status</div>
-                        <div style="font-size:0.75rem;font-weight:800;color:${isFullyPaid ? 'var(--success)' : 'var(--error)'};">${isFullyPaid ? '✓ PAID' : booking.payment_status === 'Partial' ? '◐ PARTIAL' : '○ UNPAID'}</div>
+                    <div style="font-size:0.6rem;color:var(--gray-500);line-height:1.5;">
+                        ${booking.vendor_category}<br>
+                        ${booking.vendor_location || 'Ghana'}<br>
+                        ${booking.vendor_phone || booking.vendor_whatsapp || ''}
                     </div>
                 </div>
-
-                <!-- BILL TO -->
-                <div style="margin-bottom:14px;">
-                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Billed To</div>
-                    <div style="font-size:0.8rem;font-weight:700;color:var(--gray-800);">${booking.user_name}</div>
-                    <div style="font-size:0.7rem;color:var(--gray-500);">${booking.user_phone}</div>
-                </div>
-
-                <!-- SERVICE DETAILS TABLE -->
-                <table style="width:100%;border-collapse:collapse;margin-bottom:14px;border:1px solid var(--gray-100);border-radius:8px;overflow:hidden;">
-                    <thead>
-                        <tr style="background:var(--primary);color:white;">
-                            <th style="padding:8px 10px;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;">Description</th>
-                            <th style="padding:8px 10px;text-align:right;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding:10px;border-bottom:1px solid var(--gray-100);">
-                                <div style="font-size:0.78rem;font-weight:700;color:var(--gray-800);">${booking.package_name || 'Service Package'}</div>
-                                <div style="font-size:0.65rem;color:var(--gray-500);">${booking.vendor_category} · ${booking.event_type || 'Event'} · ${formatFriendlyDate(booking.event_date)}</div>
-                            </td>
-                            <td style="padding:10px;text-align:right;font-weight:800;font-size:0.85rem;color:var(--gray-800);border-bottom:1px solid var(--gray-100);">GH₵ ${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                        </tr>
-                    </tbody>
-                    <tfoot>
-                        <tr style="background:var(--gray-50);">
-                            <td style="padding:8px 10px;font-size:0.7rem;color:var(--gray-600);">Total Paid (Verified)</td>
-                            <td style="padding:8px 10px;text-align:right;font-weight:700;font-size:0.8rem;color:var(--success);">GH₵ ${totalPaid.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                        </tr>
-                        <tr style="background:var(--gray-50);border-top:2px solid var(--primary);">
-                            <td style="padding:10px;font-size:0.78rem;font-weight:800;color:var(--primary);">Balance Due</td>
-                            <td style="padding:10px;text-align:right;font-weight:800;font-size:0.9rem;color:${isFullyPaid ? 'var(--success)' : 'var(--error)'};">${isFullyPaid ? 'GH₵ 0.00 ✓' : 'GH₵ ' + remaining.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-
-                <!-- PAYMENT TRANSACTIONS LOG -->
-                <div style="margin-bottom:14px;">
-                    <div style="font-size:0.65rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Payment Transactions</div>
-                    <table style="width:100%;border-collapse:collapse;border:1px solid var(--gray-100);border-radius:8px;overflow:hidden;">
-                        <thead>
-                            <tr style="background:var(--gray-50);">
-                                <th style="padding:6px 8px;text-align:left;font-size:0.6rem;color:var(--gray-500);">Date</th>
-                                <th style="padding:6px 8px;text-align:left;font-size:0.6rem;color:var(--gray-500);">Method</th>
-                                <th style="padding:6px 8px;text-align:left;font-size:0.6rem;color:var(--gray-500);">Ref</th>
-                                <th style="padding:6px 8px;text-align:right;font-size:0.6rem;color:var(--gray-500);">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>${txRows}</tbody>
-                    </table>
-                </div>
-
-                <!-- ESCROW NOTICE -->
-                <div style="background:rgba(27,43,75,0.05);border:1px solid var(--gray-100);border-radius:8px;padding:10px 12px;margin-bottom:16px;">
-                    <p style="margin:0;font-size:0.65rem;color:var(--gray-500);line-height:1.5;">
-                        <i class="fa-solid fa-shield-halved" style="color:var(--accent);"></i>
-                        <strong>Escrow Protection:</strong> All payments are processed securely and verified directly by Ohati Admin. For disputes, contact support.
-                    </p>
-                </div>
-
-                <!-- ACTION BUTTONS -->
-                <div style="display:flex;gap:8px;margin-bottom:10px;">
-                    <button class="btn btn-outline btn-full btn-sm" onclick="printBookingInvoice(${booking.id})" style="font-size:0.75rem;height:38px;"><i class="fa-solid fa-print"></i> Print Invoice</button>
-                    <button class="btn btn-outline btn-full btn-sm" onclick="downloadBookingInvoice(${booking.id})" style="font-size:0.75rem;height:38px;"><i class="fa-solid fa-download"></i> Download PDF</button>
-                </div>
-                <button class="btn btn-primary btn-full" onclick="closeModal();" style="height:38px;font-size:0.85rem;">Close</button>
             </div>
-        `;
-        openModal(html);
-    });
+
+            <!-- INVOICE META -->
+            <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding:10px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;">
+                <div>
+                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Invoice No.</div>
+                    <div style="font-size:0.8rem;font-weight:800;color:var(--primary);">${invoiceNo}</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Issued Date & Time</div>
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--gray-800);">${createdDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} ${timeFormatted}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Booking Status</div>
+                    <div style="font-size:0.75rem;">${statusBadge}</div>
+                </div>
+            </div>
+
+            <!-- BILL TO -->
+            <div style="margin-bottom:14px; padding:10px 12px; background:var(--gray-50); border-radius:8px;">
+                <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Billed To (Client Details)</div>
+                <div style="font-size:0.8rem;font-weight:700;color:var(--gray-800);">${booking.user_name}</div>
+                <div style="font-size:0.7rem;color:var(--gray-600);"><i class="fa-solid fa-phone"></i> ${booking.user_phone}</div>
+                ${booking.user_email ? `<div style="font-size:0.7rem;color:var(--gray-600);"><i class="fa-solid fa-envelope"></i> ${booking.user_email}</div>` : ''}
+            </div>
+
+            <!-- SERVICE DETAILS TABLE -->
+            <table style="width:100%;border-collapse:collapse;margin-bottom:14px;border:1px solid var(--gray-100);border-radius:8px;overflow:hidden;">
+                <thead>
+                    <tr style="background:var(--primary);color:white;">
+                        <th style="padding:8px 10px;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;">Description / Service Package</th>
+                        <th style="padding:8px 10px;text-align:right;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;">Agreed Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding:10px;border-bottom:1px solid var(--gray-100);">
+                            <div style="font-size:0.78rem;font-weight:700;color:var(--gray-800);">${booking.package_name || 'Custom Service Package'}</div>
+                            <div style="font-size:0.65rem;color:var(--gray-500);">${booking.vendor_category} · ${booking.event_type || 'Event'} · Event Date: ${formatFriendlyDate(booking.event_date)}</div>
+                            ${booking.notes ? `<div style="font-size:0.65rem;color:var(--gray-600);margin-top:4px;"><em>Notes: ${booking.notes}</em></div>` : ''}
+                        </td>
+                        <td style="padding:10px;text-align:right;font-weight:800;font-size:0.85rem;color:var(--gray-800);border-bottom:1px solid var(--gray-100);">GH₵ ${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="background:var(--gray-50);border-top:2px solid var(--primary);">
+                        <td style="padding:10px;font-size:0.78rem;font-weight:800;color:var(--primary);">Total Booking Amount</td>
+                        <td style="padding:10px;text-align:right;font-weight:800;font-size:0.9rem;color:var(--primary);">GH₵ ${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <!-- MARKETPLACE NOTICE -->
+            <div style="background:rgba(14,131,69,0.06);border:1px solid rgba(14,131,69,0.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;">
+                <p style="margin:0;font-size:0.68rem;color:var(--gray-700);line-height:1.5;">
+                    <i class="fa-solid fa-circle-check" style="color:var(--primary);"></i>
+                    <strong>Official Booking Invoice:</strong> Issued by Ohati Event Marketplace. Details and scheduling are confirmed between client and vendor.
+                </p>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <button class="btn btn-outline btn-full btn-sm" onclick="printBookingInvoice(${booking.id})" style="font-size:0.75rem;height:38px;"><i class="fa-solid fa-print"></i> Print Invoice</button>
+                <button class="btn btn-outline btn-full btn-sm" onclick="downloadBookingInvoice(${booking.id})" style="font-size:0.75rem;height:38px;"><i class="fa-solid fa-download"></i> Download PDF</button>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="closeModal();" style="height:38px;font-size:0.85rem;">Close</button>
+        </div>
+    `;
+    openModal(html);
 }
 
 // ── PRINT & DOWNLOAD INVOICE HELPERS ────────────────────────────────────
@@ -6864,56 +6851,6 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                     <p class="text-sm text-muted" style="margin-bottom:12px;">Set your weekly availability so clients know when to reach you.</p>
                     <div id="working-hours-section-container"></div>
                 </div>
-
-                <h4 style="margin-bottom:12px;">Payout & Bank Details</h4>
-                <div class="card p-16 mb-16">
-                    <div class="form-group">
-                        <label class="form-label">Preferred Payout Method</label>
-                        <select class="form-select" id="edit-vendor-payout-method" onchange="togglePayoutFields(this.value)">
-                            <option value="momo" ${v.payout_method === 'momo' ? 'selected' : ''}>Mobile Money (Momo)</option>
-                            <option value="bank" ${v.payout_method === 'bank' ? 'selected' : ''}>Bank Transfer</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Momo Fields -->
-                    <div id="payout-momo-fields" style="display: ${v.payout_method !== 'bank' ? 'block' : 'none'};">
-                        <div class="form-group">
-                            <label class="form-label">Momo Provider</label>
-                            <select class="form-select" id="edit-vendor-momo-provider">
-                                <option value="MTN" ${v.momo_provider === 'MTN' ? 'selected' : ''}>MTN Mobile Money</option>
-                                <option value="Telecel" ${v.momo_provider === 'Telecel' || v.momo_provider === 'Vodafone' ? 'selected' : ''}>Telecel Cash</option>
-                                <option value="AT" ${v.momo_provider === 'AT' || v.momo_provider === 'AirtelTigo' ? 'selected' : ''}>AT Money</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Momo Number</label>
-                            <input type="text" class="form-input" id="edit-vendor-momo-number" value="${v.momo_number || ''}">
-                        </div>
-                    </div>
-
-                    <!-- Bank Fields -->
-                    <div id="payout-bank-fields" style="display: ${v.payout_method === 'bank' ? 'block' : 'none'};">
-                        <div class="form-group">
-                            <label class="form-label">Bank Name</label>
-                            <input type="text" class="form-input" id="edit-vendor-bank-name" placeholder="e.g. GCB, Ecobank..." value="${v.bank_name || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Account Name</label>
-                            <input type="text" class="form-input" id="edit-vendor-account-name" value="${v.account_name || ''}">
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Account Number</label>
-                            ${isFieldLocked('account_number') ? `
-                                <div style="position:relative;">
-                                    <input type="text" class="form-input" value="${v.account_number}" disabled style="background:var(--gray-50); padding-right:120px; color:var(--gray-700); font-weight:600;">
-                                    <a onclick="openRequestChangeModal('account_number')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--primary); font-weight:600; cursor:pointer;"><i class="fa-solid fa-lock"></i> Request Change</a>
-                                </div>
-                            ` : `
-                                <input type="text" class="form-input" id="edit-vendor-account-number" value="${v ? (v.account_number || '') : ''}">
-                            `}
-                        </div>
-                    </div>
-                </div>
             ` : ''}
 
             <button class="btn btn-primary btn-full" onclick="saveProfileChanges()">Save Changes</button>
@@ -7353,12 +7290,6 @@ function saveProfileChanges() {
                     gallery: state.tempGallery,
                     packages_pricing: state.tempPackages,
                     working_hours: state.tempWorkingHours,
-                    payout_method: document.getElementById('edit-vendor-payout-method')?.value || 'momo',
-                    momo_provider: document.getElementById('edit-vendor-momo-provider')?.value || '',
-                    momo_number: document.getElementById('edit-vendor-momo-number')?.value.trim() || '',
-                    bank_name: document.getElementById('edit-vendor-bank-name')?.value.trim() || '',
-                    account_name: document.getElementById('edit-vendor-account-name')?.value.trim() || '',
-                    account_number: document.getElementById('edit-vendor-account-number')?.value.trim() || '',
                     welcome_message: document.getElementById('edit-welcome-message')?.value.trim() || '',
                     response_time: document.getElementById('edit-vendor-response-time')?.value || 'Within 24 hours',
                     gps_lat: parseFloat(document.getElementById('edit-vendor-gps-lat')?.value || 0),

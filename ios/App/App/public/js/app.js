@@ -1,12 +1,6 @@
 // js/app.js — Ohati Main Application Bootstrapper
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Instant launch: Dismiss splash screen and activate Home screen in 200ms
-    setTimeout(() => { if (typeof dismissLoading === 'function') dismissLoading(); }, 11200);
-    // Render initial Home screen immediately to prevent blank white screen
-    if (typeof navigateTo === 'function') {
-        try { navigateTo('home'); } catch(e) {}
-    }
     // 0. Initialize theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const body = document.body;
@@ -23,40 +17,61 @@ document.addEventListener('DOMContentLoaded', () => {
         if (headerLogo) headerLogo.src = 'img/logo black transparent small.png';
     }
 
-    // 1. Initial State Sync & Data Loading
-        const dismissLoading = () => {
+    // Smooth loading splash dismissal helper
+    const dismissLoading = () => {
         const loadingScreen = document.getElementById('screen-loading');
         if (loadingScreen) {
             loadingScreen.classList.add('hide');
-            loadingScreen.style.display = 'none';
-            try { loadingScreen.remove(); } catch(e) {}
-        }
-        if (typeof navigateTo === 'function') {
-            try {
-                const activeScreen = document.querySelector('.screen.active');
-                if (!activeScreen) navigateTo('home');
-            } catch(e) {}
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                try { loadingScreen.remove(); } catch(e) {}
+            }, 300);
         }
     };
 
-    // Safety fallback: Dismiss loading screen after 1.2s maximum to ensure instant app launch
+    // Safety fallback: Dismiss loading screen after 1.5s maximum
     const splashTimer = setTimeout(() => {
         dismissLoading();
-    }, 11200);
+    }, 1500);
 
+    // Instant check: If no stored auth session token exists, lock to login IMMEDIATELY without waiting for network API delay
+    const hasLocalAuth = localStorage.getItem('ohati_auth_token') || localStorage.getItem('ohati_user_session');
+    if (!hasLocalAuth) {
+        state.user = null;
+        dismissLoading();
+        if (typeof showMandatoryAuthLockScreen === 'function') {
+            showMandatoryAuthLockScreen('login');
+        }
+        return;
+    }
+
+    // 1. Authenticate Session First Before Exposing App Content
     API.getSession()
         .then(res => {
             clearTimeout(splashTimer);
-            state.user = res.user;
-            if (!state.user) {
+            if (!res || !res.user) {
+                // UNAUTHENTICATED USER: Clear local state & lock screen to LOGIN ONLY
+                state.user = null;
+                localStorage.removeItem('ohati_auth_token');
+                localStorage.removeItem('ohati_user_session');
+                localStorage.removeItem('ohati_user');
+                localStorage.removeItem('wedmi_user');
+                dismissLoading();
                 if (typeof showMandatoryAuthLockScreen === 'function') {
                     showMandatoryAuthLockScreen('login');
                 }
-            } else {
-                if (typeof unlockMandatoryAuthScreen === 'function') {
-                    unlockMandatoryAuthScreen();
-                }
+                return null;
             }
+
+            // AUTHENTICATED USER: Initialize session & load application state
+            state.user = res.user;
+            localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            if (typeof unlockMandatoryAuthScreen === 'function') {
+                unlockMandatoryAuthScreen();
+            }
+            dismissLoading();
+
             state.lockedFields = res.locked_profile_fields || ["name", "email", "phone", "dob"];
             if (res.platform_reviews) state.platformReviews = res.platform_reviews;
             state.settings = res.settings || {};
@@ -73,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 15000);
             }
             if (typeof checkReferralWebLanding === 'function') checkReferralWebLanding();
+            
             return Promise.allSettled([
                 API.getCategories(),
                 API.getVendors(),
@@ -86,6 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
         })
         .then((results) => {
+            if (!state.user || !results) return; // Halt data processing if unauthenticated
+
             state.categories = results[0].status === 'fulfilled' ? results[0].value : [];
             state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
             
@@ -171,20 +189,18 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(err => {
             console.error("Initial load failed:", err);
-            // Default placeholder categories to prevent JS crash
-            state.categories = [
-                {name: 'Photography', icon: 'camera'},
-                {name: 'Videography', icon: 'video'},
-                {name: 'Makeup Artists', icon: 'brush'},
-                {name: 'Decorators', icon: 'wand-magic-sparkles'},
-                {name: 'Caterers', icon: 'utensils'},
-                {name: 'Event Venues', icon: 'hotel'}
-            ];
-            state.vendors = [];
-            navigateTo('home');
             dismissLoading();
-            pollUnreadChats();
-            openWelcomePopup();
+            if (!state.user) {
+                localStorage.removeItem('ohati_auth_token');
+                localStorage.removeItem('ohati_user_session');
+                localStorage.removeItem('ohati_user');
+                localStorage.removeItem('wedmi_user');
+                if (typeof showMandatoryAuthLockScreen === 'function') {
+                    showMandatoryAuthLockScreen('login');
+                }
+            } else {
+                navigateTo('home');
+            }
         });
 
     // 3. Attach Bottom Navigation Handlers

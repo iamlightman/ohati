@@ -44,38 +44,83 @@ session_start();
 
         function renderStep() {
             const container = document.getElementById('vendor-onboard-card');
+            
+            if (state.isOtpStep) {
+                container.innerHTML = `
+                    <div class="auth-modal-header" style="text-align:center;">
+                        <h2 class="auth-modal-title">Account Verification</h2>
+                        <p class="auth-modal-subtitle">Enter the 6-digit OTP sent to <strong>${state.otpTarget || 'your email/phone'}</strong></p>
+                    </div>
+                    <div style="margin: -5px 0 15px 0; padding: 10px 14px; border-radius: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent); font-size: 0.82rem; color: var(--primary); text-align: center;">
+                        <i class="fa-solid fa-envelope-open-text" style="color:var(--accent); margin-right:6px;"></i> Check your email inbox or SMS for your verification code.
+                    </div>
+                    <div class="otp-inputs" style="display:flex; justify-content:center; gap:8px; margin-bottom:16px;">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-1" oninput="vOtpMove(1)" onkeyup="vOtpKey(1, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-2" oninput="vOtpMove(2)" onkeyup="vOtpKey(2, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-3" oninput="vOtpMove(3)" onkeyup="vOtpKey(3, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-4" oninput="vOtpMove(4)" onkeyup="vOtpKey(4, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-5" oninput="vOtpMove(5)" onkeyup="vOtpKey(5, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-6" oninput="vOtpMove(6)" onkeyup="vOtpKey(6, event)">
+                    </div>
+                    <div id="v-otp-error" class="form-error mb-12" style="display:none;"></div>
+                    <button class="btn btn-primary btn-full" onclick="verifyStep1Otp()">Verify Code & Continue</button>
+                    <button class="btn btn-ghost btn-full mt-8" onclick="state.isOtpStep=false; renderStep();">Back</button>
+                `;
+                return;
+            }
+
             const step = state.authStep;
+            const isUserLoggedIn = isLoggedIn || state.userIsLoggedIn;
             
-            const isGuest = !isLoggedIn;
-            const totalSteps = isGuest ? 7 : 6;
-            const displayStep = isGuest ? step : (step - 1);
-            
+            let displayTitle = "Vendor Profile Details Setup";
+            let displaySubtitle = "";
+            let currentDisplayStep = 1;
+
+            if (isUserLoggedIn) {
+                currentDisplayStep = Math.max(1, step - 1);
+                displaySubtitle = `Step ${currentDisplayStep} of 5 — Profile Setup`;
+            } else {
+                if (step === 1) {
+                    displayTitle = "Vendor Account Registration";
+                    displaySubtitle = "Create account credentials & password";
+                    currentDisplayStep = 1;
+                } else {
+                    currentDisplayStep = Math.max(1, step - 1);
+                    displaySubtitle = `Next Steps: Step ${currentDisplayStep} of 5 — Vendor Details`;
+                }
+            }
+
             let html = `
                 <div class="auth-modal-header">
-                    <h2 class="auth-modal-title">Vendor Setup</h2>
-                    <p class="auth-modal-subtitle">Step ${displayStep} of ${totalSteps}</p>
+                    <h2 class="auth-modal-title">${displayTitle}</h2>
+                    <p class="auth-modal-subtitle">${displaySubtitle}</p>
                 </div>
+            `;
+
+            if (isUserLoggedIn || step > 1) {
+                html += `
                 <div class="vendor-steps">
-                    ${Array.from({length: totalSteps}, (_, index) => {
+                    ${Array.from({length: 5}, (_, index) => {
                         const i = index + 1;
-                        const actualStep = isGuest ? i : (i + 1);
-                        const isActive = actualStep === step;
-                        const isDone = actualStep < step;
+                        const isActive = i === currentDisplayStep;
+                        const isDone = i < currentDisplayStep;
                         return `
                             <div class="vendor-step-item">
                                 <div class="vendor-step-circle ${isActive ? 'active' : (isDone ? 'done' : '')}">
                                     ${isDone ? '<i class="fa-solid fa-check"></i>' : i}
                                 </div>
                             </div>
-                            ${i < totalSteps ? `<div class="vendor-step-line ${isDone ? 'done' : ''}"></div>` : ''}
+                            ${i < 5 ? `<div class="vendor-step-line ${isDone ? 'done' : ''}"></div>` : ''}
                         `;
                     }).join('')}
                 </div>
-            `;
+                `;
+            }
 
             switch (step) {
-                case 1: // Create Account (Guest Only)
+                case 1: // Login Details Creation
                     html += `
+                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Step 1: Account Credentials & Password</h4>
                         <div class="form-group">
                             <label class="form-label">Full Name</label>
                             <input type="text" class="form-input" id="v-reg-name" placeholder="John Doe" value="${state.authData.reg_name || ''}">
@@ -97,12 +142,13 @@ session_start();
                             <input type="password" class="form-input" id="v-reg-confirm" placeholder="Confirm your password">
                         </div>
                         <div id="v-step1-error" class="form-error mb-12" style="display:none;"></div>
-                        <button class="btn btn-primary btn-full mt-12" onclick="saveStep1Guest()">Next Step</button>
+                        <button class="btn btn-primary btn-full mt-12" onclick="saveStep1Guest()">Create Account & Next Steps</button>
                     `;
                     break;
 
                 case 2: // Business Details
                     html += `
+                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Next Step 1: Business Profile Details</h4>
                         <div class="form-group">
                             <label class="form-label">Business Name</label>
                             <input type="text" class="form-input" id="v-bizname" placeholder="e.g. Chill & Serve Ghana" value="${state.authData.bizname || ''}">
@@ -122,7 +168,7 @@ session_start();
                             <input type="number" class="form-input" id="v-experience" placeholder="e.g. 5" value="${state.authData.experience || ''}">
                         </div>
                         <div style="display:flex;gap:10px;" class="mt-12">
-                            ${!isLoggedIn ? `<button class="btn btn-outline btn-full" onclick="state.authStep=1; renderStep();">Back</button>` : ''}
+                            ${!isLoggedIn && !state.userIsLoggedIn ? `<button class="btn btn-outline btn-full" onclick="state.authStep=1; renderStep();">Back</button>` : ''}
                             <button class="btn btn-primary btn-full" onclick="saveStep2()">Next Step</button>
                         </div>
                     `;
@@ -130,6 +176,7 @@ session_start();
 
                 case 3: // Contact Info
                     html += `
+                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Next Step 2: Contact Info</h4>
                         <div class="form-group">
                             <label class="form-label">Primary Phone</label>
                             <input type="text" class="form-input" id="v-phone" placeholder="+233..." value="${state.authData.phone || ''}">
@@ -155,6 +202,7 @@ session_start();
 
                 case 4: // Location & Hours
                     html += `
+                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Next Step 3: Location & Service Coverage</h4>
                         <div class="form-group">
                             <label class="form-label">Business Address / Location</label>
                             <div style="display:flex; gap:8px;">
@@ -206,7 +254,7 @@ session_start();
 
                 case 5: // Packages
                     html += `
-                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Add Service Packages</h4>
+                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Next Step 4: Add Service Packages</h4>
                         <div id="v-packages-container">
                             ${state.authData.packages.map((p, i) => `
                                 <div class="card mb-12" style="position:relative;padding:12px;">
@@ -233,7 +281,7 @@ session_start();
 
                 case 6: // KYC
                     html += `
-                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Verify Owner Identity (KYC)</h4>
+                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Next Step 5: Verify Owner Identity (KYC)</h4>
                         <p style="font-size:0.75rem;color:var(--gray-500);margin-bottom:12px;">Required before accepting active client event bookings.</p>
                         <div class="form-group">
                             <label class="form-label">Accepted ID Type</label>
@@ -258,64 +306,13 @@ session_start();
                         </div>
                         <div style="display:flex;gap:10px;">
                             <button class="btn btn-outline btn-full" onclick="state.authStep=5; renderStep();">Back</button>
-                            <button class="btn btn-primary btn-full" onclick="saveStep6()">Next Step</button>
-                        </div>
-                    `;
-                    break;
-
-                case 7: // Payout
-                    html += `
-                        <h4 style="font-size:0.9rem;margin-bottom:12px;">Payout Details</h4>
-                        <div class="form-group">
-                            <label class="form-label">Payment Method</label>
-                            <select class="form-select" id="v-paymethod" onchange="togglePayFields()">
-                                <option value="momo">Mobile Money (MTN, Telecel, AT)</option>
-                                <option value="bank">Bank Transfer</option>
-                            </select>
-                        </div>
-                        <div id="v-momo-fields">
-                            <div class="form-group">
-                                <label class="form-label">Mobile Money Provider</label>
-                                <select class="form-select" id="v-momo-prov">
-                                    <option value="MTN Mobile Money">MTN MoMo</option>
-                                    <option value="Telecel Cash">Telecel Cash</option>
-                                    <option value="AT Money">AT Money</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Mobile Money Number</label>
-                                <input type="text" class="form-input" id="v-momo-num" placeholder="024..." value="${state.authData.momonum || ''}">
-                            </div>
-                        </div>
-                        <div id="v-bank-fields" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Bank Name</label>
-                                <input type="text" class="form-input" id="v-bank-name" placeholder="e.g. Ecobank, GCB..." value="${state.authData.bankname || ''}">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Account Name</label>
-                                <input type="text" class="form-input" id="v-bank-accname" placeholder="Account Name" value="${state.authData.bankaccname || ''}">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Account Number</label>
-                                <input type="text" class="form-input" id="v-bank-accnum" placeholder="Account Number" value="${state.authData.bankaccnum || ''}">
-                            </div>
-                        </div>
-                        <div style="display:flex;gap:10px;" class="mt-16">
-                            <button class="btn btn-outline btn-full" onclick="state.authStep=6; renderStep();">Back</button>
-                            <button class="btn btn-primary btn-full" onclick="submitFinalApplication()">Submit Application</button>
+                            <button class="btn btn-primary btn-full" onclick="saveStep6()">Submit Application</button>
                         </div>
                     `;
                     break;
             }
 
             container.innerHTML = html;
-        }
-
-        function togglePayFields() {
-            const val = document.getElementById('v-paymethod')?.value;
-            document.getElementById('v-momo-fields').style.display = val === 'momo' ? 'block' : 'none';
-            document.getElementById('v-bank-fields').style.display = val === 'bank' ? 'block' : 'none';
         }
 
         function toggleHoursFields() {
@@ -412,6 +409,21 @@ session_start();
             });
         }
 
+        function vOtpMove(idx) {
+            const curr = document.getElementById('v-otp-' + idx);
+            if (curr && curr.value.length === 1 && idx < 6) {
+                document.getElementById('v-otp-' + (idx + 1))?.focus();
+            }
+        }
+        function vOtpKey(idx, e) {
+            if (e.key === 'Backspace' && idx > 1) {
+                const curr = document.getElementById('v-otp-' + idx);
+                if (curr && curr.value.length === 0) {
+                    document.getElementById('v-otp-' + (idx - 1))?.focus();
+                }
+            }
+        }
+
         function saveStep1Guest() {
             const name = document.getElementById('v-reg-name').value.trim();
             const email = document.getElementById('v-reg-email').value.trim();
@@ -443,8 +455,56 @@ session_start();
             state.authData.reg_phone = phone;
             state.authData.reg_pass = pass;
 
-            state.authStep = 2;
-            renderStep();
+            const btn = document.querySelector('button[onclick="saveStep1Guest()"]');
+            ActionLock.execute(btn, 'Creating Account...', async () => {
+                const userPayload = {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    password: pass,
+                    role: 'vendor'
+                };
+                const res = await API.register(userPayload);
+                if (res.auth_token) {
+                    localStorage.setItem('ohati_auth_token', res.auth_token);
+                }
+                state.registeredUser = res.user;
+                state.otpTarget = email || phone;
+                state.isOtpStep = true;
+                
+                try {
+                    await API.sendOTP(state.otpTarget, 'verify', email, phone);
+                } catch(e) {}
+                
+                renderStep();
+            }).catch(e => {
+                if (err) {
+                    err.textContent = e.message || 'Registration error occurred';
+                    err.style.display = 'block';
+                }
+            });
+        }
+
+        function verifyStep1Otp() {
+            let code = '';
+            for (let i = 1; i <= 6; i++) {
+                code += document.getElementById('v-otp-' + i)?.value || '';
+            }
+            const err = document.getElementById('v-otp-error');
+            if (code.length < 6) {
+                if (err) { err.textContent = 'Please enter all 6 digits.'; err.style.display = 'block'; }
+                return;
+            }
+            const btn = document.querySelector('button[onclick="verifyStep1Otp()"]');
+            ActionLock.execute(btn, 'Verifying Code...', async () => {
+                await API.verifyOTP(state.otpTarget, code);
+                state.isOtpStep = false;
+                state.userIsLoggedIn = true;
+                state.authStep = 2;
+                renderStep();
+            }).catch(e => {
+                if (err) { err.textContent = e.message || 'Invalid code.'; err.style.display = 'block'; }
+            });
         }
 
         function saveStep2() {
@@ -528,30 +588,14 @@ session_start();
                 return;
             }
 
-            state.authStep = 7;
-            renderStep();
+            submitFinalApplication();
         }
 
         function submitFinalApplication() {
-            const pm = document.getElementById('v-paymethod').value;
-            let payout = {};
-            if (pm === 'momo') {
-                payout = {
-                    momo_provider: document.getElementById('v-momo-prov').value,
-                    momo_number: document.getElementById('v-momo-num').value.trim()
-                };
-            } else {
-                payout = {
-                    bank_name: document.getElementById('v-bank-name').value.trim(),
-                    account_name: document.getElementById('v-bank-accname').value.trim(),
-                    account_number: document.getElementById('v-bank-accnum').value.trim()
-                };
-            }
-
-            const btn = document.querySelector('button[onclick="submitFinalApplication()"]');
+            const btn = document.querySelector('button[onclick="saveStep6()"]') || document.querySelector('button[onclick="submitFinalApplication()"]');
 
             ActionLock.execute(btn, 'Submitting Application...', async () => {
-                if (!isLoggedIn) {
+                if (!isLoggedIn && !state.userIsLoggedIn) {
                     const userPayload = {
                         name: state.authData.reg_name,
                         email: state.authData.reg_email,
@@ -561,7 +605,7 @@ session_start();
                     };
                     await API.register(userPayload);
                 }
-                await submitVendorApplicationData(pm, payout);
+                await submitVendorApplicationData();
             }).catch(e => {
                 const errMsg = e.message || e || 'Registration error occurred';
                 if (typeof showPushNotification === 'function') {
@@ -572,7 +616,7 @@ session_start();
             });
         }
 
-        async function submitVendorApplicationData(pm, payout) {
+        async function submitVendorApplicationData() {
             const payload = {
                 business_name: state.authData.bizname,
                 category: state.authData.category,
@@ -602,9 +646,7 @@ session_start();
                 packages_pricing: pkgs,
                 instant_booking: 0,
                 verification_status: 'pending',
-                verification_badge: 'blue',
-                payout_method: pm,
-                ...payout
+                verification_badge: 'blue'
             };
 
             await API.updateVendor(updatePayload);

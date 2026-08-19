@@ -95,15 +95,28 @@ function dismissPushNotification() {
 
 // ── Sidebar ────────────────────────────────────────────────────────────
 function toggleSidebar(open) {
-    const overlay = document.getElementById('sidebar-overlay');
+    const overlay = document.getElementById('sidebar-overlay') || document.getElementById('app-sidebar-overlay');
     if (!overlay) return;
-    if (open) {
+    const shouldOpen = (open === undefined) ? (!overlay.classList.contains('open') && !overlay.classList.contains('active')) : !!open;
+    if (shouldOpen) {
         overlay.classList.add('open');
-        updateSidebarUI();
+        overlay.classList.add('active');
+        if (typeof updateSidebarUI === 'function') updateSidebarUI();
+        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            const screen = item.getAttribute('onclick');
+            if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
     } else {
         overlay.classList.remove('open');
+        overlay.classList.remove('active');
     }
 }
+window.toggleSidebar = toggleSidebar;
 
 function updateSidebarUI() {
     const nameEl = document.getElementById('sidebar-name');
@@ -281,6 +294,7 @@ function switchAccountType(targetRole) {
     API.post('switch_role', { role: targetRole }).then(res => {
         if (res.success) {
             state.user = res.user;
+            localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
             showPushNotification('Account Switched', 'Switched to ' + (targetRole === 'vendor' ? 'Vendor Mode' : 'Customer Mode'));
             updateSidebarUI();
             if (targetRole === 'vendor') {
@@ -436,17 +450,15 @@ function lightboxNav(dir) {
 
 // ── Convenience Modals ─────────────────────────────────────────────────
 function openLoginModal() {
-    state.authMode = 'login';
-    state.authStep = 1;
-    state.authData = {};
-    renderAuthModal();
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        showMandatoryAuthLockScreen('login');
+    }
 }
 
 function openSignUpModal() {
-    state.authMode = 'welcome';
-    state.authStep = 1;
-    state.authData = {};
-    renderAuthModal();
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        showMandatoryAuthLockScreen('signup');
+    }
 }
 
 
@@ -492,44 +504,7 @@ function openNotificationsModal() {
 
 // ── Welcome Popup Modal ───────────────────────────────────────────────
 function openWelcomePopup() {
-    // Completely suppress welcome popup on mobile app (Capacitor, Android, iOS WebView, Mobile app windows)
-    const ua = (navigator.userAgent || '').toLowerCase();
-    const isApp = (typeof window.Capacitor !== 'undefined') ||
-                  (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
-                  window.location.protocol === 'capacitor:' ||
-                  window.location.protocol === 'file:' ||
-                  ua.includes('ohatiapp') ||
-                  ua.includes('capacitor') ||
-                  ua.includes('wv') ||
-                  (typeof window.isNativeMobileApp === 'function' && window.isNativeMobileApp()) ||
-                  (window.state && window.state.isMobileApp);
-
-    if (isApp) {
-        return; // Never show website welcome promo popup inside mobile app
-    }
-
-
-    const dismissedValue = localStorage.getItem('ohati_welcome_dismissed');
-    if (dismissedValue) {
-        const dismissedTime = parseInt(dismissedValue, 10);
-        if (!isNaN(dismissedTime)) {
-            const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-            if (Date.now() - dismissedTime < twoDaysMs) {
-                return; // Suppressed for 2 days
-            }
-        } else if (dismissedValue === '1') {
-            // Fallback for legacy values: suppress or allow setting new timestamp
-            return;
-        }
-    }
-    const overlay = document.getElementById('welcome-popup-overlay');
-    if (overlay) {
-        const checkbox = document.getElementById('welcome-dont-show-again');
-        if (checkbox) {
-            checkbox.checked = false;
-        }
-        overlay.classList.add('open');
-    }
+    return; // Welcome popup completely disabled per user requirement
 }
 
 function closeWelcomePopup(event) {

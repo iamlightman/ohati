@@ -617,7 +617,7 @@ case 'register':
             $loc = clean($input['location'] ?? $input['city'] ?? 'Accra, Ghana');
             
             try {
-                $v_ins = $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'grey', 1)");
+                $v_ins = $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)");
                 $v_ins->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
             } catch (Exception $eVend) {}
         }
@@ -645,13 +645,61 @@ case 'register':
     echo json_encode(['success'=>true,'requires_verification'=>true,'user'=>$user,'auth_token'=>$auth_token,'csrf'=>csrf_token()]);
     break;
 
+case 'session':
+case 'me':
+    if (isset($_SESSION['user']['id'])) {
+        $uid = intval($_SESSION['user']['id']);
+        $u_stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $u_stmt->execute([$uid]);
+        $u_row = $u_stmt->fetch();
+        if ($u_row && intval($u_row['is_active'] ?? 1) === 1) {
+            $safe_user = [
+                'id' => intval($u_row['id']),
+                'name' => $u_row['name'],
+                'email' => $u_row['email'],
+                'phone' => $u_row['phone'],
+                'role' => $u_row['role'],
+                'avatar' => $u_row['avatar'],
+                'kyc_status' => $u_row['kyc_status'] ?? 'not_started',
+                'active_role' => !empty($u_row['active_role']) ? $u_row['active_role'] : ($u_row['role'] === 'vendor' ? 'vendor' : 'customer')
+            ];
+            $v_stmt = $pdo->prepare("SELECT id, name, verification_status, description, location FROM vendors WHERE user_id = ?");
+            $v_stmt->execute([$uid]);
+            $v_row = $v_stmt->fetch();
+            if ($v_row) {
+                $safe_user['vendor_id'] = intval($v_row['id']);
+                $safe_user['has_vendor_profile'] = true;
+                $v_st = $v_row['verification_status'] ?? 'pending';
+                $safe_user['vendor_verification_status'] = $v_st;
+                $safe_user['vendor_onboarding_completed'] = ($v_st !== 'draft' && !empty($v_row['name']));
+            } else {
+                $safe_user['has_vendor_profile'] = false;
+                $safe_user['vendor_verification_status'] = 'not_created';
+                $safe_user['vendor_onboarding_completed'] = false;
+            }
+            $_SESSION['user'] = $safe_user;
+            echo json_encode(['success' => true, 'user' => $safe_user, 'csrf' => csrf_token()]);
+            break;
+        }
+    }
+    $_SESSION['user'] = null;
+    echo json_encode(['success' => false, 'user' => null, 'csrf' => csrf_token()]);
+    break;
+
 case 'login':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     if (!rate_limit('login', 5, 60)) { http_response_code(429); echo json_encode(['error'=>'Too many login attempts. Wait 60 seconds.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
-    $identifier = clean($input['identifier'] ?? '');
-    $password = $input['password'] ?? '';
-    $otp = $input['otp'] ?? '';
+    $raw_body = file_get_contents('php://input');
+    $input = json_decode($raw_body, true);
+    if (is_string($input)) {
+        $identifier = clean($input);
+    } else if (is_array($input)) {
+        $identifier = clean($input['identifier'] ?? $input['email'] ?? $input['phone'] ?? $input['username'] ?? $input['user'] ?? $_POST['identifier'] ?? $_POST['email'] ?? $_POST['phone'] ?? '');
+    } else {
+        $identifier = clean($_POST['identifier'] ?? $_POST['email'] ?? $_POST['phone'] ?? $_POST['username'] ?? $_GET['identifier'] ?? $_GET['email'] ?? '');
+    }
+    $password = is_array($input) ? ($input['password'] ?? $_POST['password'] ?? '') : ($_POST['password'] ?? '');
+    $otp = is_array($input) ? ($input['otp'] ?? $_POST['otp'] ?? '') : ($_POST['otp'] ?? '');
     if (empty($identifier)) { http_response_code(400); echo json_encode(['error'=>'Email or phone is required.']); exit; }
 
     $id_lower = strtolower(trim($identifier));
@@ -691,48 +739,11 @@ case 'login':
     } else {
         if (!password_verify($password, $user['password_hash'])) { http_response_code(401); echo json_encode(['error'=>'Incorrect password.']); exit; }
     }
-    // Bypass verification restriction for existing active accounts, demo accounts, or already verified accounts
-    $is_existing_account = (
-        ($user['status'] ?? '') === 'active' ||
-        empty($user['status']) ||
-        intval($user['email_verified'] ?? 1) === 1 ||
-        intval($user['phone_verified'] ?? 1) === 1 ||
-        strpos(strtolower($user['email'] ?? ''), 'demo') !== false ||
-        strpos(strtolower($user['email'] ?? ''), 'apple') !== false ||
-        strpos(strtolower($user['email'] ?? ''), 'review') !== false
-    );
-    
-    $is_unverified_new_signup = (($user['status'] ?? '') === 'pending_otp' || (intval($user['email_verified'] ?? 0) === 0 && intval($user['phone_verified'] ?? 0) === 0));
-
-    if (!$is_existing_account && $is_unverified_new_signup) {
-        $target = !empty($user['email']) ? $user['email'] : $user['phone'];
-
-        // Automatically issue and dispatch fresh 6-digit OTP code to SMS & Email
-        $code = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        $code_hash = password_hash($code, PASSWORD_DEFAULT);
-        $expires = date('Y-m-d H:i:s', time() + 600);
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $device = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 190);
-        $pdo->prepare("UPDATE otp_codes SET used = 1 WHERE target = ? AND used = 0")->execute([$target]);
-        $pdo->prepare("INSERT INTO otp_codes (target, code, code_hash, email_status, sms_status, expires_at, ip_address, device) VALUES (?, ?, ?, 'pending', 'pending', ?, ?, ?)")->execute([$target, $code, $code_hash, $expires, $ip, $device]);
-
-        if (!empty($user['email']) && function_exists('send_email_notification')) {
-            @send_email_notification($user['email'], "Your Ohati Verification Code", "<p>Your 6-digit verification code is: <strong>$code</strong></p>");
-        }
-        if (!empty($user['phone']) && function_exists('send_sms_notification')) {
-            @send_sms_notification($user['phone'], "Your Ohati verification code is: $code");
-        }
-
-        http_response_code(403);
-        echo json_encode([
-            'error' => 'Account verification incomplete. A new verification code has been sent to your SMS and email. Please enter code to complete verification.',
-            'requires_verification' => true,
-            'target' => $target,
-            'email' => $user['email'] ?? '',
-            'phone' => $user['phone'] ?? ''
-        ]);
-        exit;
-    }
+    // Automatically ensure existing accounts in the database are marked verified & active
+    $pdo->prepare("UPDATE users SET email_verified = 1, phone_verified = 1, status = 'active' WHERE id = ?")->execute([$user['id']]);
+    $user['status'] = 'active';
+    $user['email_verified'] = 1;
+    $user['phone_verified'] = 1;
     // Update login
     $pdo->prepare("UPDATE users SET last_login = ?, login_count = login_count + 1 WHERE id = ?")->execute([date('Y-m-d H:i:s'), $user['id']]);
     // Log login
@@ -742,16 +753,23 @@ case 'login':
     $safe_user = ['id'=>$user['id'],'name'=>$user['name'],'email'=>$user['email'],'phone'=>$user['phone'],'role'=>$user['role'],'avatar'=>$user['avatar'],'kyc_status'=>$user['kyc_status']];
     
     // Check if vendor
-    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_stmt = $pdo->prepare("SELECT id, name, verification_status, description, location FROM vendors WHERE user_id = ?");
     $v_stmt->execute([$user['id']]);
-    $v_id = $v_stmt->fetchColumn();
-    if ($v_id) {
-        $safe_user['vendor_id'] = intval($v_id);
+    $v_row = $v_stmt->fetch();
+    if ($v_row) {
+        $safe_user['vendor_id'] = intval($v_row['id']);
         $safe_user['has_vendor_profile'] = true;
-        $safe_user['active_role'] = $user['role'] === 'vendor' ? 'vendor' : 'customer';
+        $v_st = $v_row['verification_status'] ?? 'pending';
+        $safe_user['vendor_verification_status'] = $v_st;
+        $is_draft = ($v_st === 'draft');
+        $has_name = !empty($v_row['name']);
+        $safe_user['vendor_onboarding_completed'] = (!$is_draft && $has_name);
+        $safe_user['active_role'] = !empty($user['active_role']) ? $user['active_role'] : ($user['role'] === 'vendor' ? 'vendor' : 'customer');
     } else {
-        $safe_user['active_role'] = 'customer';
+        $safe_user['active_role'] = !empty($user['active_role']) ? $user['active_role'] : ($user['role'] === 'vendor' ? 'vendor' : 'customer');
         $safe_user['has_vendor_profile'] = false;
+        $safe_user['vendor_verification_status'] = 'not_created';
+        $safe_user['vendor_onboarding_completed'] = false;
     }
     
     $_SESSION['user'] = $safe_user;
@@ -760,6 +778,24 @@ case 'login':
     break;
 
 case 'logout':
+    $auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    $token_to_del = '';
+    if (preg_match('/Bearer\s+(.+)/i', $auth_header, $m)) {
+        $token_to_del = trim($m[1]);
+    } else {
+        $token_to_del = trim($_GET['auth_token'] ?? $_POST['auth_token'] ?? $raw_input_init['auth_token'] ?? '');
+    }
+    if (!empty($token_to_del)) {
+        $hash = hash('sha256', $token_to_del);
+        try {
+            $pdo->prepare("DELETE FROM auth_tokens WHERE token_hash = ?")->execute([$hash]);
+        } catch (Exception $e) {}
+    }
+    if (isset($_SESSION['user']['id'])) {
+        try {
+            $pdo->prepare("DELETE FROM auth_tokens WHERE user_id = ?")->execute([intval($_SESSION['user']['id'])]);
+        } catch (Exception $e) {}
+    }
     $_SESSION = array();
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
@@ -1695,7 +1731,7 @@ case 'book':
     $created_at_stamp = date('Y-m-d H:i:s');
     $timeline = json_encode([['status'=>'Inquiry Submitted','user'=>'Customer','timestamp'=>$created_at_stamp,'notes'=>$notes]]);
     $stmt = $pdo->prepare("INSERT INTO bookings (vendor_id,user_id,user_name,user_phone,event_date,event_type,package_name,price,negotiated_price,negotiation_history,notes,status,payment_status,timeline,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([$vendor_id,$uid,$user_name,$user_phone,$event_date,$event_type,$package_name,$price,$negotiated_price,$neg_history_json,$notes,'Inquiry','Unpaid',$timeline,$created_at_stamp]);
+    $stmt->execute([$vendor_id,$uid,$user_name,$user_phone,$event_date,$event_type,$package_name,$price,$negotiated_price,$neg_history_json,$notes,'Inquiry','N/A',$timeline,$created_at_stamp]);
     $booking_id = $pdo->lastInsertId();
 
     log_activity($pdo, 'Booking Created', 'Booking', $booking_id, $uid, 'customer', $user_name, $negotiated_price, '', 'Inquiry', "Created booking #OHT-B" . str_pad($booking_id, 5, '0', STR_PAD_LEFT) . " for " . $event_type);
@@ -2163,6 +2199,17 @@ case 'chat':
 
 case 'upload_chat_file':
     $upload_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$upload_uid && (isset($_POST['auth_token']) || isset($_GET['auth_token']))) {
+        $post_token = trim($_POST['auth_token'] ?? $_GET['auth_token'] ?? '');
+        if (!empty($post_token)) {
+            $token_hash = hash('sha256', $post_token);
+            try {
+                $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > NOW())");
+                $t_stmt->execute([$token_hash]);
+                $upload_uid = intval($t_stmt->fetchColumn() ?: 0);
+            } catch (Exception $e) {}
+        }
+    }
     if (!$upload_uid) { http_response_code(401); echo json_encode(['error'=>'Please log in to upload files.']); exit; }
     if (!isset($_FILES['file'])) { http_response_code(400); echo json_encode(['error'=>'No file uploaded or file exceeds server post limit.']); exit; }
     
@@ -2471,9 +2518,19 @@ case 'register_vendor':
         }
     }
     
-    $stmt = $pdo->prepare("INSERT INTO vendors (user_id,name,category,description,location,phone,email,experience,verification_status,verification_badge) VALUES (?,?,?,?,?,?,?,?,'pending','grey')");
-    $stmt->execute([$uid,$name,$category,clean($input['description']??''),clean($input['location']??''),clean($input['phone']??''),clean($input['email']??''),intval($input['experience']??0)]);
-    $vendor_id = $pdo->lastInsertId();
+    $exist_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ? AND user_id > 0 LIMIT 1");
+    $exist_stmt->execute([$uid]);
+    $exist_v = $exist_stmt->fetch();
+    
+    if ($exist_v) {
+        $vendor_id = intval($exist_v['id']);
+        $u_stmt = $pdo->prepare("UPDATE vendors SET name = ?, category = ?, description = ?, location = ?, phone = ?, email = ?, experience = ?, verification_status = 'pending' WHERE id = ?");
+        $u_stmt->execute([$name, $category, clean($input['description']??''), clean($input['location']??''), clean($input['phone']??''), clean($input['email']??''), intval($input['experience']??0), $vendor_id]);
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO vendors (user_id,name,category,description,location,phone,email,experience,verification_status,verification_badge) VALUES (?,?,?,?,?,?,?,?,'pending','grey')");
+        $stmt->execute([$uid,$name,$category,clean($input['description']??''),clean($input['location']??''),clean($input['phone']??''),clean($input['email']??''),intval($input['experience']??0)]);
+        $vendor_id = $pdo->lastInsertId();
+    }
     
     // Auto-update users role to vendor
     if ($uid > 0) {
@@ -2483,6 +2540,8 @@ case 'register_vendor':
             $_SESSION['user']['active_role'] = 'vendor';
             $_SESSION['user']['vendor_id'] = intval($vendor_id);
             $_SESSION['user']['has_vendor_profile'] = true;
+            $_SESSION['user']['vendor_verification_status'] = 'pending';
+            $_SESSION['user']['vendor_onboarding_completed'] = true;
         }
     }
     
@@ -2647,6 +2706,10 @@ case 'switch_role':
         $_SESSION['user']['has_vendor_profile'] = true;
     }
     $_SESSION['user']['active_role'] = $role;
+    try {
+        $stmt = $pdo->prepare("UPDATE users SET active_role = ? WHERE id = ?");
+        $stmt->execute([$role, $_SESSION['user']['id']]);
+    } catch (Exception $e) {}
     echo json_encode(['success'=>true, 'active_role'=>$role, 'user'=>$_SESSION['user']]);
     break;
 

@@ -41,7 +41,7 @@ window.triggerChatAttachment = function() {
 };
 
 window.handleChatFileSelected = function(inputEl) {
-    if (!inputEl.files || inputEl.files.length === 0 || !state.activeChatVendorId) return;
+    if (!inputEl || !inputEl.files || inputEl.files.length === 0 || !state.activeChatVendorId) return;
     const file = inputEl.files[0];
     
     // Validate size (20MB limit)
@@ -52,7 +52,7 @@ window.handleChatFileSelected = function(inputEl) {
         return;
     }
 
-    showPushNotification('Uploading File', 'Sending attachment...');
+    showPushNotification('Uploading Image', 'Sending attachment...');
 
     const processUpload = (fileToUpload) => {
         const formData = new FormData();
@@ -60,36 +60,43 @@ window.handleChatFileSelected = function(inputEl) {
         const token = localStorage.getItem('ohati_auth_token');
         if (token) formData.append('auth_token', token);
 
-        const getHeaders = () => {
-            return token ? { 'Authorization': `Bearer ${token}` } : {};
-        };
+        const uploadHeaders = {};
+        if (token) {
+            uploadHeaders['Authorization'] = `Bearer ${token}`;
+        }
 
-        const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+        let apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+        if (token) {
+            apiUrl += '&auth_token=' + encodeURIComponent(token);
+        }
+
         fetch(apiUrl, {
             method: 'POST',
             credentials: 'include',
-            headers: getHeaders(),
+            headers: uploadHeaders,
             body: formData
         })
         .then(r => {
-            if (!r.ok) throw new Error("Server error (" + r.status + ")");
+            if (!r.ok) return r.json().then(errData => { throw new Error(errData.error || `Server error (${r.status})`); });
             return r.json();
         })
         .then(res => {
             if (res.success) {
-                return API.sendMessage(state.activeChatVendorId, res.url, res.type || 'image');
+                const fileType = res.type || (fileToUpload.type.startsWith('image/') ? 'image' : 'pdf');
+                return API.sendMessage(state.activeChatVendorId, res.url, fileType);
             } else {
                 throw new Error(res.error || 'Upload failed');
             }
         })
         .then(() => {
-            API.getChatHistory(state.activeChatVendorId).then(history => {
+            return API.getChatHistory(state.activeChatVendorId).then(history => {
                 if (typeof updateChatMessages === 'function') updateChatMessages(history);
             });
-            inputEl.value = '';
         })
         .catch(err => {
             showPushNotification('Upload Error', err.message || 'Could not upload attachment.');
+        })
+        .finally(() => {
             inputEl.value = '';
         });
     };

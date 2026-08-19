@@ -2279,13 +2279,20 @@ function handleChatFileSelected(input) {
     const inputBarField = document.getElementById('chat-input-field');
     if (inputBarField) inputBarField.placeholder = "Uploading file...";
 
-    const headers = (typeof API !== 'undefined' && API.getAuthHeaders) ? API.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
-    const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+    const uploadHeaders = {};
+    if (token) {
+        uploadHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    let apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+    if (token) {
+        apiUrl += '&auth_token=' + encodeURIComponent(token);
+    }
 
     fetch(apiUrl, {
         method: 'POST',
         credentials: 'include',
-        headers: headers,
+        headers: uploadHeaders,
         body: formData
     })
     .then(r => {
@@ -2294,20 +2301,21 @@ function handleChatFileSelected(input) {
     })
     .then(res => {
         if (res.success && state.activeChatVendorId) {
-            API.sendMessage(state.activeChatVendorId, res.url, res.type || 'image').then(() => {
-                API.getChatHistory(state.activeChatVendorId).then(history => {
+            const fileType = res.type || (file.type.startsWith('image/') ? 'image' : 'pdf');
+            return API.sendMessage(state.activeChatVendorId, res.url, fileType).then(() => {
+                return API.getChatHistory(state.activeChatVendorId).then(history => {
                     updateChatMessages(history);
                 });
             });
         } else if (res.error) {
             showPushNotification("Upload Error", res.error);
         }
-        if (inputBarField) inputBarField.placeholder = "Type a message...";
-        input.value = '';
     })
     .catch(err => {
         console.error("File upload error:", err);
         showPushNotification("Upload Failed", err.message || "An error occurred during upload.");
+    })
+    .finally(() => {
         if (inputBarField) inputBarField.placeholder = "Type a message...";
         input.value = '';
     });

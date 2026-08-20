@@ -7238,9 +7238,8 @@ body.dark-theme .handpicked-card-location {
     .bottom-nav {
         display: flex !important;
     }
-}
 
-    /* 5. Home Screen Categories & Handpicked layouts */
+    /* Tablet & iPad Categories & Handpicked layouts */
     .category-grid {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -7267,20 +7266,13 @@ body.dark-theme .handpicked-card-location {
         font-size: 1.25rem !important;
     }
 
-    #ohati-app .handpicked-scroller {
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 20px !important;
-    }
-
-    /* 6. Search Screen Grid Catalog Layout */
     #search-vendors-list {
         display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 28px !important;
-        padding: 0 24px 32px 24px !important;
-        max-width: 1200px !important;
-        margin: 0 auto !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+        padding: 0 16px 24px 16px !important;
     }
+}
 
     .vendor-list-item {
         flex-direction: column !important;

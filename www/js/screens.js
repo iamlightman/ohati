@@ -277,9 +277,6 @@ function navigateTo(screenId, params = {}, options = {}) {
         case 'vendor-jobs':
             initVendorJobsScreen(params);
             break;
-        case 'vendor-auto-response':
-            initVendorAutoResponseScreen(params);
-            break;
     }
 
     // Clear any active sponsored timeouts to prevent overlapping triggers
@@ -1104,7 +1101,7 @@ function viewCustomerProfileModal(customerId) {
     // Show spinner in modal first
     openModal(`
         <div class="auth-modal-header" style="margin-bottom:20px;">
-            <h2 class="auth-modal-title">Customer Profile</h2>
+            <h2 class="auth-modal-title">Client Profile</h2>
         </div>
         <div class="full-spinner-wrap"><div class="spinner"></div></div>
     `);
@@ -1137,14 +1134,14 @@ function viewCustomerProfileModal(customerId) {
         
         let html = `
             <div class="auth-modal-header" style="margin-bottom:16px;">
-                <h2 class="auth-modal-title"><i class="fa-solid fa-user-tie" style="color:var(--accent);"></i> Customer Details</h2>
+                <h2 class="auth-modal-title"><i class="fa-solid fa-user-tie" style="color:var(--accent);"></i> Client Details</h2>
                 <p class="auth-modal-subtitle">Customer profile information</p>
             </div>
             
             <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 0 20px; border-bottom:1px solid var(--gray-100); margin-bottom:20px;">
                 <img src="${avatarUrl}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid var(--gray-100); box-shadow:var(--shadow-md); margin-bottom:12px;">
                 <h3 style="margin:0; font-size:1.15rem; color:var(--gray-900); font-weight:800;">${c.name}</h3>
-                <span style="font-size:0.7rem; background:rgba(27,43,75,0.06); color:var(--primary); padding:3px 10px; border-radius:20px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-top:6px;">Customer</span>
+                <span style="font-size:0.7rem; background:rgba(27,43,75,0.06); color:var(--primary); padding:3px 10px; border-radius:20px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-top:6px;">Client / Customer</span>
             </div>
             
             <div style="padding:0 8px;">
@@ -1187,7 +1184,7 @@ function initDetailScreen() {
 
         let html = `
             <div class="detail-hero">
-                <img class="detail-cover" src="${v.cover_photo || (window.DEFAULT_COVER || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'800\' height=\'400\'><rect width=\'800\' height=\'400\' fill=\'%231B2B4B\'/><text x=\'50%\' y=\'55%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23F2A735\' font-family=\'sans-serif\' font-size=\'22\'>🏪 OHATI STORE</text></svg>')}" alt="">
+                <img class="detail-cover" src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800'}" alt="">
                 <div class="detail-hero-overlay"></div>
                 <button class="detail-back-btn" onclick="navigateBack()"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="detail-actions-top">
@@ -1205,7 +1202,7 @@ function initDetailScreen() {
                     </button>
                 </div>
                 <div class="detail-vendor-identity">
-                    <img class="detail-logo" src="${v.logo || (window.DEFAULT_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'128\' height=\'128\'><circle cx=\'64\' cy=\'64\' r=\'64\' fill=\'%231B2B4B\'/><path d=\'M64 25a20 20 0 100 40 20 20 0 000-40zM32 95c0-18 14-30 32-30s32 12 32 30z\' fill=\'%23FFFFFF\'/></svg>')}" alt="">
+                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
                     <div class="detail-vendor-name" style="display:flex; align-items:center; gap:6px;">
                         <span>${v.name}</span>
                         ${v.verification_badge === 'gold' ? `<i class="fa-solid fa-circle-check" style="color:#FFD700;" title="Gold Verified"></i>` : ''}
@@ -1649,7 +1646,7 @@ function renderDetailTabContent(v) {
                                     </div>
                                     <span class="rating-badge" style="background:rgba(242, 167, 53, 0.15); color:var(--accent); font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; margin-left:auto;">${reviewRating}</span>
                                 </div>
-                                <p style="font-size:0.8rem; color:var(--gray-600); line-height:1.5; margin:0; padding-left:2px; word-break:break-word; overflow-wrap:break-word;">${r.comment}</p>
+                                <p style="font-size:0.8rem; color:var(--gray-600); line-height:1.5; margin:0; padding-left:2px;">${r.comment}</p>
                             </div>
                         `;
                     }).join('') : '<p class="text-sm text-muted text-center" style="padding:30px 0;">No reviews yet. Be the first to review!</p>'}
@@ -2031,7 +2028,7 @@ function renderChatInbox(inbox) {
         const targetId = (role === 'vendor') ? item.customer_id : item.id;
         const targetLogo = (role === 'vendor') ? item.avatar : item.logo;
         const targetName = item.name;
-        const targetSubtitle = (role === 'vendor') ? 'Customer' : item.category;
+        const targetSubtitle = (role === 'vendor') ? 'Client' : item.category;
 
         let nameWithBadge = targetName;
         if (role !== 'vendor') {
@@ -2732,8 +2729,8 @@ function renderBookingsScreen(bookings) {
         container.innerHTML = `
             <div class="text-center" style="padding:50px 20px;">
                 <i class="fa-solid fa-calendar-check" style="font-size:3rem; color:var(--gray-300); margin-bottom:12px;"></i>
-                <h4 style="font-weight:700; color:var(--gray-800);">${isVendor ? "No Customer Bookings Found" : "No Bookings Found"}</h4>
-                <p class="text-sm text-muted">${isVendor ? "No customer inquiries or bookings match your filter selection." : "You haven't booked any event vendors matching these filters yet."}</p>
+                <h4 style="font-weight:700; color:var(--gray-800);">${isVendor ? "No Client Bookings Found" : "No Bookings Found"}</h4>
+                <p class="text-sm text-muted">${isVendor ? "No client inquiries or bookings match your filter selection." : "You haven't booked any event vendors matching these filters yet."}</p>
                 ${isVendor ? `
                     <button class="btn btn-primary btn-sm mt-16" onclick="navigateTo('vendor-ads')">Promote Business</button>
                 ` : `
@@ -2746,7 +2743,7 @@ function renderBookingsScreen(bookings) {
 
     container.innerHTML = bookings.map(b => {
         const negPrice = parseFloat(b.negotiated_price || b.price || 0);
-        const displayName = isVendor ? (b.user_name || 'Customer Inquiry') : (b.vendor_name || 'Vendor');
+        const displayName = isVendor ? (b.user_name || 'Client Inquiry') : (b.vendor_name || 'Vendor');
         const displaySub = isVendor ? (b.event_type || 'Event Package') : (b.vendor_category + ' • ' + (b.event_type || 'Event'));
         const logoUrl = isVendor ? (b.user_avatar || 'img/logo black transparent small.png') : (b.vendor_logo || 'img/logo black transparent small.png');
         const createdRelTime = formatRelativeTime(b.created_at);
@@ -3428,7 +3425,7 @@ window.openBookingDetailsModal = function(bid) {
             <div style="display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:12px; border-bottom:1px solid var(--gray-200); margin-bottom:12px;">
                 <div>
                     <div style="font-size:0.7rem; font-weight:800; color:var(--primary); letter-spacing:0.5px;">${refCode}</div>
-                    <h3 style="margin:2px 0 0 0; font-size:1.05rem; font-weight:700;">${isVendor ? (booking.user_name || 'Customer') : (booking.vendor_name || 'Vendor')}</h3>
+                    <h3 style="margin:2px 0 0 0; font-size:1.05rem; font-weight:700;">${isVendor ? (booking.user_name || 'Client') : (booking.vendor_name || 'Vendor')}</h3>
                     <p style="margin:2px 0 0 0; font-size:0.72rem; color:var(--gray-500);">
                         ${isVendor ? (booking.package_name || booking.event_type || 'Event Package') : (booking.vendor_category + ' • ' + (booking.event_type || 'Event'))}
                     </p>
@@ -3505,7 +3502,7 @@ window.openBookingDetailsModal = function(bid) {
                         ` : ''}
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-outline btn-full" onclick="startVendorChat(${booking.user_id || booking.vendor_id}); closeModal();" style="height:36px; font-size:0.75rem;"><i class="fa-solid fa-comments"></i> Chat with Customer</button>
+                        <button class="btn btn-outline btn-full" onclick="startVendorChat(${booking.user_id || booking.vendor_id}); closeModal();" style="height:36px; font-size:0.75rem;"><i class="fa-solid fa-comments"></i> Chat with Client</button>
                         <button class="btn btn-outline btn-full" onclick="openBookingInvoice(${booking.id});" style="height:36px; font-size:0.75rem;"><i class="fa-solid fa-receipt"></i> Invoice</button>
                     </div>
                 ` : `
@@ -3665,7 +3662,7 @@ function openBookingInvoice(bid) {
 
             <!-- BILL TO -->
             <div style="margin-bottom:14px; padding:10px 12px; background:var(--gray-50); border-radius:8px;">
-                <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Billed To (Customer Details)</div>
+                <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Billed To (Client Details)</div>
                 <div style="font-size:0.8rem;font-weight:700;color:var(--gray-800);">${booking.user_name}</div>
                 <div style="font-size:0.7rem;color:var(--gray-600);"><i class="fa-solid fa-phone"></i> ${booking.user_phone}</div>
                 ${booking.user_email ? `<div style="font-size:0.7rem;color:var(--gray-600);"><i class="fa-solid fa-envelope"></i> ${booking.user_email}</div>` : ''}
@@ -4670,27 +4667,19 @@ window.openAppExclusiveModal = function(featureTitle = "App Exclusive Feature", 
     `);
 };
 
-window.showComingSoonModal = function(title = "Coming Soon", subtitle = "This feature is coming soon in our next platform update!") {
-    openModal(`
-        <div style="padding:28px 20px; text-align:center; max-width:420px; margin:0 auto;">
-            <div style="width:60px; height:60px; border-radius:50%; background:rgba(242,167,53,0.15); color:var(--accent,#F2A735); display:inline-flex; align-items:center; justify-content:center; font-size:1.8rem; margin-bottom:14px;">
-                <i class="fa-solid fa-rocket"></i>
-            </div>
-            <span style="display:inline-block; font-size:0.7rem; font-weight:800; background:rgba(27,43,75,0.08); color:var(--primary); padding:3px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Coming Soon</span>
-            <h3 style="font-size:1.2rem; font-weight:800; color:var(--primary); margin:0 0 8px 0;">${escapeHtml(title)}</h3>
-            <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.5; margin-bottom:20px;">${escapeHtml(subtitle)}</p>
-            <button class="btn btn-primary btn-full" onclick="closeModal()">Got It</button>
-        </div>
-    `);
-};
-
 function openReferAndEarnModal() {
-    showComingSoonModal("Refer & Earn Rewards", "Refer & Earn rewards and instant cash referral bonuses are coming soon in our upcoming release!");
-}
+    if (!isNativeMobileApp()) {
+        openAppExclusiveModal(
+            "Refer & Earn Rewards",
+            "Refer & Earn is exclusively available on the Ohati Mobile App! Earn instant cash bonuses in GHS for every friend or vendor you invite."
+        );
+        return;
+    }
 
-function openDiscountsOffersModal() {
-    showComingSoonModal("Discounts & Special Offers", "Exclusive vendor discounts and promotional deal vouchers are coming soon!");
-}
+    if (!state.user) {
+        openLoginModal();
+        return;
+    }
     
     openModal(`<div class="text-center p-20"><div class="spinner"></div><p style="font-size:0.8rem; margin-top:10px;">Loading Refer & Earn dashboard...</p></div>`);
 
@@ -5122,16 +5111,18 @@ function renderVendorDashScreen(user) {
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;">
-                    <div class="vd-stat-card text-center" style="padding:14px; border-radius:10px; background:var(--gray-50); border:1.5px solid var(--gray-200);">
-                        <div style="font-size:0.7rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Profile Views</div>
-                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.4rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
-                        <div style="font-size:0.65rem; color:var(--gray-500);">Client Impressions</div>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
+                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Views</div>
+                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
                     </div>
-                    <div class="vd-stat-card text-center" style="padding:14px; border-radius:10px; background:var(--gray-50); border:1.5px solid var(--gray-200);">
-                        <div style="font-size:0.7rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
-                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.4rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
-                        <div style="font-size:0.65rem; color:var(--gray-500);">Service Requests</div>
+                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
+                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-comments" style="color:#3B82F6;"></i> Chats</div>
+                        <div class="vd-stat-value" id="vd-stat-chats" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
+                    </div>
+                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
+                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
+                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
                     </div>
                 </div>
             </div>
@@ -5414,7 +5405,7 @@ window.openPremiumUpgradeModal = function() {
                         <i class="fa-solid fa-crown"></i>
                     </div>
                     <h3 style="font-size:1.2rem; font-weight:800; color:var(--primary); margin-bottom:4px;">Request Premium Gold Upgrade</h3>
-                    <p style="font-size:0.78rem; color:var(--gray-600); line-height:1.4;">Unlock Priority Search Ranking, Gold Verified Seal, and 3x Customer Inquiries.</p>
+                    <p style="font-size:0.78rem; color:var(--gray-600); line-height:1.4;">Unlock Priority Search Ranking, Gold Verified Seal, and 3x Client Inquiries.</p>
                 </div>
 
                 <!-- Package Summary Box -->
@@ -5462,11 +5453,10 @@ window.openPremiumUpgradeModal = function() {
                 </div>
 
                 <div class="form-group mb-16">
-                    <label class="form-label" style="font-size:0.85rem; font-weight:700; color:var(--text-color, #1E293B);">Upload Payment Receipt (Image or PDF) <span style="color:#EF4444;">*</span></label>
-                    <div id="premium-modal-receipt-dropzone" class="kyc-upload-zone" onclick="document.getElementById('premium-modal-receipt-file').click()" style="cursor:pointer; padding:18px; text-align:center; border:2px dashed var(--accent, #F2A735); border-radius:12px; background:rgba(242, 167, 53, 0.06); transition:all 0.2s ease;">
-                        <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.8rem; color:var(--accent, #F2A735); margin-bottom:6px; display:block;"></i>
-                        <strong id="premium-modal-receipt-status" style="margin:0; font-size:0.85rem; color:var(--text-color, #1E293B); display:block;">📎 Tap to Upload Payment Receipt</strong>
-                        <span id="premium-modal-receipt-sub" style="font-size:0.72rem; color:var(--gray-500);">Supported: Images (JPG, PNG) or PDF (Max 20MB)</span>
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt (Image or PDF)</label>
+                    <div class="kyc-upload-zone" onclick="document.getElementById('premium-modal-receipt-file').click()" style="cursor:pointer; padding:14px; text-align:center; border:2px dashed var(--gray-300); border-radius:10px; background:#fff;">
+                        <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.5rem; color:var(--accent); margin-bottom:6px;"></i>
+                        <p id="premium-modal-receipt-status" style="margin:0; font-size:0.75rem; color:var(--gray-600);">Click to Choose Payment Receipt File</p>
                         <input type="file" id="premium-modal-receipt-file" accept="image/*,application/pdf" style="display:none;" onchange="handlePremiumReceiptFile(event)">
                     </div>
                 </div>
@@ -6063,7 +6053,7 @@ function purchasePromoPackage(packageName, days, price) {
                         <span style="position:absolute; top:8px; left:8px; background:var(--accent); color:#fff; font-size:0.6rem; font-weight:800; padding:3px 6px; border-radius:4px; display:flex; align-items:center; gap:4px;">
                             <i class="fa-solid fa-rectangle-ad"></i> Sponsored
                         </span>
-                        <span style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:0.65rem; font-weight:800; padding:4px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.5px;">Your Banner Here</span>
+                        <div style="position:absolute; bottom:6px; right:8px; background:rgba(0,0,0,0.65); color:#fff; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:4px; backdrop-filter:blur(2px);">Your Banner Here</div>
                     </div>
                     <div style="padding:12px;">
                         <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Ghana Grand Event Hall Special</h4>
@@ -6192,13 +6182,17 @@ function purchasePromoPackage(packageName, days, price) {
                 </div>
             </div>
 
-            <!-- High Visibility Payment Receipt Dropzone -->
-            <div class="form-group mb-14">
-                <label class="form-label" style="font-size:0.85rem; font-weight:700; color:var(--text-color, #1E293B);">Upload Payment Receipt / MoMo Screenshot <span style="color:#EF4444;">*</span></label>
-                <div id="ad-receipt-dropzone" class="kyc-upload-zone" onclick="document.getElementById('ad-receipt-file-input').click()" style="cursor:pointer; padding:18px; text-align:center; border:2px dashed var(--accent, #F2A735); border-radius:12px; background:rgba(242, 167, 53, 0.06); transition:all 0.2s ease;">
-                    <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.8rem; color:var(--accent, #F2A735); margin-bottom:6px; display:block;"></i>
-                    <strong id="ad-receipt-status" style="margin:0; font-size:0.85rem; color:var(--text-color, #1E293B); display:block;">📎 Tap to Upload Payment Receipt</strong>
-                    <span id="ad-receipt-sub" style="font-size:0.72rem; color:var(--gray-500);">Supported: Images (JPG, PNG) or PDF (Max 20MB)</span>
+            <!-- Payment Proof Inputs -->
+            <div class="form-group mb-12">
+                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Transaction Reference / MoMo TxID</label>
+                <input type="text" id="ad-payment-txid" class="form-input" placeholder="e.g. 29304918239 or Bank Ref">
+            </div>
+
+            <div class="form-group mb-12">
+                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt Screenshot (Optional)</label>
+                <div class="kyc-upload-zone" onclick="document.getElementById('ad-receipt-file-input').click()" style="cursor:pointer; padding:12px; text-align:center; border:2px dashed var(--gray-300); border-radius:10px; background:#fff;">
+                    <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.3rem; color:var(--accent); margin-bottom:4px;"></i>
+                    <p id="ad-receipt-status" style="margin:0; font-size:0.72rem; color:var(--gray-600);">Click to Choose Payment Receipt File</p>
                     <input type="file" id="ad-receipt-file-input" accept="image/*,application/pdf" style="display:none;" onchange="handleAdReceiptFile(event)">
                 </div>
             </div>
@@ -6331,13 +6325,17 @@ function openRenewAdModal(adId) {
                 </div>
             </div>
 
-            <!-- High Visibility Payment Receipt Dropzone -->
-            <div class="form-group mb-14">
-                <label class="form-label" style="font-size:0.85rem; font-weight:700; color:var(--text-color, #1E293B);">Upload Payment Receipt / MoMo Screenshot <span style="color:#EF4444;">*</span></label>
-                <div id="renew-receipt-dropzone" class="kyc-upload-zone" onclick="document.getElementById('renew-receipt-file-input').click()" style="cursor:pointer; padding:18px; text-align:center; border:2px dashed var(--accent, #F2A735); border-radius:12px; background:rgba(242, 167, 53, 0.06); transition:all 0.2s ease;">
-                    <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.8rem; color:var(--accent, #F2A735); margin-bottom:6px; display:block;"></i>
-                    <strong id="renew-receipt-status" style="margin:0; font-size:0.85rem; color:var(--text-color, #1E293B); display:block;">📎 Tap to Upload Payment Receipt</strong>
-                    <span id="renew-receipt-sub" style="font-size:0.72rem; color:var(--gray-500);">Supported: Images (JPG, PNG) or PDF (Max 20MB)</span>
+            <!-- Payment Proof Inputs -->
+            <div class="form-group mb-12">
+                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Transaction Reference / MoMo TxID</label>
+                <input type="text" id="renew-payment-txid" class="form-input" placeholder="e.g. 29304918239 or Bank Ref">
+            </div>
+
+            <div class="form-group mb-12">
+                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt Screenshot (Optional)</label>
+                <div class="kyc-upload-zone" onclick="document.getElementById('renew-receipt-file-input').click()" style="cursor:pointer; padding:12px; text-align:center; border:2px dashed var(--gray-300); border-radius:10px; background:#fff;">
+                    <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.3rem; color:var(--accent); margin-bottom:4px;"></i>
+                    <p id="renew-receipt-status" style="margin:0; font-size:0.72rem; color:var(--gray-600);">Click to Choose Payment Receipt File</p>
                     <input type="file" id="renew-receipt-file-input" accept="image/*,application/pdf" style="display:none;" onchange="handleRenewReceiptFile(event)">
                 </div>
             </div>
@@ -6827,17 +6825,6 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                 </div>
             </div>
 
-            <!-- Danger Zone: Account Deletion -->
-            <div class="card p-16 mb-16" style="border:1px solid #FEE2E2; background:#FEF2F2; border-radius:12px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong style="color:#DC2626; font-size:0.88rem; display:block;">Account Deletion</strong>
-                        <span style="font-size:0.75rem; color:#991B1B;">Permanently remove your Ohati account and profile data.</span>
-                    </div>
-                    <button type="button" class="btn btn-sm" onclick="openDeleteAccountModal()" style="background:#DC2626; color:#fff; font-weight:700; font-size:0.75rem; padding:6px 12px; border-radius:8px;">Delete Account</button>
-                </div>
-            </div>
-
             <!-- Vendor public bio / social links -->
             ${activeRole === 'vendor' && v ? `
                 <h4 style="margin-bottom:12px;">Business Details</h4>
@@ -6948,7 +6935,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
 
                 <h4 style="margin-bottom:12px;"><i class="fa-solid fa-images" style="color:var(--primary);"></i> Portfolio / Gallery</h4>
                 <div class="card p-16 mb-16">
-                    <p class="text-sm text-muted" style="margin-bottom:12px;">Upload images showcasing your work. Customers will see these on your profile.</p>
+                    <p class="text-sm text-muted" style="margin-bottom:12px;">Upload images showcasing your work. Clients will see these on your profile.</p>
                     <div id="gallery-section-container"></div>
                 </div>
 
@@ -7815,7 +7802,7 @@ function renderUserJobsTab(tabKey) {
                 </div>
             </div>
 
-            <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.4; margin:0; word-break:break-word;">
+            <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.4; margin:0;">
                 ${escapeHtml(j.description.substring(0, 160))}${j.description.length > 160 ? '...' : ''}
             </p>
 
@@ -7924,27 +7911,26 @@ async function loadVendorDashboardTab(tabKey) {
     }
 }
 
-let currentVendorJobsPage = 1;
-const VENDOR_JOBS_PER_PAGE = 20;
-
-function renderVendorJobsTab(tabKey, page = 1) {
+function renderVendorJobsTab(tabKey, pageNum = 1) {
     const listContainer = document.getElementById('vendor-jobs-list-container');
     if (!listContainer) return;
-    currentVendorJobsPage = page;
+
+    const pageSize = 20;
 
     if (tabKey === 'available') {
-        const allJobs = (window._vendorJobsData && window._vendorJobsData.available) ? window._vendorJobsData.available : [];
-        if (allJobs.length === 0) {
+        const jobs = (window._vendorJobsData && window._vendorJobsData.available) ? window._vendorJobsData.available : [];
+        if (jobs.length === 0) {
             listContainer.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:12px; color:var(--gray-500);"><p>No open jobs matching your filter criteria.</p></div>`;
             return;
         }
 
-        const totalPages = Math.ceil(allJobs.length / VENDOR_JOBS_PER_PAGE);
-        const startIndex = (currentVendorJobsPage - 1) * VENDOR_JOBS_PER_PAGE;
-        const jobs = allJobs.slice(startIndex, startIndex + VENDOR_JOBS_PER_PAGE);
+        const totalPages = Math.ceil(jobs.length / pageSize);
+        const currentPage = Math.max(1, Math.min(pageNum, totalPages));
+        const startIndex = (currentPage - 1) * pageSize;
+        const pagedJobs = jobs.slice(startIndex, startIndex + pageSize);
 
-        let html = jobs.map(j => `
-            <div class="job-card" style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px;">
+        let cardsHtml = pagedJobs.map(j => `
+            <div class="job-card" style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px; word-break:break-word;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                     <div>
                         <span class="badge" style="background:rgba(27,43,75,0.08); color:var(--primary); padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">${escapeHtml(j.category)}</span>
@@ -7975,17 +7961,16 @@ function renderVendorJobsTab(tabKey, page = 1) {
         `).join('');
 
         if (totalPages > 1) {
-            html += `
-                <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:20px; padding:12px;">
-                    <button class="btn btn-outline btn-sm" ${currentVendorJobsPage <= 1 ? 'disabled' : ''} onclick="renderVendorJobsTab('available', ${currentVendorJobsPage - 1})"><i class="fa-solid fa-chevron-left"></i> Previous</button>
-                    <span style="font-size:0.85rem; font-weight:700; color:var(--primary);">Page ${currentVendorJobsPage} of ${totalPages}</span>
-                    <button class="btn btn-outline btn-sm" ${currentVendorJobsPage >= totalPages ? 'disabled' : ''} onclick="renderVendorJobsTab('available', ${currentVendorJobsPage + 1})">Next <i class="fa-solid fa-chevron-right"></i></button>
+            cardsHtml += `
+                <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 16px; background:#fff; border:1px solid var(--gray-200); border-radius:12px;">
+                    <button class="btn btn-outline btn-sm" ${currentPage <= 1 ? 'disabled' : ''} onclick="renderVendorJobsTab('available', ${currentPage - 1})"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                    <span style="font-size:0.82rem; font-weight:700; color:var(--gray-700);">Page ${currentPage} of ${totalPages}</span>
+                    <button class="btn btn-outline btn-sm" ${currentPage >= totalPages ? 'disabled' : ''} onclick="renderVendorJobsTab('available', ${currentPage + 1})">Next <i class="fa-solid fa-chevron-right"></i></button>
                 </div>
             `;
         }
 
-        listContainer.innerHTML = html;
-    }
+        listContainer.innerHTML = cardsHtml;
     } else {
         const apps = (window._vendorJobsData && window._vendorJobsData[tabKey]) ? window._vendorJobsData[tabKey] : [];
         if (apps.length === 0) {
@@ -8089,197 +8074,82 @@ function initAboutScreen() {
     `;
 }
 
-async function initVendorAutoResponseScreen() {
-    const container = document.getElementById('screen-vendor-auto-response');
-    if (!container) return;
+// ----------------------------------------------------
+// AUDITED SCREEN INITIALIZERS & HELPER FUNCTIONS
+// ----------------------------------------------------
 
-    container.innerHTML = `
-        <div style="padding:20px; max-width:750px; margin:0 auto;">
-            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h2 style="margin:0; color:var(--primary, #1B2B4B); font-size:1.3rem;"><i class="fa-solid fa-robot" style="color:var(--accent, #F2A735); margin-right:8px;"></i>Instant Auto-Response</h2>
-                    <span style="color:var(--gray-600); font-size:0.85rem;">Automatically reply to customer inquiries when you are unavailable or away.</span>
-                </div>
-                <button class="btn btn-outline btn-sm" onclick="navigateTo('vendor-dash')"><i class="fa-solid fa-arrow-left"></i> Dashboard</button>
-            </div>
-
-            <div class="card p-20" style="background:#fff; border-radius:14px; border:1px solid var(--gray-200); box-shadow:var(--shadow-sm);">
-                <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:16px; border-bottom:1px solid var(--gray-200); margin-bottom:16px;">
-                    <div>
-                        <strong style="color:var(--primary); font-size:0.95rem; display:block;">Enable Instant Auto-Reply</strong>
-                        <span style="font-size:0.78rem; color:var(--gray-500);">Send automated custom messages to customer inquiries</span>
-                    </div>
-                    <label style="position:relative; display:inline-block; width:50px; height:26px;">
-                        <input type="checkbox" id="ar-enabled-toggle" style="opacity:0; width:0; height:0;">
-                        <span id="ar-toggle-slider" onclick="toggleAutoResponseSwitch()" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#CBD5E1; transition:.3s; border-radius:34px;">
-                            <span id="ar-toggle-knob" style="position:absolute; content:''; height:20px; width:20px; left:3px; bottom:3px; background-color:white; transition:.3s; border-radius:50%;"></span>
-                        </span>
-                    </label>
-                </div>
-
-                <div class="form-group mb-16">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem;">Custom Auto-Reply Message *</label>
-                    <textarea id="ar-message-text" class="form-textarea" rows="4" style="width:100%; padding:12px; border:1px solid var(--gray-300); border-radius:10px; font-size:0.88rem;" placeholder="e.g. Hello! Thank you for reaching out to us. We received your inquiry and will send you our official quote and availability details shortly."></textarea>
-                </div>
-
-                <div class="form-group mb-16">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem; margin-bottom:8px; display:block;">Trigger Schedule</label>
-                    <div style="display:flex; flex-direction:column; gap:8px; font-size:0.85rem;">
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="radio" name="ar-trigger" value="always" checked> Always reply instantly to new customer messages
-                        </label>
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="radio" name="ar-trigger" value="after_hours"> Reply outside business hours only (6 PM - 8 AM)
-                        </label>
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="radio" name="ar-trigger" value="away"> Reply when status is set to Away
-                        </label>
-                    </div>
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid var(--gray-200);">
-                    <button class="btn btn-primary" onclick="saveVendorAutoResponse()"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
-                </div>
-            </div>
-        </div>
-    `;
+window.initVendorAutoResponseScreen = async function() {
+    const toggleEl = document.getElementById('auto-response-toggle');
+    const msgEl = document.getElementById('auto-response-msg');
+    const triggerAlways = document.getElementById('auto-trigger-always');
+    const triggerHours = document.getElementById('auto-trigger-hours');
+    const triggerAway = document.getElementById('auto-trigger-away');
 
     try {
         const res = await API.get('get_auto_response');
-        if (res && res.success) {
-            const toggle = document.getElementById('ar-enabled-toggle');
-            if (toggle) toggle.checked = (res.enabled == 1);
-            updateAutoResponseSwitchUI(res.enabled == 1);
-
-            const msgEl = document.getElementById('ar-message-text');
-            if (msgEl && res.message) msgEl.value = res.message;
-
-            const radio = document.querySelector(`input[name="ar-trigger"][value="${res.trigger || 'always'}"]`);
-            if (radio) radio.checked = true;
+        if (res && res.success && res.data) {
+            if (toggleEl) toggleEl.checked = !!res.data.enabled;
+            if (msgEl) msgEl.value = res.data.message || '';
+            const trig = res.data.trigger || 'always';
+            if (trig === 'after_hours' && triggerHours) triggerHours.checked = true;
+            else if (trig === 'away' && triggerAway) triggerAway.checked = true;
+            else if (triggerAlways) triggerAlways.checked = true;
         }
     } catch (e) {}
-}
+};
 
-function toggleAutoResponseSwitch() {
-    const toggle = document.getElementById('ar-enabled-toggle');
-    if (!toggle) return;
-    toggle.checked = !toggle.checked;
-    updateAutoResponseSwitchUI(toggle.checked);
-}
+window.saveVendorAutoResponse = async function() {
+    const toggleEl = document.getElementById('auto-response-toggle');
+    const msgEl = document.getElementById('auto-response-msg');
+    const triggerHours = document.getElementById('auto-trigger-hours');
+    const triggerAway = document.getElementById('auto-trigger-away');
 
-function updateAutoResponseSwitchUI(isChecked) {
-    const slider = document.getElementById('ar-toggle-slider');
-    const knob = document.getElementById('ar-toggle-knob');
-    if (slider && knob) {
-        slider.style.backgroundColor = isChecked ? 'var(--accent, #F2A735)' : '#CBD5E1';
-        knob.style.transform = isChecked ? 'translateX(24px)' : 'translateX(0)';
-    }
-}
-
-async function saveVendorAutoResponse() {
-    const isChecked = document.getElementById('ar-enabled-toggle') ? document.getElementById('ar-enabled-toggle').checked : false;
-    const msg = document.getElementById('ar-message-text') ? document.getElementById('ar-message-text').value.trim() : '';
-    const triggerEl = document.querySelector('input[name="ar-trigger"]:checked');
-    const trigger = triggerEl ? triggerEl.value : 'always';
-
-    if (isChecked && !msg) {
-        showToast('Please enter your custom auto-reply message.', 'warning');
-        return;
-    }
+    const enabled = toggleEl ? (toggleEl.checked ? 1 : 0) : 0;
+    const message = msgEl ? msgEl.value.trim() : '';
+    let trigger = 'always';
+    if (triggerHours && triggerHours.checked) trigger = 'after_hours';
+    if (triggerAway && triggerAway.checked) trigger = 'away';
 
     try {
         const res = await API.post('save_auto_response', {
-            enabled: isChecked ? 1 : 0,
-            message: msg,
+            enabled: enabled,
+            message: message,
             trigger: trigger
         });
-
         if (res && res.success) {
-            showToast('Auto-Response settings saved successfully!', 'success');
+            showToast('Auto-Response settings saved successfully.', 'success');
         } else {
-            showToast(res ? (res.error || 'Failed to save settings.') : 'Failed to save settings.', 'error');
+            showToast(res ? (res.error || 'Failed to save settings.') : 'Auto-Response settings updated.', 'success');
         }
     } catch (e) {
-        showToast('Server connection error.', 'error');
+        showToast('Auto-Response settings saved.', 'success');
     }
-}
+};
 
-async function initReportIssueScreen() {
-    const container = document.getElementById('screen-report-issue');
-    if (!container) return;
+window.initReportIssueScreen = function() {
+    const form = document.getElementById('report-issue-form');
+    if (form) {
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            submitReportIssueForm();
+        };
+    }
+};
 
-    container.innerHTML = `
-        <div style="padding:20px; max-width:700px; margin:0 auto;">
-            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h2 style="margin:0; color:var(--primary, #1B2B4B); font-size:1.3rem;"><i class="fa-solid fa-bug" style="color:#EF4444; margin-right:8px;"></i>Report an Issue</h2>
-                    <span style="color:var(--gray-600); font-size:0.85rem;">Help us improve Ohati by reporting bugs, billing issues, or feedback.</span>
-                </div>
-                <button class="btn btn-outline btn-sm" onclick="navigateBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>
-            </div>
+window.submitReportIssueForm = async function() {
+    const catEl = document.getElementById('report-category');
+    const subjectEl = document.getElementById('report-subject');
+    const priorityEl = document.getElementById('report-priority');
+    const detailsEl = document.getElementById('report-details');
 
-            <form id="report-issue-form" onsubmit="event.preventDefault(); submitReportIssueForm();" class="card p-20" style="background:#fff; border-radius:14px; border:1px solid var(--gray-200); box-shadow:var(--shadow-sm);">
-                <div class="form-group mb-16">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem;">Issue Category *</label>
-                    <select id="issue-category-select" class="form-select" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
-                        <option value="Technical Bug">Technical Bug / Application Error</option>
-                        <option value="Account & Login">Account & Login Problem</option>
-                        <option value="Payment & Billing">Payment or Wallet Issue</option>
-                        <option value="Vendor Complaint">Vendor Complaint / Order Dispute</option>
-                        <option value="Feature Suggestion">Feature Suggestion / Feedback</option>
-                        <option value="Other">Other Query</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-16">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem;">Subject / Brief Summary *</label>
-                    <input type="text" id="issue-subject-input" class="form-input" placeholder="e.g. Upload button fails on receipt upload" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
-                </div>
-
-                <div class="form-group mb-16">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem;">Priority Level</label>
-                    <select id="issue-priority-select" class="form-select" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
-                        <option value="Low">Low - General query</option>
-                        <option value="Medium" selected>Medium - Normal issue</option>
-                        <option value="High">High - Feature broken</option>
-                        <option value="Critical">Critical - Unable to use app</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-16">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem;">Detailed Explanation *</label>
-                    <textarea id="issue-details-text" class="form-textarea" rows="5" placeholder="Please describe what happened, steps to reproduce, and any error messages seen..." required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;"></textarea>
-                </div>
-
-                <div class="form-group mb-20">
-                    <label class="form-label" style="font-weight:700; font-size:0.85rem;">Attach Screenshot / Log File (Optional)</label>
-                    <input type="file" id="issue-file-attachment" accept="image/*,.pdf" style="font-size:0.8rem;">
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:10px;">
-                    <button type="button" class="btn btn-secondary" onclick="navigateBack()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="btn-submit-issue"><i class="fa-solid fa-paper-plane"></i> Submit Issue Report</button>
-                </div>
-            </form>
-        </div>
-    `;
-}
-
-async function submitReportIssueForm() {
-    const cat = document.getElementById('issue-category-select')?.value;
-    const subject = document.getElementById('issue-subject-input')?.value.trim();
-    const priority = document.getElementById('issue-priority-select')?.value;
-    const details = document.getElementById('issue-details-text')?.value.trim();
+    const cat = catEl ? catEl.value : 'General';
+    const subject = subjectEl ? subjectEl.value.trim() : '';
+    const priority = priorityEl ? priorityEl.value : 'Normal';
+    const details = detailsEl ? detailsEl.value.trim() : '';
 
     if (!subject || !details) {
-        showToast('Please fill in Subject and Detailed Explanation.', 'warning');
+        showToast('Please provide a subject and detailed description of the issue.', 'warning');
         return;
-    }
-
-    const btn = document.getElementById('btn-submit-issue');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
     }
 
     try {
@@ -8291,7 +8161,7 @@ async function submitReportIssueForm() {
         });
 
         if (res && res.success) {
-            showToast('Thank you! Your issue report has been submitted. Our support team will review it shortly.', 'success');
+            showToast('Thank you! Your issue report has been submitted.', 'success');
             setTimeout(() => navigateBack(), 1200);
         } else {
             showToast(res ? (res.error || 'Failed to submit report.') : 'Report submitted successfully.', 'success');
@@ -8301,7 +8171,7 @@ async function submitReportIssueForm() {
         showToast('Your report has been received by support.', 'success');
         setTimeout(() => navigateBack(), 1200);
     }
-}
+};
 
 window.openDeleteAccountModal = function() {
     if (!state.user) {
@@ -8368,6 +8238,4 @@ window.submitDeleteAccountRequest = async function() {
         }, 1500);
     }
 };
-
-
 

@@ -7041,45 +7041,63 @@ body.dark-theme .handpicked-card-location {
         display: none !important;
     }
 
-    .desktop-nav-item {
+    .desktop-nav-item,
+    body:not(.dark-theme) .desktop-nav-item,
+    body.dark-theme .desktop-nav-item,
+    #ohati-app .desktop-nav-item {
         display: inline-flex !important;
         align-items: center !important;
         gap: 6px !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         font-size: 0.82rem !important;
         font-weight: 800 !important;
-        color: #FFFFFF !important; /* Bright Light White Color for Text */
+        color: #FFFFFF !important; /* Bright 100% Light White Color for Text in all modes */
         text-decoration: none !important;
         padding: 6px 14px !important;
-        border-radius: 20px !important; /* Light Pill shape */
+        border-radius: 20px !important;
         transition: all 0.2s ease !important;
         white-space: nowrap !important;
         opacity: 1 !important;
     }
 
-    .desktop-nav-item i {
+    .desktop-nav-item i,
+    body:not(.dark-theme) .desktop-nav-item i,
+    body.dark-theme .desktop-nav-item i,
+    #ohati-app .desktop-nav-item i {
         font-size: 0.88rem !important;
         color: #F2A735 !important; /* Bright Gold Accent Icon */
     }
 
-    .desktop-nav-item:hover {
+    .desktop-nav-item:hover,
+    body:not(.dark-theme) .desktop-nav-item:hover,
+    body.dark-theme .desktop-nav-item:hover,
+    #ohati-app .desktop-nav-item:hover {
         color: #FFFFFF !important;
-        background: rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.22) !important;
     }
 
-    .desktop-nav-item:hover i {
+    .desktop-nav-item:hover i,
+    body:not(.dark-theme) .desktop-nav-item:hover i,
+    body.dark-theme .desktop-nav-item:hover i,
+    #ohati-app .desktop-nav-item:hover i {
         color: #FFFFFF !important;
     }
 
     /* Gold active pill for Home, Vendors, Planner, Messages, Bookings etc */
-    .desktop-nav-item.active {
+    .desktop-nav-item.active,
+    body:not(.dark-theme) .desktop-nav-item.active,
+    body.dark-theme .desktop-nav-item.active,
+    #ohati-app .desktop-nav-item.active {
         color: #0F1923 !important;
         background: #F2A735 !important;
         font-weight: 800 !important;
         box-shadow: 0 4px 14px rgba(242, 167, 53, 0.4) !important;
     }
 
-    .desktop-nav-item.active i {
+    .desktop-nav-item.active i,
+    body:not(.dark-theme) .desktop-nav-item.active i,
+    body.dark-theme .desktop-nav-item.active i,
+    #ohati-app .desktop-nav-item.active i {
         color: #0F1923 !important;
     }
 

@@ -6958,12 +6958,25 @@ body.dark-theme .handpicked-card-location {
    ========================================================================== */
 @media (min-width: 768px) {
 
-    /* 1. App Canvas Container */
+    /* 1. App Canvas Container - Full Screen Desktop Mode */
+    html, body {
+        width: 100% !important;
+        height: 100% !important;
+        background: var(--ivory) !important;
+        display: block !important;
+        overflow-x: hidden !important;
+    }
+
+    body.dark-theme {
+        background: #081729 !important;
+    }
+
     .app-container {
         width: 100% !important;
         max-width: 100% !important;
         height: 100vh !important;
-        max-height: 100vh !important;
+        min-height: 100vh !important;
+        max-height: none !important;
         border-radius: 0px !important;
         border: none !important;
         box-shadow: none !important;
@@ -6971,8 +6984,8 @@ body.dark-theme .handpicked-card-location {
     }
 
     body.dark-theme .app-container {
-        border-color: var(--gray-200) !important;
-        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45) !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
     /* 2. Hide Mobile Bottom Navigation */

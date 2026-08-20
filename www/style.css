@@ -6952,11 +6952,11 @@ body.dark-theme .handpicked-card-location {
 }
 
 /* ==========================================================================
-   DESKTOP WEB APP FULL SCREEN MODE (>= 992px ONLY - MATCHING SAMPLE SCREENSHOT)
+   DESKTOP & TABLET / IPAD RESPONSIVE OVERRIDES (>= 768px - INCLUDING IPAD 820x1180)
    ========================================================================== */
-@media (min-width: 992px) {
+@media (min-width: 768px) {
 
-    /* 1. App Canvas Container - Full Screen Desktop Web App Mode */
+    /* 1. App Canvas Container */
     html, body {
         width: 100% !important;
         height: 100% !important;
@@ -6985,23 +6985,23 @@ body.dark-theme .handpicked-card-location {
         position: relative !important;
     }
 
-    /* 2. Hide Mobile Bottom Navigation on Desktop */
+    /* 2. Hide Mobile Bottom Navigation */
     .bottom-nav {
         display: none !important;
     }
 
-    /* 3. Dark Slate Header Bar (Matching Sample Screenshot) */
+    /* 3. Dark Slate Header Bar for Tablet/iPad & Desktop */
     .app-header {
         position: relative !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        padding: 0 32px !important;
+        padding: 0 20px !important;
         background: #1B2B4B !important; /* Dark Slate Navy Background */
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
-        height: 68px !important;
-        min-height: 68px !important;
+        height: 64px !important;
+        min-height: 64px !important;
     }
 
     .header-menu-btn {
@@ -7017,22 +7017,28 @@ body.dark-theme .handpicked-card-location {
 
     .header-brand {
         font-family: 'Fraunces', serif !important;
-        font-size: 1.35rem !important;
+        font-size: 1.3rem !important;
         font-weight: 800 !important;
         color: #FFFFFF !important;
         letter-spacing: 0.5px !important;
     }
 
-    /* 4. Desktop Nav Links with Gold Active Pill (Matching Sample Screenshot) */
+    /* 4. Bright Light-Colored Header Navigation Link Buttons for iPad, Tablet & Desktop */
     .desktop-nav {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 8px !important;
+        gap: 4px !important;
         position: static !important;
         transform: none !important;
-        margin: 0 24px !important;
+        margin: 0 12px !important;
         flex: 1 !important;
+        overflow-x: auto !important;
+        scrollbar-width: none !important;
+    }
+
+    .desktop-nav::-webkit-scrollbar {
+        display: none !important;
     }
 
     .desktop-nav-item {
@@ -7040,12 +7046,12 @@ body.dark-theme .handpicked-card-location {
         align-items: center !important;
         gap: 6px !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-size: 0.84rem !important;
-        font-weight: 700 !important;
-        color: rgba(255, 255, 255, 0.75) !important;
+        font-size: 0.82rem !important;
+        font-weight: 800 !important;
+        color: #FFFFFF !important; /* Bright Light White Color for Text */
         text-decoration: none !important;
-        padding: 7px 16px !important;
-        border-radius: 20px !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important; /* Light Pill shape */
         transition: all 0.2s ease !important;
         white-space: nowrap !important;
         opacity: 1 !important;
@@ -7053,19 +7059,19 @@ body.dark-theme .handpicked-card-location {
 
     .desktop-nav-item i {
         font-size: 0.88rem !important;
-        color: rgba(255, 255, 255, 0.65) !important;
+        color: #F2A735 !important; /* Bright Gold Accent Icon */
     }
 
     .desktop-nav-item:hover {
         color: #FFFFFF !important;
-        background: rgba(255, 255, 255, 0.12) !important;
+        background: rgba(255, 255, 255, 0.2) !important;
     }
 
     .desktop-nav-item:hover i {
         color: #FFFFFF !important;
     }
 
-    /* Gold active pill for Home and active tabs */
+    /* Gold active pill for Home, Vendors, Planner, Messages, Bookings etc */
     .desktop-nav-item.active {
         color: #0F1923 !important;
         background: #F2A735 !important;
@@ -7080,14 +7086,15 @@ body.dark-theme .handpicked-card-location {
     .header-actions {
         display: flex !important;
         align-items: center !important;
-        gap: 12px !important;
+        gap: 10px !important;
+        flex-shrink: 0 !important;
     }
 
     .header-icon-btn {
-        width: 38px !important;
-        height: 38px !important;
+        width: 36px !important;
+        height: 36px !important;
         border-radius: 50% !important;
-        background: rgba(255, 255, 255, 0.12) !important;
+        background: rgba(255, 255, 255, 0.15) !important;
         color: #FFFFFF !important;
         border: none !important;
         display: flex !important;
@@ -7097,15 +7104,16 @@ body.dark-theme .handpicked-card-location {
     }
 
     .header-icon-btn:hover {
-        background: rgba(255, 255, 255, 0.22) !important;
+        background: rgba(255, 255, 255, 0.25) !important;
     }
 
     .header-avatar {
-        width: 38px !important;
-        height: 38px !important;
+        width: 36px !important;
+        height: 36px !important;
         border-radius: 50% !important;
         border: 2px solid #FFFFFF !important;
     }
+}
 
     /* Full-width Hero Banner */
     .home-hero-banner {

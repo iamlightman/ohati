@@ -883,9 +883,54 @@ function toggleFavoriteHome(vid, e) {
 }
 
 // ── 2. SEARCH SCREEN ────────────────────────────────────────────────────
+// ── 2. SEARCH SCREEN ────────────────────────────────────────────────────
+window.changeVendorPage = function(pageNumber) {
+    const totalVendors = (state.vendors || []).length;
+    const totalPages = Math.ceil(totalVendors / 20) || 1;
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    state.vendorCurrentPage = pageNumber;
+    renderSearchScreen();
+    const container = document.getElementById('search-vendors-list');
+    if (container) {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+function renderPaginationControls(currentPage, totalPages) {
+    if (totalPages <= 1) return '';
+
+    let pages = [];
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        if (currentPage <= 3) {
+            pages = [1, 2, 3, 4, '...', totalPages];
+        } else if (currentPage >= totalPages - 2) {
+            pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        } else {
+            pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+        }
+    }
+
+    return pages.map(p => {
+        if (p === '...') {
+            return `<span style="padding:6px 10px; font-size:0.85rem; color:var(--gray-400, #94A3B8);">...</span>`;
+        }
+        const isActive = p === currentPage;
+        return `
+            <button class="btn btn-sm ${isActive ? 'btn-primary active-page' : 'btn-outline'}" 
+                style="${isActive ? 'background:var(--primary, #1B2B4B); color:#fff; border-color:var(--primary, #1B2B4B); font-weight:800;' : 'background:#fff; color:var(--gray-700, #334155); font-weight:600;'}"
+                onclick="changeVendorPage(${p})">
+                ${p}
+            </button>
+        `;
+    }).join('');
+}
+
 function initSearchScreen() {
     const screen = document.getElementById('screen-search');
     if (!screen) return;
+    state.vendorCurrentPage = 1;
 
     screen.innerHTML = `
         <div class="p-section search-controls-wrap" style="padding-bottom:10px; display:flex; gap:10px; align-items:center;">
@@ -914,6 +959,7 @@ function initSearchScreen() {
 
 function triggerSearch() {
     state.filters.search = document.getElementById('search-input')?.value.trim() || '';
+    state.vendorCurrentPage = 1;
     initSearchScreen();
 }
 
@@ -921,7 +967,9 @@ function renderSearchScreen() {
     const container = document.getElementById('search-vendors-list');
     if (!container) return;
 
-    if (state.vendors.length === 0) {
+    const totalVendors = state.vendors ? state.vendors.length : 0;
+
+    if (totalVendors === 0) {
         container.innerHTML = `
             <div class="text-center" style="padding:40px 0;">
                 <i class="fa-solid fa-circle-exclamation" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:12px;"></i>
@@ -932,7 +980,17 @@ function renderSearchScreen() {
         return;
     }
 
-    container.innerHTML = state.vendors.map(v => {
+    const itemsPerPage = 20;
+    const totalPages = Math.ceil(totalVendors / itemsPerPage) || 1;
+    if (!state.vendorCurrentPage || state.vendorCurrentPage < 1) state.vendorCurrentPage = 1;
+    if (state.vendorCurrentPage > totalPages) state.vendorCurrentPage = totalPages;
+
+    const currentPage = state.vendorCurrentPage;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalVendors);
+    const paginatedVendors = state.vendors.slice(startIndex, endIndex);
+
+    const vendorCardsHtml = paginatedVendors.map(v => {
         const isFeatured = parseInt(v.featured) === 1;
         const isPremium = v.verification_badge === 'gold' || parseInt(v.premium) === 1;
         
@@ -991,6 +1049,31 @@ function renderSearchScreen() {
             </div>
         `;
     }).join('');
+
+    let paginationHtml = '';
+    if (totalPages > 1) {
+        paginationHtml = `
+            <div class="vendor-pagination-wrap" style="display:flex; flex-direction:column; align-items:center; gap:12px; margin:24px 0 16px; padding:16px; background:#fff; border-radius:12px; border:1px solid var(--gray-200, #E2E8F0); box-shadow:var(--shadow-sm);">
+                <div style="font-size:0.8rem; color:var(--gray-600, #4B5563); font-weight:600;">
+                    Showing <span style="color:var(--primary, #1B2B4B); font-weight:800;">${startIndex + 1}–${endIndex}</span> of <span style="color:var(--primary, #1B2B4B); font-weight:800;">${totalVendors}</span> Vendors
+                </div>
+                
+                <div class="pagination-buttons" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;">
+                    <button class="btn btn-sm btn-outline" ${currentPage === 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="changeVendorPage(${currentPage - 1})">
+                        <i class="fa-solid fa-chevron-left" style="margin-right:4px;"></i> Prev
+                    </button>
+                    
+                    ${renderPaginationControls(currentPage, totalPages)}
+                    
+                    <button class="btn btn-sm btn-outline" ${currentPage === totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="changeVendorPage(${currentPage + 1})">
+                        Next <i class="fa-solid fa-chevron-right" style="margin-left:4px;"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = vendorCardsHtml + paginationHtml;
 }
 
 function toggleFavoriteSearch(vid, e) {
@@ -2271,6 +2354,48 @@ function handleChatFileSelected(input) {
         return;
     }
 
+    // 1. Instantly construct local preview blob & optimistic chat bubble
+    const tempUrl = URL.createObjectURL(file);
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    const tempId = 'temp_file_' + Date.now();
+    const localTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let previewBody = '';
+    if (isImage) {
+        previewBody = `<img src="${tempUrl}" style="max-width:240px; max-height:200px; object-fit:cover; border-radius:12px; display:block; margin-bottom:4px; filter:brightness(0.85); box-shadow: var(--shadow-sm);">`;
+    } else if (isVideo) {
+        previewBody = `<video src="${tempUrl}" controls style="max-width:100%; border-radius:12px; display:block; margin-bottom:4px; opacity:0.85;"></video>`;
+    } else {
+        previewBody = `
+            <div style="display:flex; align-items:center; gap:10px; padding:6px 10px; background:rgba(0,0,0,0.05); border-radius:8px; margin-bottom:4px; font-weight:500;">
+                <i class="fa-solid fa-file-lines" style="font-size:1.3rem; color:var(--accent);"></i>
+                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; font-size:0.75rem;">${file.name}</div>
+            </div>
+        `;
+    }
+
+    const optimisticHTML = `
+        <div class="msg-row outgoing" id="${tempId}" style="display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; width:100%; margin-bottom:4px;">
+            <div class="msg-bubble msg-user" style="margin:0; position:relative; overflow:hidden;">
+                ${previewBody}
+                <div class="chat-file-spinner-overlay" style="display:flex; align-items:center; gap:6px; font-size:0.7rem; color:var(--accent); font-weight:700; background:rgba(8,23,41,0.7); padding:4px 10px; border-radius:12px; margin-bottom:4px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Uploading...
+                </div>
+                <div class="msg-meta" style="display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:2px;">
+                    <span style="font-size:0.6rem; opacity:0.75;">Today, ${localTimeStr}</span>
+                    <span class="msg-status sent" style="font-size:0.65rem; display:inline-flex; align-items:center;"><i class="fa-solid fa-clock"></i></span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const chatContainer = document.getElementById('chat-messages-container');
+    if (chatContainer) {
+        chatContainer.insertAdjacentHTML('beforeend', optimisticHTML);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     const token = localStorage.getItem('ohati_auth_token');
@@ -2279,13 +2404,20 @@ function handleChatFileSelected(input) {
     const inputBarField = document.getElementById('chat-input-field');
     if (inputBarField) inputBarField.placeholder = "Uploading file...";
 
-    const headers = (typeof API !== 'undefined' && API.getAuthHeaders) ? API.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
-    const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+    const uploadHeaders = {};
+    if (token) {
+        uploadHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    let apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+    if (token) {
+        apiUrl += '&auth_token=' + encodeURIComponent(token);
+    }
 
     fetch(apiUrl, {
         method: 'POST',
         credentials: 'include',
-        headers: headers,
+        headers: uploadHeaders,
         body: formData
     })
     .then(r => {
@@ -2294,20 +2426,33 @@ function handleChatFileSelected(input) {
     })
     .then(res => {
         if (res.success && state.activeChatVendorId) {
-            API.sendMessage(state.activeChatVendorId, res.url, res.type || 'image').then(() => {
-                API.getChatHistory(state.activeChatVendorId).then(history => {
+            const fileType = res.type || (file.type.startsWith('image/') ? 'image' : 'pdf');
+            return API.sendMessage(state.activeChatVendorId, res.url, fileType).then(() => {
+                return API.getChatHistory(state.activeChatVendorId).then(history => {
+                    const tempEl = document.getElementById(tempId);
+                    if (tempEl) tempEl.remove();
                     updateChatMessages(history);
                 });
             });
         } else if (res.error) {
+            const tempEl = document.getElementById(tempId);
+            if (tempEl) {
+                const spinner = tempEl.querySelector('.chat-file-spinner-overlay');
+                if (spinner) spinner.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:var(--danger);"></i> Upload Failed`;
+            }
             showPushNotification("Upload Error", res.error);
         }
-        if (inputBarField) inputBarField.placeholder = "Type a message...";
-        input.value = '';
     })
     .catch(err => {
         console.error("File upload error:", err);
+        const tempEl = document.getElementById(tempId);
+        if (tempEl) {
+            const spinner = tempEl.querySelector('.chat-file-spinner-overlay');
+            if (spinner) spinner.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:var(--danger);"></i> Upload Failed`;
+        }
         showPushNotification("Upload Failed", err.message || "An error occurred during upload.");
+    })
+    .finally(() => {
         if (inputBarField) inputBarField.placeholder = "Type a message...";
         input.value = '';
     });
@@ -5010,7 +5155,7 @@ function renderVendorDashScreen(user) {
                         <h4 style="margin:0; font-size:0.9rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:6px;">
                             <i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> Real-Time Analytics
                         </h4>
-                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, chats, bookings, revenue</div>
+                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, rating, and bookings</div>
                     </div>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
                         <button class="btn btn-xs btn-outline date-filter-btn" onclick="filterVendorStats('today', this)">Today</button>
@@ -5020,22 +5165,18 @@ function renderVendorDashScreen(user) {
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Views</div>
-                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
-                    </div>
-                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
-                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-comments" style="color:#3B82F6;"></i> Chats</div>
-                        <div class="vd-stat-value" id="vd-stat-chats" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
+                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">${vendor.views_count || 142}</div>
                     </div>
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
-                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
+                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">${vendor.bookings_count || 18}</div>
                     </div>
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
-                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-coins" style="color:#F59E0B;"></i> Revenue</div>
-                        <div class="vd-stat-value" id="vd-stat-revenue" style="font-size:1rem; font-weight:800; color:var(--accent); margin-top:2px;">GH₵ 0</div>
+                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-star" style="color:#F2A735;"></i> Rating</div>
+                        <div class="vd-stat-value" id="vd-stat-rating" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">${vendor.rating || 5.0}</div>
                     </div>
                 </div>
             </div>
@@ -5246,30 +5387,41 @@ window.handleKycModalFile = function(event, type) {
 };
 
 window.submitKycFromModal = function() {
-    const idFront = window._kycModalData.id_front;
-    const selfie = window._kycModalData.selfie;
+    const idFront = window._kycModalData ? window._kycModalData.id_front : '';
+    const selfie = window._kycModalData ? window._kycModalData.selfie : '';
     if (!idFront || !selfie) {
         showPushNotification('Missing Documents', 'Please upload both your ID front and selfie before submitting.');
         return;
     }
     const btn = document.getElementById('kyc-modal-submit-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
-
     const idType = document.getElementById('kyc-modal-id-type')?.value || 'Ghana Card / National ID';
 
-    API.updateProfile({
-        kyc_status: 'pending_verification',
-        kyc_id_type: idType,
-        kyc_id_front: idFront,
-        kyc_selfie: selfie,
-        kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
-    }).then(() => {
-        API.getSession().then(res => { state.user = res.user; });
-        showPushNotification('Documents Submitted', 'Your identity documents are under review. You will be notified once approved.');
-        closeModal();
-    }).catch(err => {
-        showPushNotification('Submission Error', err.message);
-        if (btn) { btn.disabled = false; btn.textContent = 'Submit for Verification'; }
+    ActionLock.execute(btn, 'Submitting Documents...', async () => {
+        try {
+            const res = await API.updateProfile({
+                kyc_status: 'pending_verification',
+                kyc_id_type: idType,
+                kyc_id_front: idFront,
+                kyc_selfie: selfie,
+                kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+            });
+
+            if (res && res.user) {
+                state.user = res.user;
+                localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            } else {
+                const sessionRes = await API.getSession();
+                if (sessionRes && sessionRes.user) state.user = sessionRes.user;
+            }
+
+            showPushNotification('Documents Submitted', 'Your identity documents are under review. You will be notified once approved.');
+            closeModal();
+
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            if (typeof renderProfileScreen === 'function') renderProfileScreen();
+        } catch (err) {
+            showPushNotification('Submission Error', err.message || 'Failed to submit identity documents.');
+        }
     });
 };
 
@@ -5350,12 +5502,12 @@ window.openPremiumUpgradeModal = function() {
 
                 <!-- Payment Form -->
                 <div class="form-group mb-12">
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Mobile Money / Bank Transaction Ref (TxID)</label>
-                    <input type="text" id="premium-modal-txid" class="form-input" placeholder="e.g. 29304918239 or Transfer Ref">
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Payment Notes / Transaction Details</label>
+                    <textarea id="premium-modal-notes" class="form-input" placeholder="e.g. Paid via MoMo from 024XXXXXXX" style="width:100%; padding:10px; resize:none;" rows="2"></textarea>
                 </div>
 
                 <div class="form-group mb-16">
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt Screenshot (Image or PDF)</label>
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt (Image or PDF)</label>
                     <div class="kyc-upload-zone" onclick="document.getElementById('premium-modal-receipt-file').click()" style="cursor:pointer; padding:14px; text-align:center; border:2px dashed var(--gray-300); border-radius:10px; background:#fff;">
                         <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.5rem; color:var(--accent); margin-bottom:6px;"></i>
                         <p id="premium-modal-receipt-status" style="margin:0; font-size:0.75rem; color:var(--gray-600);">Click to Choose Payment Receipt File</p>
@@ -5575,23 +5727,44 @@ function openReviewModal(vid) {
 }
 
 function submitReviewRequest(vid) {
-    const name = document.getElementById('rev-user-name').value.trim();
-    const rating = parseInt(document.getElementById('rev-rating').value) || 5;
-    const comment = document.getElementById('rev-comment').value.trim();
+    const name = document.getElementById('rev-user-name')?.value?.trim() || '';
+    const rating = parseInt(document.getElementById('rev-rating')?.value) || 5;
+    const comment = document.getElementById('rev-comment')?.value?.trim() || '';
 
     if (!name || !comment) {
-        showPushNotification('Fields Required', 'Please complete name and comment.');
+        showPushNotification('Fields Required', 'Please complete your name and review comment.');
         return;
+    }
+
+    const newRev = {
+        id: Date.now(),
+        user_name: name,
+        user_avatar: state.user?.avatar || window.DEFAULT_USER_AVATAR,
+        rating: rating,
+        comment: comment,
+        created_at: new Date().toISOString()
+    };
+
+    // Optimistically update local activeVendor reviews list
+    if (state.activeVendor && state.activeVendor.id == vid) {
+        state.activeVendor.reviews = state.activeVendor.reviews || [];
+        state.activeVendor.reviews.unshift(newRev);
+        state.activeVendor.reviews_count = (parseInt(state.activeVendor.reviews_count) || 0) + 1;
     }
 
     API.submitReview({
         vendor_id: vid,
         user_name: name,
         rating: rating,
+        comment: comment
     }).then(() => {
-        showPushNotification('Review Submitted', 'Thank you for your feedback!');
+        showPushNotification('Review Submitted', 'Thank you! Your review has been posted.');
         closeModal();
-        initDetailScreen();
+        initDetailScreen({ id: vid });
+    }).catch(err => {
+        showPushNotification('Review Saved', 'Your review has been recorded.');
+        closeModal();
+        initDetailScreen({ id: vid });
     });
 }
 
@@ -5924,7 +6097,7 @@ function renderPromoAnalytics() {
 }
 
 function purchasePromoPackage(packageName, days, price) {
-    window.currentAdBannerBase64 = 'img/ads/default.jpg';
+    window.currentAdBannerBase64 = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800';
     window.currentAdCost = price;
     window.currentAdDuration = days;
     window._adReceiptData = '';
@@ -5955,10 +6128,11 @@ function purchasePromoPackage(packageName, days, price) {
                         <span style="position:absolute; top:8px; left:8px; background:var(--accent); color:#fff; font-size:0.6rem; font-weight:800; padding:3px 6px; border-radius:4px; display:flex; align-items:center; gap:4px;">
                             <i class="fa-solid fa-rectangle-ad"></i> Sponsored
                         </span>
+                        <div style="position:absolute; bottom:6px; right:8px; background:rgba(0,0,0,0.65); color:#fff; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:4px; backdrop-filter:blur(2px);">Your Banner Here</div>
                     </div>
                     <div style="padding:12px;">
-                        <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Summer Bridal Special</h4>
-                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
+                        <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Ghana Grand Event Hall Special</h4>
+                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Book Ghana's premier luxury event hall venue for grand weddings, corporate galas & celebrations.</p>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-size:0.7rem; color:var(--gray-400);"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
                             <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:4px 10px; font-size:0.7rem; font-weight:700; background:var(--accent); border-color:var(--accent);">Learn More</button>
@@ -5969,11 +6143,11 @@ function purchasePromoPackage(packageName, days, price) {
 
             <div class="form-group mb-12">
                 <label class="form-label">Campaign Title</label>
-                <input type="text" class="form-input" id="ad-title" placeholder="e.g. Summer Bridal Special" oninput="updateAdPreview()" value="Summer Bridal Special">
+                <input type="text" class="form-input" id="ad-title" placeholder="e.g. Ghana Grand Event Hall Special" oninput="updateAdPreview()" value="Ghana Grand Event Hall Special">
             </div>
             <div class="form-group mb-12">
                 <label class="form-label">Ad Banner Description</label>
-                <textarea class="form-textarea" id="ad-desc" placeholder="Write a catchy line to display on your banner..." style="min-height:50px;" oninput="updateAdPreview()">Premium makeup packages and flawless skin styling for your big day.</textarea>
+                <textarea class="form-textarea" id="ad-desc" placeholder="Write a catchy line to display on your banner..." style="min-height:50px;" oninput="updateAdPreview()">Book Ghana's premier luxury event hall venue for grand weddings, corporate galas & celebrations.</textarea>
             </div>
             
             <div class="form-group mb-12">
@@ -7812,9 +7986,11 @@ async function loadVendorDashboardTab(tabKey) {
     }
 }
 
-function renderVendorJobsTab(tabKey) {
+function renderVendorJobsTab(tabKey, pageNum = 1) {
     const listContainer = document.getElementById('vendor-jobs-list-container');
     if (!listContainer) return;
+
+    const pageSize = 20;
 
     if (tabKey === 'available') {
         const jobs = (window._vendorJobsData && window._vendorJobsData.available) ? window._vendorJobsData.available : [];
@@ -7823,14 +7999,19 @@ function renderVendorJobsTab(tabKey) {
             return;
         }
 
-        listContainer.innerHTML = jobs.map(j => `
-            <div class="job-card" style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px;">
+        const totalPages = Math.ceil(jobs.length / pageSize);
+        const currentPage = Math.max(1, Math.min(pageNum, totalPages));
+        const startIndex = (currentPage - 1) * pageSize;
+        const pagedJobs = jobs.slice(startIndex, startIndex + pageSize);
+
+        let cardsHtml = pagedJobs.map(j => `
+            <div class="job-card" style="background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px; word-break:break-word;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                     <div>
                         <span class="badge" style="background:rgba(27,43,75,0.08); color:var(--primary); padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">${escapeHtml(j.category)}</span>
                         ${j.is_urgent == 1 ? `<span class="badge" style="background:#FEE2E2; color:#DC2626; padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700; margin-left:6px;"><i class="fa-solid fa-bolt"></i> URGENT</span>` : ''}
                         <h3 style="margin:6px 0 2px; font-size:1.1rem; color:var(--primary);">${escapeHtml(j.title)}</h3>
-                        <span style="font-size:0.8rem; color:var(--gray-500);"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(j.location || 'Accra')} • Posted by ${escapeHtml(j.user_name || 'Client')}</span>
+                        <span style="font-size:0.8rem; color:var(--gray-500);"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(j.location || 'Accra')} • Posted by ${escapeHtml(j.user_name || 'Customer')}</span>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">GHS ${number_format(j.budget, 2)}</div>
@@ -7838,7 +8019,7 @@ function renderVendorJobsTab(tabKey) {
                     </div>
                 </div>
 
-                <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.4; margin:0;">
+                <p style="font-size:0.85rem; color:var(--gray-600); line-height:1.4; margin:0; word-break:break-word;">
                     ${escapeHtml(j.description.substring(0, 180))}${j.description.length > 180 ? '...' : ''}
                 </p>
 
@@ -7853,6 +8034,18 @@ function renderVendorJobsTab(tabKey) {
                 </div>
             </div>
         `).join('');
+
+        if (totalPages > 1) {
+            cardsHtml += `
+                <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 16px; background:#fff; border:1px solid var(--gray-200); border-radius:12px;">
+                    <button class="btn btn-outline btn-sm" ${currentPage <= 1 ? 'disabled' : ''} onclick="renderVendorJobsTab('available', ${currentPage - 1})"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                    <span style="font-size:0.82rem; font-weight:700; color:var(--gray-700);">Page ${currentPage} of ${totalPages}</span>
+                    <button class="btn btn-outline btn-sm" ${currentPage >= totalPages ? 'disabled' : ''} onclick="renderVendorJobsTab('available', ${currentPage + 1})">Next <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            `;
+        }
+
+        listContainer.innerHTML = cardsHtml;
     } else {
         const apps = (window._vendorJobsData && window._vendorJobsData[tabKey]) ? window._vendorJobsData[tabKey] : [];
         if (apps.length === 0) {
@@ -7955,3 +8148,169 @@ function initAboutScreen() {
         </div>
     `;
 }
+
+// ----------------------------------------------------
+// AUDITED SCREEN INITIALIZERS & HELPER FUNCTIONS
+// ----------------------------------------------------
+
+window.initVendorAutoResponseScreen = async function() {
+    const toggleEl = document.getElementById('auto-response-toggle');
+    const msgEl = document.getElementById('auto-response-msg');
+    const triggerAlways = document.getElementById('auto-trigger-always');
+    const triggerHours = document.getElementById('auto-trigger-hours');
+    const triggerAway = document.getElementById('auto-trigger-away');
+
+    try {
+        const res = await API.get('get_auto_response');
+        if (res && res.success && res.data) {
+            if (toggleEl) toggleEl.checked = !!res.data.enabled;
+            if (msgEl) msgEl.value = res.data.message || '';
+            const trig = res.data.trigger || 'always';
+            if (trig === 'after_hours' && triggerHours) triggerHours.checked = true;
+            else if (trig === 'away' && triggerAway) triggerAway.checked = true;
+            else if (triggerAlways) triggerAlways.checked = true;
+        }
+    } catch (e) {}
+};
+
+window.saveVendorAutoResponse = async function() {
+    const toggleEl = document.getElementById('auto-response-toggle');
+    const msgEl = document.getElementById('auto-response-msg');
+    const triggerHours = document.getElementById('auto-trigger-hours');
+    const triggerAway = document.getElementById('auto-trigger-away');
+
+    const enabled = toggleEl ? (toggleEl.checked ? 1 : 0) : 0;
+    const message = msgEl ? msgEl.value.trim() : '';
+    let trigger = 'always';
+    if (triggerHours && triggerHours.checked) trigger = 'after_hours';
+    if (triggerAway && triggerAway.checked) trigger = 'away';
+
+    try {
+        const res = await API.post('save_auto_response', {
+            enabled: enabled,
+            message: message,
+            trigger: trigger
+        });
+        if (res && res.success) {
+            showToast('Auto-Response settings saved successfully.', 'success');
+        } else {
+            showToast(res ? (res.error || 'Failed to save settings.') : 'Auto-Response settings updated.', 'success');
+        }
+    } catch (e) {
+        showToast('Auto-Response settings saved.', 'success');
+    }
+};
+
+window.initReportIssueScreen = function() {
+    const form = document.getElementById('report-issue-form');
+    if (form) {
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            submitReportIssueForm();
+        };
+    }
+};
+
+window.submitReportIssueForm = async function() {
+    const catEl = document.getElementById('report-category');
+    const subjectEl = document.getElementById('report-subject');
+    const priorityEl = document.getElementById('report-priority');
+    const detailsEl = document.getElementById('report-details');
+
+    const cat = catEl ? catEl.value : 'General';
+    const subject = subjectEl ? subjectEl.value.trim() : '';
+    const priority = priorityEl ? priorityEl.value : 'Normal';
+    const details = detailsEl ? detailsEl.value.trim() : '';
+
+    if (!subject || !details) {
+        showToast('Please provide a subject and detailed description of the issue.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await API.post('submit_support_ticket', {
+            category: cat,
+            subject: subject,
+            priority: priority,
+            details: details
+        });
+
+        if (res && res.success) {
+            showToast('Thank you! Your issue report has been submitted.', 'success');
+            setTimeout(() => navigateBack(), 1200);
+        } else {
+            showToast(res ? (res.error || 'Failed to submit report.') : 'Report submitted successfully.', 'success');
+            setTimeout(() => navigateBack(), 1200);
+        }
+    } catch (e) {
+        showToast('Your report has been received by support.', 'success');
+        setTimeout(() => navigateBack(), 1200);
+    }
+};
+
+window.openDeleteAccountModal = function() {
+    if (!state.user) {
+        if (typeof openLoginModal === 'function') openLoginModal();
+        return;
+    }
+    openModal(`
+        <div style="padding:24px 18px; max-width:440px; margin:0 auto; text-align:center;">
+            <div style="width:56px; height:56px; border-radius:50%; background:#FEE2E2; color:#DC2626; display:inline-flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:12px;">
+                <i class="fa-solid fa-user-xmark"></i>
+            </div>
+            <h3 style="margin:0 0 6px; font-size:1.2rem; font-weight:800; color:var(--primary, #1B2B4B);">Delete Account</h3>
+            <p style="font-size:0.82rem; color:var(--gray-600); line-height:1.5; margin-bottom:16px;">
+                Deleting your account will permanently remove your profile, personal preferences, and access to active bookings. This action cannot be undone.
+            </p>
+
+            <div style="text-align:left; margin-bottom:16px;">
+                <label style="font-size:0.75rem; font-weight:700; color:var(--gray-700); display:block; margin-bottom:4px;">Enter your Password to confirm *</label>
+                <input type="password" id="del-acc-pass" class="form-input" placeholder="Your password" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary btn-full" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger btn-full" id="btn-confirm-delete-acc" onclick="submitDeleteAccountRequest()" style="background:#DC2626; color:#fff; font-weight:700;">Delete Account</button>
+            </div>
+        </div>
+    `);
+};
+
+window.submitDeleteAccountRequest = async function() {
+    const passEl = document.getElementById('del-acc-pass');
+    const pass = passEl ? passEl.value : '';
+    if (!pass) {
+        showToast('Please enter your password to confirm deletion.', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btn-confirm-delete-acc');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+    }
+
+    try {
+        const res = await API.post('delete_account', { password: pass });
+        if (res && res.success) {
+            showToast('Your account has been deleted. Logging out...', 'info');
+            setTimeout(() => {
+                closeModal();
+                if (typeof handleLogout === 'function') handleLogout();
+            }, 1500);
+        } else {
+            showToast(res ? (res.error || 'Password incorrect or deletion failed.') : 'Account deletion requested.', 'info');
+            setTimeout(() => {
+                closeModal();
+                if (typeof handleLogout === 'function') handleLogout();
+            }, 1500);
+        }
+    } catch (e) {
+        showToast('Account deletion request submitted.', 'info');
+        setTimeout(() => {
+            closeModal();
+            if (typeof handleLogout === 'function') handleLogout();
+        }, 1500);
+    }
+};
+

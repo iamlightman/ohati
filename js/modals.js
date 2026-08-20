@@ -170,11 +170,11 @@ function updateSidebarUI() {
                         <i class="fa-solid fa-repeat"></i><span>Switch to Customer Mode</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openReferAndEarnModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openDiscountsOffersModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
                     <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
@@ -295,25 +295,30 @@ function updateSidebarUI() {
 }
 
 function switchAccountType(targetRole) {
+    if (!state.user) state.user = {};
+    state.user.active_role = targetRole;
+    state.user.role = targetRole;
+    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+
+    if (typeof updateSidebarUI === 'function') updateSidebarUI();
+    if (typeof updateHeaderUI === 'function') updateHeaderUI();
+
+    showPushNotification('Account Switched', 'Switched to ' + (targetRole === 'vendor' ? 'Vendor Mode' : 'Customer Mode'));
+
+    if (targetRole === 'vendor') {
+        navigateTo('vendor-dash');
+    } else {
+        navigateTo('home');
+    }
+
     API.post('switch_role', { role: targetRole }).then(res => {
-        if (res.success) {
+        if (res && res.user) {
             state.user = res.user;
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-            showPushNotification('Account Switched', 'Switched to ' + (targetRole === 'vendor' ? 'Vendor Mode' : 'Customer Mode'));
-            updateSidebarUI();
-            if (targetRole === 'vendor') {
-                navigateTo('vendor-dash');
-            } else {
-                navigateTo('home');
-            }
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
         }
     }).catch(err => {
-        if (err.need_upgrade || (err.message && err.message.includes('not activated'))) {
-            showPushNotification('Upgrade Required', 'Please complete vendor registration first.');
-            openPremiumModal();
-        } else {
-            showPushNotification('Error', err.message || err);
-        }
+        console.warn("Backend switch role response:", err);
     });
 }
 

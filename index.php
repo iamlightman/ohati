@@ -1,5 +1,5 @@
-<?php
-// index.php — Ohati Event Marketplace Web App
+﻿<?php
+// index.php â€” Ohati Event Marketplace Web App
 session_start();
 if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -10,7 +10,7 @@ if (empty($_SESSION['csrf'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ohati — Find. Compare. Book. Celebrate.</title>
+    <title>Ohati â€” Find. Compare. Book. Celebrate.</title>
     <meta name="csrf-token" content="">
     <meta name="description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta name="theme-color" content="#1B2B4B">
@@ -34,13 +34,13 @@ if (empty($_SESSION['csrf'])) {
     <meta name="twitter:app:url:googleplay" content="https://play.google.com/store/apps/details?id=com.ohati.app">
 
     <!-- SEO & Link Preview Meta Tags (Open Graph / Twitter) -->
-    <meta property="og:title" content="Ohati — Find. Compare. Book. Celebrate.">
+    <meta property="og:title" content="Ohati â€” Find. Compare. Book. Celebrate.">
     <meta property="og:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta property="og:image" content="https://ohati.com/img/app_icon.png">
     <meta property="og:url" content="https://ohati.com">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Ohati — Find. Compare. Book. Celebrate.">
+    <meta name="twitter:title" content="Ohati â€” Find. Compare. Book. Celebrate.">
     <meta name="twitter:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta name="twitter:image" content="https://ohati.com/img/app_icon.png">
 
@@ -60,7 +60,7 @@ if (empty($_SESSION['csrf'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=2.0.0">
+    <link rel="stylesheet" href="style.css?v=3.5.0">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -374,10 +374,10 @@ if (empty($_SESSION['csrf'])) {
                     <div class="welcome-popup-logo">
                         <img src="img/logo black transparent small.png" alt="Ohati Logo" class="welcome-logo-img">
                     </div>
-                    <h2 class="welcome-popup-title">Welcome to Ohati 🎉</h2>
+                    <h2 class="welcome-popup-title">Welcome to Ohati ðŸŽ‰</h2>
                     <p class="welcome-popup-tagline">Finding trusted event vendors has never been easier.</p>
                     <p class="welcome-popup-desc">
-                        Whether you're planning a wedding, birthday, engagement, corporate event, or any special occasion, Ohati helps you discover, compare, chat with, negotiate, and book verified event professionals—all in one place.
+                        Whether you're planning a wedding, birthday, engagement, corporate event, or any special occasion, Ohati helps you discover, compare, chat with, negotiate, and book verified event professionalsâ€”all in one place.
                     </p>
                     <div class="welcome-popup-motto">Find. Compare. Book. Celebrate.</div>
                     
@@ -437,3 +437,4 @@ if (empty($_SESSION['csrf'])) {
 
 </body>
 </html>
+

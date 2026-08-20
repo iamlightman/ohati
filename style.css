@@ -319,7 +319,6 @@ body {
         border-radius: 40px;
         border: 10px solid #0F1923;
         box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
-        margin: 20px auto;
     }
 }
 
@@ -498,9 +497,40 @@ body {
 
 .handpicked-cover {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s ease;
+/* ===== UNIVERSAL PREMIUM FORM FIELDS ===== */
+.form-control, .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 11px 14px;
+    background-color: #FFFFFF !important;
+    border: 1.5px solid #CBD5E1 !important;
+    border-radius: 10px !important;
+    font-size: 0.88rem !important;
+    color: #0F172A !important;
+    font-weight: 500 !important;
+    outline: none !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.form-control:focus, .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--primary, #1B2B4B) !important;
+    box-shadow: 0 0 0 3px rgba(27, 43, 75, 0.12) !important;
+    background-color: #FFFFFF !important;
+}
+
+.form-label {
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    color: #1E293B !important;
+    margin-bottom: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.form-group {
+    margin-bottom: 16px !important;
 }
 
 .handpicked-card:hover .handpicked-cover {
@@ -977,17 +1007,15 @@ body.dark-theme .push-notif.notif-warning .push-notif-desc {
     justify-content: space-between;
     padding: 0 18px;
     padding-top: env(safe-area-inset-top, 0px);
-    background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(25px) saturate(220%);
-    -webkit-backdrop-filter: blur(25px) saturate(220%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--gray-200);
     position: sticky;
     top: 0;
     z-index: 1000;
     flex-shrink: 0;
     transition: all var(--anim-mid) ease;
     box-sizing: border-box;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.05), 0 8px 32px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .desktop-nav {
@@ -1645,13 +1673,15 @@ body.dark-theme .sidebar-panel {
 
 /* MODAL */
 .modal-overlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
+    padding-top: max(12px, env(safe-area-inset-top));
     background: rgba(0, 0, 0, 0);
     visibility: hidden;
     z-index: 6000;
     display: flex;
     align-items: flex-end;
+    justify-content: center;
     transition: background var(--anim-mid) ease, visibility var(--anim-mid) ease;
 }
 
@@ -1662,9 +1692,10 @@ body.dark-theme .sidebar-panel {
 
 .modal-sheet {
     width: 100%;
+    max-width: 650px;
     background: var(--white);
     border-radius: 28px 28px 0 0;
-    max-height: 92%;
+    max-height: calc(100vh - max(20px, env(safe-area-inset-top)) - 20px);
     display: flex;
     flex-direction: column;
     transform: translateY(100%);
@@ -1786,19 +1817,27 @@ body.dark-theme .filter-drawer {
 
 .lightbox-close {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    color: #fff;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    top: 24px;
+    right: 24px;
+    background: #EF4444 !important;
+    border: 2px solid #FFFFFF !important;
+    color: #FFFFFF !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    font-size: 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10010 !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+    transition: transform 0.2s ease, background 0.2s ease !important;
+}
+
+.lightbox-close:hover {
+    transform: scale(1.1);
+    background: #DC2626 !important;
 }
 
 .lightbox-prev,
@@ -6921,225 +6960,404 @@ body.dark-theme .handpicked-card-location {
 }
 
 /* ==========================================================================
-   COMPLETE DESKTOP & TABLET RESPONSIVE OVERRIDES (>= 768px)
+   DESKTOP & LAPTOP WEB APP RESPONSIVE OVERRIDES (>= 768px & body.is-desktop / body.is-laptop)
    ========================================================================== */
-@media (min-width: 768px) {
+@media (min-width: 768px), screen and (min-device-width: 768px) {
 
-    /* 1. App Canvas & Master Container */
-    body {
-        background: var(--bg-light, #F8FAFC) !important;
+    /* 1. App Canvas Container - 100% Full Screen Desktop Web App */
+    html, body, html.is-desktop, body.is-desktop, html.is-laptop, body.is-laptop {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 100vh !important;
+        background: var(--ivory) !important;
+        display: block !important;
         overflow-x: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     body.dark-theme {
-        background: var(--bg-dark, #08121E) !important;
+        background: #081729 !important;
     }
 
     .app-container {
-        width: 100vw !important;
-        max-width: 100vw !important;
+        width: 100% !important;
+        max-width: 100% !important;
         height: 100vh !important;
-        max-height: 100vh !important;
+        min-height: 100vh !important;
+        max-height: none !important;
         border-radius: 0px !important;
         border: none !important;
         box-shadow: none !important;
         margin: 0 !important;
-        background: var(--bg-light, #F8FAFC) !important;
-        display: flex !important;
-        flex-direction: column !important;
+        position: relative !important;
     }
 
-    body.dark-theme .app-container {
-        background: var(--bg-dark, #08121E) !important;
-        border-color: transparent !important;
-        box-shadow: none !important;
-    }
-
-    /* 2. Hide Mobile Bottom Navigation on Desktop */
+    /* 2. Hide Mobile Bottom Navigation */
     .bottom-nav {
         display: none !important;
     }
 
-    /* 3. Header Desktop Styling */
+    /* 3. Dark Slate Header Bar for Tablet/iPad & Desktop */
     .app-header {
-        position: sticky !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: 72px !important;
-        padding: 0 40px !important;
-        background: var(--white) !important;
-        border-bottom: 1px solid var(--gray-200) !important;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04) !important;
-        z-index: 1000 !important;
+        position: relative !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-    }
-
-    body.dark-theme .app-header {
-        background: var(--gray-50) !important;
-        border-bottom-color: var(--gray-200) !important;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
+        padding: 0 20px !important;
+        background: #1B2B4B !important; /* Dark Slate Navy Background */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+        height: 64px !important;
+        min-height: 64px !important;
     }
 
     .header-menu-btn {
-        pointer-events: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        flex-shrink: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        cursor: pointer;
     }
 
+    .header-brand {
+        font-family: 'Fraunces', serif !important;
+        font-size: 1.3rem !important;
+        font-weight: 800 !important;
+        color: #FFFFFF !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* 4. Bright Light-Colored Header Navigation Link Buttons for iPad, Tablet & Desktop */
     .desktop-nav {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 12px !important;
-        position: absolute !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        margin-left: 0 !important;
-    }
-
-    .desktop-nav-item {
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-size: 0.85rem !important;
-        font-weight: 700 !important;
-        color: var(--gray-700, #374151) !important;
-        text-decoration: none !important;
-        padding: 8px 14px !important;
-        border-radius: 10px !important;
-        transition: all 0.2s ease !important;
-    }
-
-    .desktop-nav-item i {
-        font-size: 0.92rem !important;
-    }
-
-    .desktop-nav-item:hover {
-        color: var(--accent) !important;
-        background: rgba(242, 167, 53, 0.08) !important;
-    }
-
-    .desktop-nav-item.active {
-        color: var(--accent) !important;
-        background: rgba(242, 167, 53, 0.15) !important;
-    }
-
-    body.dark-theme .desktop-nav-item {
-        color: var(--gray-800, #E5E7EB) !important;
-    }
-
-    body.dark-theme .desktop-nav-item:hover {
-        color: var(--accent) !important;
-        background: rgba(242, 167, 53, 0.12) !important;
-    }
-
-    body.dark-theme .desktop-nav-item.active {
-        color: var(--accent) !important;
-        background: rgba(242, 167, 53, 0.2) !important;
-    }
-
-    /* 4. App Main Viewport & Master Inner Container */
-    .app-viewport {
+        gap: 4px !important;
+        position: static !important;
+        transform: none !important;
+        margin: 0 12px !important;
         flex: 1 !important;
-        overflow-y: auto !important;
-        width: 100% !important;
-        padding: 0 !important;
+        overflow-x: auto !important;
+        scrollbar-width: none !important;
+    }
+
+    .desktop-nav::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    /* Base Desktop Nav Item Defaults */
+    .desktop-nav-item {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 0.82rem !important;
+        font-weight: 800 !important;
+        text-decoration: none !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        transition: all 0.2s ease !important;
+        white-space: nowrap !important;
+        opacity: 1 !important;
+    }
+
+    /* Light Theme: All Links use Yellow/Gold Pill Style */
+    body:not(.dark-theme) .desktop-nav-item {
+        color: #0F1923 !important;
+        background: #F2A735 !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 8px rgba(242, 167, 53, 0.25) !important;
+    }
+
+    body:not(.dark-theme) .desktop-nav-item i {
+        color: #0F1923 !important;
+    }
+
+    body:not(.dark-theme) .desktop-nav-item:hover {
+        background: #E59824 !important;
+        color: #0F1923 !important;
+    }
+
+    /* Light Theme Active Link: SWAPPED to Dark Navy / White Pill */
+    body:not(.dark-theme) .desktop-nav-item.active,
+    body:not(.dark-theme) #ohati-app .desktop-nav-item.active {
+        color: #FFFFFF !important;
+        background: #1B2B4B !important;
+        font-weight: 800 !important;
+        box-shadow: 0 4px 14px rgba(27, 43, 75, 0.4) !important;
+    }
+
+    body:not(.dark-theme) .desktop-nav-item.active i,
+    body:not(.dark-theme) #ohati-app .desktop-nav-item.active i {
+        color: #F2A735 !important;
+    }
+
+    /* Dark Theme: Inactive Links use Light White Text */
+    body.dark-theme .desktop-nav-item {
+        color: #FFFFFF !important;
         background: transparent !important;
     }
 
-    .screen {
-        max-width: 1280px !important;
-        margin: 0 auto !important;
+    body.dark-theme .desktop-nav-item i {
+        color: #F2A735 !important;
+    }
+
+    body.dark-theme .desktop-nav-item:hover {
+        color: #FFFFFF !important;
+        background: rgba(255, 255, 255, 0.22) !important;
+    }
+
+    /* Dark Theme Active Link: Yellow/Gold Pill Style */
+    body.dark-theme .desktop-nav-item.active {
+        color: #0F1923 !important;
+        background: #F2A735 !important;
+        font-weight: 800 !important;
+        box-shadow: 0 4px 14px rgba(242, 167, 53, 0.4) !important;
+    }
+
+    body.dark-theme .desktop-nav-item.active i {
+        color: #0F1923 !important;
+    }
+
+    .header-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .header-icon-btn {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 50% !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+    }
+
+    .header-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+    }
+
+    /* Full-width Hero Banner - Fills all side edges 100% edge-to-edge with ZERO side gaps */
+    .home-hero-banner {
+        min-height: 420px !important;
         width: 100% !important;
-        padding: 32px 40px 60px 40px !important;
+        max-width: 100% !important;
+        margin: 0 0 32px 0 !important;
+        padding: 72px 32px 48px 32px !important;
+        border-radius: 0 !important;
         box-sizing: border-box !important;
     }
 
-    /* 5. Desktop Hero & Homepage Layout */
-    .home-hero-banner {
-        min-height: 300px !important;
-        border-radius: 24px !important;
-        padding: 40px 36px !important;
-        margin-bottom: 32px !important;
-    }
-
     .home-hero-title {
-        font-size: 2.2rem !important;
-        line-height: 1.25 !important;
+        font-size: 2.8rem !important;
+        line-height: 1.2 !important;
+        max-width: 850px !important;
     }
 
-    .home-hero-subtitle {
-        font-size: 1.05rem !important;
-    }
-
-    .category-grid {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-        gap: 20px !important;
+    .home-hero-search {
         max-width: 100% !important;
-        margin: 0 auto 32px auto !important;
-    }
-
-    .category-item {
         width: 100% !important;
+        padding: 8px 12px 8px 24px !important;
+        border-radius: 36px !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
     }
 
+    /* Desktop Full-Width Page Sections & Grids - Edge-to-Edge Canvas */
+    .app-viewport,
+    .screen,
+    .home-screen,
+    #screen-home,
+    #screen-search,
+    #screen-event,
+    #screen-user-jobs,
+    #screen-vendor-jobs,
+    #screen-bookings {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .handpicked-section-wrap,
+    .category-section-wrap,
+    .p-section,
+    .section-padding,
+    .home-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 24px !important;
+        padding-right: 24px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Handpicked Vendor Catalog Grid (4 per row on Desktop) */
+    #ohati-app .handpicked-scroller,
     .handpicked-scroller {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
         gap: 24px !important;
-        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: visible !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
-    /* 6. Vendor Search & Listings Catalog Grid */
-    .search-controls-wrap {
-        max-width: 800px !important;
-        margin: 0 auto 24px auto !important;
+    .category-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        gap: 20px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 20px 0 !important;
     }
 
     #search-vendors-list {
         display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
+        grid-template-columns: repeat(4, 1fr) !important;
         gap: 28px !important;
-        padding: 0 !important;
+        width: 100% !important;
         max-width: 100% !important;
-        margin: 0 auto !important;
+        padding: 0 40px 40px 40px !important;
     }
+}
+
+/* ==========================================================================
+   MOBILE & TABLET / IPAD MODE (< 992px - including 820x1180 iPad Air 5)
+   ========================================================================== */
+@media (max-width: 991px) {
+    /* Hide Desktop Nav Header Links completely on iPads and Tablets */
+    .desktop-nav {
+        display: none !important;
+    }
+
+    /* Keep Mobile Bottom Navigation Bar visible on iPads and Tablets */
+    .bottom-nav {
+        display: flex !important;
+    }
+
+    /* Tablet & iPad Categories & Handpicked layouts */
+    .category-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 16px !important;
+        max-width: 700px !important;
+        margin: 0 auto 12px auto !important;
+    }
+
+    .category-item {
+        width: 120px !important;
+        flex-grow: 0 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .category-name {
+        font-size: 0.82rem !important;
+        font-weight: 800 !important;
+    }
+
+    .category-icon {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 1.25rem !important;
+    }
+
+    #search-vendors-list {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+        padding: 0 16px 24px 16px !important;
+    }
+}
 
     .vendor-list-item {
         flex-direction: column !important;
         gap: 16px !important;
         padding: 20px !important;
         margin-bottom: 0 !important;
-        border-radius: 20px !important;
+        align-items: stretch !important;
+        border-radius: var(--radius-xl) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
+        border: 1px solid var(--gray-200) !important;
+        background: var(--white) !important;
+    }
+
+    body.dark-theme .vendor-list-item {
+        background: var(--gray-50) !important;
+        border-color: var(--gray-200) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
     }
 
     .vendor-list-cover-wrapper {
         width: 100% !important;
-        height: 200px !important;
-        border-radius: 14px !important;
+        height: 190px !important;
+        border-radius: var(--radius-lg) !important;
     }
 
-    /* 7. Bookings & Favorites Grids */
+    .vendor-list-info {
+        padding: 16px 4px 4px 4px !important;
+        gap: 8px !important;
+    }
+
+    .vendor-list-name {
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+    }
+
+    .vendor-list-loc {
+        font-size: 0.78rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    .vendor-rating-row {
+        margin-bottom: 12px !important;
+    }
+
+    .vendor-list-bottom {
+        padding-top: 12px !important;
+    }
+
+    /* 7. Bookings grid */
     #bookings-list {
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
-        gap: 24px !important;
+        gap: 20px !important;
     }
 
+    .booking-card {
+        margin-bottom: 0 !important;
+    }
+
+    /* 8. Saved Favorites grid */
     .favorites-grid {
-        display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 24px !important;
+        gap: 20px !important;
     }
 
-    /* 8. Desktop Vendor Detail Screen */
+    /* 9. Vendor Detail Screen 2-Column Adaptation */
     .screen-detail {
-        max-width: 1280px !important;
-        margin: 0 auto !important;
+        max-width: 1200px !important;
+        margin: 24px auto !important;
         background: var(--white) !important;
-        border-radius: 24px !important;
+        border-radius: 16px !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
         border: 1px solid var(--gray-200) !important;
         overflow: hidden !important;
@@ -7149,37 +7367,161 @@ body.dark-theme .handpicked-card-location {
     body.dark-theme .screen-detail {
         background: var(--gray-50) !important;
         border-color: var(--gray-200) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
     }
 
     .detail-hero {
-        height: 360px !important;
+        height: 340px !important;
     }
 
     .detail-body {
         display: grid !important;
-        grid-template-columns: 1fr 360px !important;
+        grid-template-columns: 1fr 340px !important;
         gap: 32px !important;
+        align-items: start !important;
+        background: transparent !important;
         padding: 32px !important;
     }
 
-    /* 9. Event Planner & Budget Grid */
-    .planner-desktop-grid {
-        display: grid !important;
-        grid-template-columns: 1.2fr 0.8fr !important;
-        gap: 32px !important;
+    .badge-wrap {
+        grid-column: 1 / -1 !important;
+        grid-row: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        border-bottom: 1px solid var(--gray-100) !important;
+        padding-bottom: 16px !important;
+        margin-bottom: 0 !important;
+    }
+
+    body.dark-theme .badge-wrap {
+        border-bottom-color: var(--gray-200) !important;
+    }
+
+    .vendor-stats-row {
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 24px !important;
+        margin-bottom: 24px !important;
+        border-bottom: 1px solid var(--gray-100) !important;
+        padding-bottom: 16px !important;
+    }
+
+    body.dark-theme .vendor-stats-row {
+        border-bottom-color: var(--gray-200) !important;
+    }
+
+    .vendor-stat {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: baseline !important;
+        gap: 6px !important;
+        background: transparent !important;
+        border: none !important;
         padding: 0 !important;
     }
 
-    /* 10. Chat Desktop Split Layout */
+    .vendor-stat-val {
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        color: var(--primary) !important;
+    }
+
+    .vendor-stat-label {
+        font-size: 0.75rem !important;
+        font-weight: 700 !important;
+        color: var(--gray-500) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin-top: 0 !important;
+    }
+
+    .detail-tabs {
+        grid-column: 1 !important;
+        grid-row: 3 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #detail-tab-content {
+        grid-column: 1 !important;
+        grid-row: 4 !important;
+    }
+
+    .detail-cta {
+        grid-column: 2 !important;
+        grid-row: 3 / span 2 !important;
+        position: sticky !important;
+        top: 80px !important;
+        z-index: 10 !important;
+    }
+
+    #detail-recommendations-wrapper {
+        grid-column: 1 / -1 !important;
+        grid-row: 5 !important;
+        margin-top: 32px !important;
+        border-top: 1px solid var(--gray-100) !important;
+        padding-top: 24px !important;
+    }
+
+    body.dark-theme #detail-recommendations-wrapper {
+        border-top-color: var(--gray-200) !important;
+    }
+
+    .recommendations-scroller {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 16px !important;
+        overflow-x: visible !important;
+        padding-bottom: 0 !important;
+    }
+
+    .recommendations-scroller .recommendation-card {
+        flex: 1 1 180px !important;
+        max-width: 220px !important;
+    }
+
+    /* 10. Planner checklist and budget side-by-side */
+    .planner-desktop-grid {
+        display: grid !important;
+        grid-template-columns: 1.2fr 0.8fr !important;
+        gap: 24px !important;
+        padding: 0 18px !important;
+    }
+
+    .planner-column-left,
+    .planner-column-right {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .planner-desktop-grid h4 {
+        font-family: 'Fraunces', serif !important;
+        font-size: 1.15rem !important;
+        color: var(--primary) !important;
+        border-bottom: 2px solid var(--gray-200) !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+    }
+
+    body.dark-theme .planner-desktop-grid h4 {
+        color: var(--accent) !important;
+        border-color: var(--gray-200) !important;
+    }
+
+    /* 11. WhatsApp style split layout for Chat */
     .chat-desktop-layout {
         display: flex !important;
-        height: calc(100vh - 140px) !important;
-        max-height: 840px !important;
+        height: calc(100vh - 120px) !important;
+        max-height: 820px !important;
         background: var(--white) !important;
-        border-radius: 20px !important;
+        border-radius: var(--radius-lg) !important;
         overflow: hidden !important;
         border: 1px solid var(--gray-200) !important;
-        margin: 0 auto !important;
     }
 
     body.dark-theme .chat-desktop-layout {
@@ -7188,52 +7530,161 @@ body.dark-theme .handpicked-card-location {
     }
 
     .chat-desktop-sidebar {
-        width: 340px !important;
+        width: 320px !important;
         border-right: 1px solid var(--gray-200) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--white) !important;
+    }
+
+    body.dark-theme .chat-desktop-sidebar {
+        background: var(--gray-50) !important;
+        border-right-color: var(--gray-200) !important;
+    }
+
+    .chat-desktop-right-sidebar {
+        width: 320px !important;
+        border-left: 1px solid var(--gray-200) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--white) !important;
+        overflow-y: auto !important;
+    }
+
+    body.dark-theme .chat-desktop-right-sidebar {
+        background: var(--gray-50) !important;
+        border-left-color: var(--gray-200) !important;
     }
 
     .chat-desktop-content {
         flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--gray-50) !important;
+        position: relative !important;
     }
 
-    /* 11. Modal Dialogs on Desktop */
-    .modal-overlay {
+    body.dark-theme .chat-desktop-content {
+        background: var(--ivory) !important;
+    }
+
+    .chat-welcome-panel {
         display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
+        flex: 1 !important;
+        padding: 40px !important;
+        text-align: center !important;
+        color: var(--gray-600) !important;
     }
 
-    .modal-sheet {
-        width: 90% !important;
-        max-width: 540px !important;
-        border-radius: 24px !important;
-        max-height: 88vh !important;
-        transform: scale(0.92) !important;
-        opacity: 0 !important;
-        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3) !important;
-        transition: transform 0.25s ease, opacity 0.25s ease !important;
+    .chat-welcome-panel h3 {
+        font-family: 'Fraunces', serif !important;
+        font-size: 1.5rem !important;
+        color: var(--primary) !important;
+        margin-bottom: 8px !important;
     }
 
-    .modal-overlay.open .modal-sheet {
-        transform: scale(1) !important;
-        opacity: 1 !important;
+    body.dark-theme .chat-welcome-panel h3 {
+        color: var(--accent) !important;
     }
 
-    .modal-handle {
-        display: none !important;
+    .chat-welcome-panel p {
+        font-size: 0.9rem !important;
+        max-width: 320px !important;
     }
 
-    /* 12. Vendor Dashboard & Form Screens */
-    .dashboard-desktop-container,
-    #screen-user-jobs,
-    #screen-vendor-jobs,
-    #screen-profile,
-    #screen-help,
-    #screen-vendor-ads,
-    #screen-report-issue,
-    #screen-about {
-        max-width: 1100px !important;
-        margin: 0 auto !important;
+    .chat-desktop-content .chat-screen {
+        height: 100% !important;
+    }
+
+    .chat-desktop-content .chat-messages {
+        height: calc(100% - 130px) !important;
+    }
+
+    #screen-vendor-dash:not([style*="display: none"]) {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 20px !important;
+        padding: 20px !important;
+        align-content: start !important;
+    }
+
+    #screen-vendor-dash .p-section:first-child {
+        grid-column: span 2 !important;
+        padding: 0 0 15px 0 !important;
+    }
+
+    #screen-vendor-dash .p-section:nth-child(2) {
+        grid-column: 1 !important;
+        padding: 0 !important;
+    }
+
+    #screen-vendor-dash .p-section:nth-child(3) {
+        grid-column: 2 !important;
+        padding: 0 !important;
+    }
+
+    #screen-vendor-dash .p-section:nth-child(4) {
+        grid-column: span 2 !important;
+        padding: 0 !important;
+    }
+
+    #screen-vendor-dash .p-section:nth-child(5) {
+        grid-column: span 2 !important;
+        padding: 0 !important;
+    }
+
+    /* 13. Centered Reviews / Testimonials Section on Homepage */
+    .reviews-section-header {
+        justify-content: center !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        text-align: center !important;
+    }
+
+    .reviews-cards-container {
+        display: flex !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 20px !important;
+        overflow-x: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 14. Centered Recommended for You Section on Homepage */
+    .recommended-cards-container {
+        display: flex !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 20px !important;
+        overflow-x: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 15. Centered Featured Vendors Section on Homepage */
+    .featured-vendors-container {
+        display: flex !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 20px !important;
+        overflow-x: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 16. Professional Section Titles & Subtitles Sizing */
+    .section-title {
+        font-size: 1.45rem !important;
+        font-weight: 700 !important;
+    }
+
+    .section-subtitle {
+        font-size: 0.8rem !important;
+        letter-spacing: 2px !important;
     }
 }
 
@@ -7619,69 +8070,6 @@ body.dark-theme .inline-verified-badge {
     height: 100%;
     z-index: 100;
     cursor: pointer;
-}
-
-/* ===== DUAL THEME FORM CONTRAST & VISIBILITY ENHANCEMENTS ===== */
-.form-label, label.form-label {
-    color: #1E293B !important;
-    font-weight: 700;
-}
-
-.form-input, input.form-input, textarea.form-input, select.form-input, select.form-select, .form-control {
-    background-color: #FFFFFF !important;
-    border: 1.5px solid #CBD5E1 !important;
-    color: #0F172A !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.form-input:focus, textarea.form-input:focus, select.form-input:focus, .form-control:focus {
-    border-color: #1B2B4B !important;
-    box-shadow: 0 0 0 3px rgba(27, 43, 75, 0.15) !important;
-}
-
-.form-input::placeholder, textarea.form-input::placeholder, input::placeholder {
-    color: #64748B !important;
-    opacity: 1 !important;
-}
-
-.kyc-upload-zone {
-    border: 2px dashed #F2A735 !important;
-    background-color: rgba(242, 167, 53, 0.05) !important;
-}
-
-body.dark-theme .form-label, body.dark-theme label.form-label {
-    color: #F8FAFC !important;
-}
-
-body.dark-theme .form-input, 
-body.dark-theme input.form-input, 
-body.dark-theme textarea.form-input, 
-body.dark-theme select.form-input, 
-body.dark-theme select.form-select, 
-body.dark-theme .form-control {
-    background-color: #0F1D30 !important;
-    border: 1.5px solid rgba(242, 167, 53, 0.35) !important;
-    color: #F8FAFC !important;
-}
-
-body.dark-theme .form-input:focus, 
-body.dark-theme textarea.form-input:focus, 
-body.dark-theme select.form-input:focus, 
-body.dark-theme .form-control:focus {
-    border-color: #F2A735 !important;
-    box-shadow: 0 0 0 3px rgba(242, 167, 53, 0.25) !important;
-}
-
-body.dark-theme .form-input::placeholder, 
-body.dark-theme textarea.form-input::placeholder, 
-body.dark-theme input::placeholder {
-    color: #94A3B8 !important;
-    opacity: 1 !important;
-}
-
-body.dark-theme .kyc-upload-zone {
-    border: 2px dashed #F2A735 !important;
-    background-color: rgba(242, 167, 53, 0.12) !important;
 }
 
 

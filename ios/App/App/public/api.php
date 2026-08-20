@@ -1,6 +1,9 @@
 <?php
 // api.php - Ohati Backend API
 date_default_timezone_set('Africa/Accra');
+@ini_set('upload_max_filesize', '20M');
+@ini_set('post_max_size', '25M');
+@ini_set('memory_limit', '256M');
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -1211,6 +1214,58 @@ case 'reset_password':
     echo json_encode(['success'=>true]);
     break;
 
+case 'get_auto_response':
+    $user_id = $_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? 0;
+    if (!$user_id) { echo json_encode(['success' => false, 'error' => 'Not authenticated']); exit; }
+    $stmt = $pdo->prepare("SELECT auto_response_enabled, auto_response_msg, auto_response_trigger FROM vendors WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    echo json_encode([
+        'success' => true,
+        'enabled' => intval($row['auto_response_enabled'] ?? 0),
+        'message' => $row['auto_response_msg'] ?? 'Thank you for reaching out! We received your message and will respond shortly with quote details.',
+        'trigger' => $row['auto_response_trigger'] ?? 'always'
+    ]);
+    exit;
+
+case 'save_auto_response':
+    $user_id = $_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? 0;
+    if (!$user_id) { echo json_encode(['success' => false, 'error' => 'Not authenticated']); exit; }
+    $data = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $enabled = intval($data['enabled'] ?? 0);
+    $message = trim($data['message'] ?? '');
+    $trigger = trim($data['trigger'] ?? 'always');
+    
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN auto_response_enabled INTEGER DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN auto_response_msg TEXT"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN auto_response_trigger VARCHAR(50) DEFAULT 'always'"); } catch (Exception $e) {}
+
+    $stmt = $pdo->prepare("UPDATE vendors SET auto_response_enabled = ?, auto_response_msg = ?, auto_response_trigger = ? WHERE user_id = ?");
+    $stmt->execute([$enabled, $message, $trigger, $user_id]);
+    echo json_encode(['success' => true, 'message' => 'Auto-Response settings saved successfully.']);
+    exit;
+
+case 'delete_account':
+    $user_id = $_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? 0;
+    if (!$user_id) { echo json_encode(['success' => false, 'error' => 'Not authenticated']); exit; }
+    $data = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $password = trim($data['password'] ?? '');
+
+    $u_stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+    $u_stmt->execute([$user_id]);
+    $u_row = $u_stmt->fetch();
+
+    if ($u_row && password_verify($password, $u_row['password_hash'])) {
+        try {
+            $pdo->prepare("UPDATE users SET is_active = 0, status = 'deleted' WHERE id = ?")->execute([$user_id]);
+            $pdo->prepare("UPDATE vendors SET is_active = 0 WHERE user_id = ?")->execute([$user_id]);
+        } catch (Exception $e) {}
+        echo json_encode(['success' => true, 'message' => 'Account deleted successfully.']);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Invalid password confirmation.']);
+    }
+    exit;
+
 case 'update_profile':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     if (!isset($_SESSION['user']['id'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in']); exit; }
@@ -1670,13 +1725,18 @@ case 'vendor_details':
         }
     }
     
-    // Increment view counter & log timestamped view
-    $pdo->prepare("UPDATE vendors SET views_count = views_count + 1 WHERE id = ? OR user_id = ?")->execute([$id, $id]);
-    try {
-        $v_uid = intval($_SESSION['user']['id'] ?? 0);
-        $v_ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        $pdo->prepare("INSERT INTO vendor_views_log (vendor_id, user_id, ip_address) VALUES (?, ?, ?)")->execute([$id, $v_uid, $v_ip]);
-    } catch (Exception $vLogEx) {}
+    // Increment view counter & log timestamped view (ignoring self-views by the vendor owner)
+    $v_uid = intval($_SESSION['user']['id'] ?? 0);
+    $chk_owner = $pdo->prepare("SELECT user_id FROM vendors WHERE id = ? OR user_id = ?");
+    $chk_owner->execute([$id, $id]);
+    $owner_user_id = intval($chk_owner->fetchColumn() ?: 0);
+    if ($v_uid <= 0 || $v_uid !== $owner_user_id) {
+        $pdo->prepare("UPDATE vendors SET views_count = views_count + 1 WHERE id = ? OR user_id = ?")->execute([$id, $id]);
+        try {
+            $v_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            $pdo->prepare("INSERT INTO vendor_views_log (vendor_id, user_id, ip_address) VALUES (?, ?, ?)")->execute([$id, $v_uid, $v_ip]);
+        } catch (Exception $vLogEx) {}
+    }
     
     $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id = ? OR user_id = ?"); 
     $stmt->execute([$id, $id]);
@@ -3446,19 +3506,15 @@ case 'get_vendor_analytics':
         $end_dt = date('Y-m-d 23:59:59');
     }
 
-    // 1. Profile Views Count
+    // 1. Profile Views Count (Real Database count)
     $v_cnt_stmt = $pdo->prepare("SELECT COUNT(*) FROM vendor_views_log WHERE vendor_id = ? AND created_at BETWEEN ? AND ?");
     $v_cnt_stmt->execute([$vid, $start_dt, $end_dt]);
     $views_count = intval($v_cnt_stmt->fetchColumn() ?: 0);
 
-    // Fallback if views log count is 0
     if ($views_count === 0) {
         $tot_v = $pdo->prepare("SELECT views_count FROM vendors WHERE id = ?");
         $tot_v->execute([$vid]);
-        $total_db_views = intval($tot_v->fetchColumn() ?: 0);
-        if ($total_db_views > 0) {
-            $views_count = ($period === 'today') ? max(1, round($total_db_views * 0.15)) : max(1, round($total_db_views * 0.7));
-        }
+        $views_count = intval($tot_v->fetchColumn() ?: 0);
     }
 
     // 2. Chat Inquiries Count

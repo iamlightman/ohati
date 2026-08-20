@@ -101,16 +101,20 @@ function toggleSidebar(open) {
     if (shouldOpen) {
         overlay.classList.add('open');
         overlay.classList.add('active');
-        if (typeof updateSidebarUI === 'function') updateSidebarUI();
-        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-        document.querySelectorAll('.sidebar-item').forEach(item => {
-            const screen = item.getAttribute('onclick');
-            if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
+        try {
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                const screen = item.getAttribute('onclick');
+                if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        } catch (err) {
+            console.warn("Sidebar UI update error:", err);
+        }
     } else {
         overlay.classList.remove('open');
         overlay.classList.remove('active');
@@ -166,11 +170,11 @@ function updateSidebarUI() {
                         <i class="fa-solid fa-repeat"></i><span>Switch to Customer Mode</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openReferAndEarnModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openDiscountsOffersModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
                     <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">

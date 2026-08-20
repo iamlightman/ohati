@@ -66,14 +66,18 @@ function renderManualPaymentModal(bookingId, reference, amount, details) {
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 6px;">
-                        Transaction ID (TxID) / MoMo Reference <span style="color: #EF4444;">*</span>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-color, #0F172A); margin-bottom: 8px;">
+                        Upload Payment Receipt / Transfer Screenshot <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="text" id="manualTxIdInput" class="form-control" placeholder="e.g. 24819038210 or MoMo Ref" style="width: 100%; padding: 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 0.9rem;">
-                    <div style="font-size: 0.72rem; color: #64748B; margin-top: 4px;">Enter the transaction reference received from your bank or Mobile Money provider.</div>
+                    <div id="manualReceiptDropzone" onclick="document.getElementById('manualReceiptFileInput').click()" style="cursor: pointer; padding: 20px; text-align: center; border: 2px dashed var(--accent, #F2A735); border-radius: 12px; background: rgba(242, 167, 53, 0.05); transition: all 0.2s ease;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--accent, #F2A735); margin-bottom: 8px; display: block;"></i>
+                        <strong id="manualReceiptStatusTitle" style="display: block; font-size: 0.9rem; color: var(--text-color, #0F172A);">📎 Tap to Upload Payment Receipt</strong>
+                        <span id="manualReceiptStatusSub" style="font-size: 0.75rem; color: var(--gray-500, #64748B);">Upload bank receipt screenshot or MoMo confirmation SMS screenshot (Max 20MB)</span>
+                        <input type="file" id="manualReceiptFileInput" accept="image/*,application/pdf" style="display: none;" onchange="handleManualPaymentFileSelected(event)">
+                    </div>
                 </div>
 
-                <button onclick="submitManualPaymentProof('${escapeHtml(reference)}')" style="width: 100%; padding: 14px; background: #081729; color: #FFF; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <button onclick="submitManualPaymentProof('${escapeHtml(reference)}')" style="width: 100%; padding: 14px; background: var(--primary, #081729); color: #FFF; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <i class="fa-solid fa-paper-plane"></i> Submit Payment Evidence
                 </button>
             </div>
@@ -83,6 +87,30 @@ function renderManualPaymentModal(bookingId, reference, amount, details) {
     modal.style.display = 'flex';
 }
 
+window.handleManualPaymentFileSelected = function(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+        if (typeof showPushNotification === 'function') showPushNotification("File Too Large", "Receipt file size cannot exceed 20MB.");
+        event.target.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        window._manualPaymentReceiptData = e.target.result;
+        const titleEl = document.getElementById('manualReceiptStatusTitle');
+        const subEl = document.getElementById('manualReceiptStatusSub');
+        const dropzone = document.getElementById('manualReceiptDropzone');
+        if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Receipt Selected: ${escapeHtml(file.name)}`;
+        if (subEl) subEl.textContent = `Size: ${(file.size / 1024 / 1024).toFixed(2)} MB - Ready to Submit`;
+        if (dropzone) {
+            dropzone.style.background = "rgba(16, 185, 129, 0.08)";
+            dropzone.style.borderColor = "#10B981";
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
 window.closeManualPaymentModal = function() {
     const modal = document.getElementById('manualPaymentModal');
     if (modal) {
@@ -91,14 +119,13 @@ window.closeManualPaymentModal = function() {
 };
 
 window.submitManualPaymentProof = function(reference) {
-    const txIdInput = document.getElementById('manualTxIdInput');
-    const txId = txIdInput ? txIdInput.value.trim() : '';
+    const receipt = window._manualPaymentReceiptData || '';
 
-    if (!txId) {
+    if (!receipt) {
         if (typeof showPushNotification === 'function') {
-            showPushNotification('Input Required', 'Please enter your payment Transaction ID (TxID).');
+            showPushNotification('Receipt Required', 'Please tap to select and upload your payment receipt before submitting.');
         } else {
-            alert('Please enter your payment Transaction ID (TxID).');
+            alert('Please select your payment receipt file.');
         }
         return;
     }
@@ -107,16 +134,17 @@ window.submitManualPaymentProof = function(reference) {
         showPushNotification('Submitting Payment', 'Sending evidence for Admin verification...');
     }
 
-    API.post('submit_manual_payment', {
-        reference: reference,
-        tx_id: txId
+    API.post('submit_payment_receipt', {
+        booking_id: reference,
+        receipt_image: receipt
     })
     .then(res => {
         closeManualPaymentModal();
+        window._manualPaymentReceiptData = '';
         if (typeof showPushNotification === 'function') {
-            showPushNotification('Submission Received 🎉', 'Payment evidence submitted! Your booking is now pending Admin verification.');
+            showPushNotification('Submission Received 🎉', 'Payment receipt uploaded successfully! Your booking is now pending Admin verification.');
         } else {
-            alert('Payment evidence submitted! Your booking is now pending Admin verification.');
+            alert('Payment receipt uploaded successfully! Your booking is now pending Admin verification.');
         }
         if (typeof renderBookings === 'function') {
             renderBookings();

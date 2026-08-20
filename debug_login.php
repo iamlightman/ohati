@@ -68,7 +68,7 @@ if ($results['db_connected']) {
 }
 
 // 4. Handle Live Interactive API Test POST
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['test_login'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_login'])) {
     $test_identifier = trim($_POST['identifier'] ?? '');
     $test_password = $_POST['password'] ?? '';
     

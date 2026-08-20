@@ -900,7 +900,7 @@ try {
     $demo_cust_count = $pdo->query("SELECT COUNT(*) FROM users WHERE email = 'demo.customer@ohati.com'")->fetchColumn();
     if ($demo_cust_count == 0) {
         $cust_hash = password_hash('OhatiDemo2026@Customer', PASSWORD_BCRYPT);
-        $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active) VALUES ('App Review Customer', 'demo.customer@ohati.com', '+233200000001', ?, 'customer', 1, 1, 1)")
+        $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active) VALUES ('App Review Customer', 'demo.customer@ohati.com', '+233240649883', ?, 'customer', 1, 1, 1)")
             ->execute([$cust_hash]);
     }
     $demo_vnd_count = $pdo->query("SELECT COUNT(*) FROM users WHERE email = 'demo.vendor@ohati.com'")->fetchColumn();

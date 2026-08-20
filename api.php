@@ -1,6 +1,9 @@
 <?php
 // api.php - Ohati Backend API
 date_default_timezone_set('Africa/Accra');
+@ini_set('upload_max_filesize', '20M');
+@ini_set('post_max_size', '25M');
+@ini_set('memory_limit', '256M');
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

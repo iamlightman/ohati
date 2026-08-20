@@ -389,7 +389,7 @@ const JobsModule = {
 
                 <div style="background:var(--gray-100); padding:12px; border-radius:8px; margin-bottom:16px; font-size:0.85rem;">
                     <strong style="display:block; color:var(--primary);">${escapeHtml(jobTitle)}</strong>
-                    <span style="color:var(--gray-600);">Client Budget: GHS ${number_format(budget, 2)}</span>
+                    <span style="color:var(--gray-600);">Customer Budget: GHS ${number_format(budget, 2)}</span>
                 </div>
 
                 <form onsubmit="event.preventDefault(); JobsModule.submitProposal(${jobId});">

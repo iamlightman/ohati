@@ -537,9 +537,32 @@ window.checkReferralWebLanding = function() {
                         </div>
                     `;
                     openModal(html);
-                }
-            }, 800);
-        }
     }
 };
+
+// Capacitor Native Hardware Back Button Handler
+if (typeof window !== 'undefined') {
+    document.addEventListener('deviceready', () => {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+            window.Capacitor.Plugins.App.addListener('backButton', () => {
+                const activeModal = document.querySelector('#modal-overlay.open, .modal-overlay.open');
+                if (activeModal) {
+                    if (typeof closeModal === 'function') closeModal();
+                    return;
+                }
+                const activeSidebar = document.querySelector('#sidebar.open, .sidebar.open');
+                if (activeSidebar) {
+                    if (typeof toggleSidebar === 'function') toggleSidebar(false);
+                    return;
+                }
+                if (typeof state !== 'undefined' && state.currentScreen && state.currentScreen !== 'home' && state.currentScreen !== 'vendor-dash') {
+                    if (typeof navigateBack === 'function') navigateBack();
+                    return;
+                }
+                window.Capacitor.Plugins.App.exitApp();
+            });
+        }
+    }, false);
+}
+
 

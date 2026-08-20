@@ -183,7 +183,7 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
                     <!-- Right Column: Bookings -->
                     <div class="dashboard-col-right">
                         <div class="section-header" style="margin-top:0;">
-                            <h3 class="section-title">Client Bookings</h3>
+                            <h3 class="section-title">Customer Bookings</h3>
                         </div>
                         <div id="vendor-bookings-list">
                             <!-- Loaded dynamically -->

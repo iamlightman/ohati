@@ -23,12 +23,12 @@ try {
     $cust_id = $stmt->fetchColumn();
 
     if (!$cust_id) {
-        $ins = $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, status, email_verified, phone_verified, is_active) VALUES ('App Review Customer', ?, '+233200000001', ?, 'customer', 'active', 1, 1, 1)");
+        $ins = $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, status, email_verified, phone_verified, is_active) VALUES ('App Review Customer', ?, '+233240649883', ?, 'customer', 'active', 1, 1, 1)");
         $ins->execute([$cust_email, $cust_hash]);
         $cust_id = $pdo->lastInsertId();
         echo "<p style='color:#10B981;'><strong>✔ Customer Account Created:</strong> $cust_email</p>";
     } else {
-        $upd = $pdo->prepare("UPDATE users SET password_hash = ?, status = 'active', email_verified = 1, phone_verified = 1, is_active = 1 WHERE id = ?");
+        $upd = $pdo->prepare("UPDATE users SET password_hash = ?, phone = '+233240649883', status = 'active', email_verified = 1, phone_verified = 1, is_active = 1 WHERE id = ?");
         $upd->execute([$cust_hash, $cust_id]);
         echo "<p style='color:#3B82F6;'><strong>✔ Customer Account Updated & Verified:</strong> $cust_email</p>";
     }

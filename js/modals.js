@@ -101,16 +101,20 @@ function toggleSidebar(open) {
     if (shouldOpen) {
         overlay.classList.add('open');
         overlay.classList.add('active');
-        if (typeof updateSidebarUI === 'function') updateSidebarUI();
-        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-        document.querySelectorAll('.sidebar-item').forEach(item => {
-            const screen = item.getAttribute('onclick');
-            if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
+        try {
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                const screen = item.getAttribute('onclick');
+                if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        } catch (err) {
+            console.warn("Sidebar UI update error:", err);
+        }
     } else {
         overlay.classList.remove('open');
         overlay.classList.remove('active');

@@ -468,7 +468,7 @@ function submitOTPVerify(event) {
         updateAppHeader();
         if (state.user && (state.user.active_role || state.user.role) === 'vendor') {
             if (state.user.vendor_onboarding_completed) {
-                navigateTo('vendor-dash');
+                navigateTo('home');
             } else {
                 showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
                 state.authMode = 'vendor-register';
@@ -510,8 +510,8 @@ function submitLogin(event) {
             closeModal();
             updateAppHeader();
             if ((state.user.active_role || state.user.role) === 'vendor') {
-                if (state.user.vendor_onboarding_completed) {
-                    navigateTo('vendor-dash');
+                if (state.user && (state.user.active_role || state.user.role) === 'vendor') {
+                    navigateTo('home');
                 } else {
                     showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
                     state.authMode = 'vendor-register';
@@ -1076,7 +1076,7 @@ function saveVendorStep5() {
             showPushNotification('Application Submitted', 'Our moderation team will review your application.');
             closeModal();
             if (typeof updateSidebarUI === 'function') updateSidebarUI();
-            if (typeof navigateTo === 'function') navigateTo('vendor-dash');
+            if (typeof navigateTo === 'function') navigateTo('home');
         } catch (e) {
             showPushNotification('Submission Error', e.message || 'Error completing application');
         }
@@ -1521,7 +1521,7 @@ window.handleMandatoryLoginSubmit = function(e) {
                 state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
                 
                 if (typeof navigateTo === 'function') {
-                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+                    navigateTo('home');
                 }
             });
         } else {

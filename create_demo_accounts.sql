@@ -5,7 +5,7 @@
 
 -- 1. Create Pre-Verified Demo Customer Account
 INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active)
-SELECT 'App Review Customer', 'demo.customer@ohati.com', '+233200000001', '$2y$10$Wp2BwM0N0Xw9GkG3vB.xX.e7o9z0123456789abcdefghijk', 'customer', 1, 1, 1
+SELECT 'App Review Customer', 'demo.customer@ohati.com', '+233240649883', '$2y$10$Wp2BwM0N0Xw9GkG3vB.xX.e7o9z0123456789abcdefghijk', 'customer', 1, 1, 1
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'demo.customer@ohati.com');
 

@@ -883,54 +883,9 @@ function toggleFavoriteHome(vid, e) {
 }
 
 // ── 2. SEARCH SCREEN ────────────────────────────────────────────────────
-// ── 2. SEARCH SCREEN ────────────────────────────────────────────────────
-window.changeVendorPage = function(pageNumber) {
-    const totalVendors = (state.vendors || []).length;
-    const totalPages = Math.ceil(totalVendors / 20) || 1;
-    if (pageNumber < 1 || pageNumber > totalPages) return;
-    state.vendorCurrentPage = pageNumber;
-    renderSearchScreen();
-    const container = document.getElementById('search-vendors-list');
-    if (container) {
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-};
-
-function renderPaginationControls(currentPage, totalPages) {
-    if (totalPages <= 1) return '';
-
-    let pages = [];
-    if (totalPages <= 7) {
-        for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-        if (currentPage <= 3) {
-            pages = [1, 2, 3, 4, '...', totalPages];
-        } else if (currentPage >= totalPages - 2) {
-            pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-        } else {
-            pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
-        }
-    }
-
-    return pages.map(p => {
-        if (p === '...') {
-            return `<span style="padding:6px 10px; font-size:0.85rem; color:var(--gray-400, #94A3B8);">...</span>`;
-        }
-        const isActive = p === currentPage;
-        return `
-            <button class="btn btn-sm ${isActive ? 'btn-primary active-page' : 'btn-outline'}" 
-                style="${isActive ? 'background:var(--primary, #1B2B4B); color:#fff; border-color:var(--primary, #1B2B4B); font-weight:800;' : 'background:#fff; color:var(--gray-700, #334155); font-weight:600;'}"
-                onclick="changeVendorPage(${p})">
-                ${p}
-            </button>
-        `;
-    }).join('');
-}
-
 function initSearchScreen() {
     const screen = document.getElementById('screen-search');
     if (!screen) return;
-    state.vendorCurrentPage = 1;
 
     screen.innerHTML = `
         <div class="p-section search-controls-wrap" style="padding-bottom:10px; display:flex; gap:10px; align-items:center;">
@@ -959,7 +914,6 @@ function initSearchScreen() {
 
 function triggerSearch() {
     state.filters.search = document.getElementById('search-input')?.value.trim() || '';
-    state.vendorCurrentPage = 1;
     initSearchScreen();
 }
 
@@ -967,9 +921,7 @@ function renderSearchScreen() {
     const container = document.getElementById('search-vendors-list');
     if (!container) return;
 
-    const totalVendors = state.vendors ? state.vendors.length : 0;
-
-    if (totalVendors === 0) {
+    if (state.vendors.length === 0) {
         container.innerHTML = `
             <div class="text-center" style="padding:40px 0;">
                 <i class="fa-solid fa-circle-exclamation" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:12px;"></i>
@@ -980,17 +932,7 @@ function renderSearchScreen() {
         return;
     }
 
-    const itemsPerPage = 20;
-    const totalPages = Math.ceil(totalVendors / itemsPerPage) || 1;
-    if (!state.vendorCurrentPage || state.vendorCurrentPage < 1) state.vendorCurrentPage = 1;
-    if (state.vendorCurrentPage > totalPages) state.vendorCurrentPage = totalPages;
-
-    const currentPage = state.vendorCurrentPage;
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, totalVendors);
-    const paginatedVendors = state.vendors.slice(startIndex, endIndex);
-
-    const vendorCardsHtml = paginatedVendors.map(v => {
+    container.innerHTML = state.vendors.map(v => {
         const isFeatured = parseInt(v.featured) === 1;
         const isPremium = v.verification_badge === 'gold' || parseInt(v.premium) === 1;
         
@@ -1049,31 +991,6 @@ function renderSearchScreen() {
             </div>
         `;
     }).join('');
-
-    let paginationHtml = '';
-    if (totalPages > 1) {
-        paginationHtml = `
-            <div class="vendor-pagination-wrap" style="display:flex; flex-direction:column; align-items:center; gap:12px; margin:24px 0 16px; padding:16px; background:#fff; border-radius:12px; border:1px solid var(--gray-200, #E2E8F0); box-shadow:var(--shadow-sm);">
-                <div style="font-size:0.8rem; color:var(--gray-600, #4B5563); font-weight:600;">
-                    Showing <span style="color:var(--primary, #1B2B4B); font-weight:800;">${startIndex + 1}–${endIndex}</span> of <span style="color:var(--primary, #1B2B4B); font-weight:800;">${totalVendors}</span> Vendors
-                </div>
-                
-                <div class="pagination-buttons" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;">
-                    <button class="btn btn-sm btn-outline" ${currentPage === 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="changeVendorPage(${currentPage - 1})">
-                        <i class="fa-solid fa-chevron-left" style="margin-right:4px;"></i> Prev
-                    </button>
-                    
-                    ${renderPaginationControls(currentPage, totalPages)}
-                    
-                    <button class="btn btn-sm btn-outline" ${currentPage === totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="changeVendorPage(${currentPage + 1})">
-                        Next <i class="fa-solid fa-chevron-right" style="margin-left:4px;"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    container.innerHTML = vendorCardsHtml + paginationHtml;
 }
 
 function toggleFavoriteSearch(vid, e) {
@@ -2362,20 +2279,13 @@ function handleChatFileSelected(input) {
     const inputBarField = document.getElementById('chat-input-field');
     if (inputBarField) inputBarField.placeholder = "Uploading file...";
 
-    const uploadHeaders = {};
-    if (token) {
-        uploadHeaders['Authorization'] = `Bearer ${token}`;
-    }
-
-    let apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
-    if (token) {
-        apiUrl += '&auth_token=' + encodeURIComponent(token);
-    }
+    const headers = (typeof API !== 'undefined' && API.getAuthHeaders) ? API.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
+    const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
 
     fetch(apiUrl, {
         method: 'POST',
         credentials: 'include',
-        headers: uploadHeaders,
+        headers: headers,
         body: formData
     })
     .then(r => {
@@ -2384,21 +2294,20 @@ function handleChatFileSelected(input) {
     })
     .then(res => {
         if (res.success && state.activeChatVendorId) {
-            const fileType = res.type || (file.type.startsWith('image/') ? 'image' : 'pdf');
-            return API.sendMessage(state.activeChatVendorId, res.url, fileType).then(() => {
-                return API.getChatHistory(state.activeChatVendorId).then(history => {
+            API.sendMessage(state.activeChatVendorId, res.url, res.type || 'image').then(() => {
+                API.getChatHistory(state.activeChatVendorId).then(history => {
                     updateChatMessages(history);
                 });
             });
         } else if (res.error) {
             showPushNotification("Upload Error", res.error);
         }
+        if (inputBarField) inputBarField.placeholder = "Type a message...";
+        input.value = '';
     })
     .catch(err => {
         console.error("File upload error:", err);
         showPushNotification("Upload Failed", err.message || "An error occurred during upload.");
-    })
-    .finally(() => {
         if (inputBarField) inputBarField.placeholder = "Type a message...";
         input.value = '';
     });
@@ -5101,7 +5010,7 @@ function renderVendorDashScreen(user) {
                         <h4 style="margin:0; font-size:0.9rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:6px;">
                             <i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> Real-Time Analytics
                         </h4>
-                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, chat inquiries, and bookings</div>
+                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, chats, bookings, revenue</div>
                     </div>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
                         <button class="btn btn-xs btn-outline date-filter-btn" onclick="filterVendorStats('today', this)">Today</button>
@@ -5111,7 +5020,7 @@ function renderVendorDashScreen(user) {
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Views</div>
                         <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
@@ -5123,6 +5032,10 @@ function renderVendorDashScreen(user) {
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
                         <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
+                    </div>
+                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
+                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-coins" style="color:#F59E0B;"></i> Revenue</div>
+                        <div class="vd-stat-value" id="vd-stat-revenue" style="font-size:1rem; font-weight:800; color:var(--accent); margin-top:2px;">GH₵ 0</div>
                     </div>
                 </div>
             </div>
@@ -5333,41 +5246,30 @@ window.handleKycModalFile = function(event, type) {
 };
 
 window.submitKycFromModal = function() {
-    const idFront = window._kycModalData ? window._kycModalData.id_front : '';
-    const selfie = window._kycModalData ? window._kycModalData.selfie : '';
+    const idFront = window._kycModalData.id_front;
+    const selfie = window._kycModalData.selfie;
     if (!idFront || !selfie) {
         showPushNotification('Missing Documents', 'Please upload both your ID front and selfie before submitting.');
         return;
     }
     const btn = document.getElementById('kyc-modal-submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+
     const idType = document.getElementById('kyc-modal-id-type')?.value || 'Ghana Card / National ID';
 
-    ActionLock.execute(btn, 'Submitting Documents...', async () => {
-        try {
-            const res = await API.updateProfile({
-                kyc_status: 'pending_verification',
-                kyc_id_type: idType,
-                kyc_id_front: idFront,
-                kyc_selfie: selfie,
-                kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
-            });
-
-            if (res && res.user) {
-                state.user = res.user;
-                localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-            } else {
-                const sessionRes = await API.getSession();
-                if (sessionRes && sessionRes.user) state.user = sessionRes.user;
-            }
-
-            showPushNotification('Documents Submitted', 'Your identity documents are under review. You will be notified once approved.');
-            closeModal();
-
-            if (typeof updateSidebarUI === 'function') updateSidebarUI();
-            if (typeof renderProfileScreen === 'function') renderProfileScreen();
-        } catch (err) {
-            showPushNotification('Submission Error', err.message || 'Failed to submit identity documents.');
-        }
+    API.updateProfile({
+        kyc_status: 'pending_verification',
+        kyc_id_type: idType,
+        kyc_id_front: idFront,
+        kyc_selfie: selfie,
+        kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    }).then(() => {
+        API.getSession().then(res => { state.user = res.user; });
+        showPushNotification('Documents Submitted', 'Your identity documents are under review. You will be notified once approved.');
+        closeModal();
+    }).catch(err => {
+        showPushNotification('Submission Error', err.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Submit for Verification'; }
     });
 };
 
@@ -5448,12 +5350,12 @@ window.openPremiumUpgradeModal = function() {
 
                 <!-- Payment Form -->
                 <div class="form-group mb-12">
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Payment Notes / Transaction Details</label>
-                    <textarea id="premium-modal-notes" class="form-input" placeholder="e.g. Paid via MoMo from 024XXXXXXX" style="width:100%; padding:10px; resize:none;" rows="2"></textarea>
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Mobile Money / Bank Transaction Ref (TxID)</label>
+                    <input type="text" id="premium-modal-txid" class="form-input" placeholder="e.g. 29304918239 or Transfer Ref">
                 </div>
 
                 <div class="form-group mb-16">
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt (Image or PDF)</label>
+                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Upload Payment Receipt Screenshot (Image or PDF)</label>
                     <div class="kyc-upload-zone" onclick="document.getElementById('premium-modal-receipt-file').click()" style="cursor:pointer; padding:14px; text-align:center; border:2px dashed var(--gray-300); border-radius:10px; background:#fff;">
                         <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.5rem; color:var(--accent); margin-bottom:6px;"></i>
                         <p id="premium-modal-receipt-status" style="margin:0; font-size:0.75rem; color:var(--gray-600);">Click to Choose Payment Receipt File</p>
@@ -6022,7 +5924,7 @@ function renderPromoAnalytics() {
 }
 
 function purchasePromoPackage(packageName, days, price) {
-    window.currentAdBannerBase64 = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800';
+    window.currentAdBannerBase64 = 'img/ads/default.jpg';
     window.currentAdCost = price;
     window.currentAdDuration = days;
     window._adReceiptData = '';
@@ -6055,8 +5957,8 @@ function purchasePromoPackage(packageName, days, price) {
                         </span>
                     </div>
                     <div style="padding:12px;">
-                        <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Ghana Grand Event Hall Special</h4>
-                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Book Ghana's premier luxury event hall venue for grand weddings, corporate galas & celebrations.</p>
+                        <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Summer Bridal Special</h4>
+                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-size:0.7rem; color:var(--gray-400);"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
                             <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:4px 10px; font-size:0.7rem; font-weight:700; background:var(--accent); border-color:var(--accent);">Learn More</button>
@@ -6067,11 +5969,11 @@ function purchasePromoPackage(packageName, days, price) {
 
             <div class="form-group mb-12">
                 <label class="form-label">Campaign Title</label>
-                <input type="text" class="form-input" id="ad-title" placeholder="e.g. Ghana Grand Event Hall Special" oninput="updateAdPreview()" value="Ghana Grand Event Hall Special">
+                <input type="text" class="form-input" id="ad-title" placeholder="e.g. Summer Bridal Special" oninput="updateAdPreview()" value="Summer Bridal Special">
             </div>
             <div class="form-group mb-12">
                 <label class="form-label">Ad Banner Description</label>
-                <textarea class="form-textarea" id="ad-desc" placeholder="Write a catchy line to display on your banner..." style="min-height:50px;" oninput="updateAdPreview()">Book Ghana's premier luxury event hall venue for grand weddings, corporate galas & celebrations.</textarea>
+                <textarea class="form-textarea" id="ad-desc" placeholder="Write a catchy line to display on your banner..." style="min-height:50px;" oninput="updateAdPreview()">Premium makeup packages and flawless skin styling for your big day.</textarea>
             </div>
             
             <div class="form-group mb-12">

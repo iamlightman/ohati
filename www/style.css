@@ -7133,21 +7133,21 @@ body.dark-theme .handpicked-card-location {
         background: rgba(255, 255, 255, 0.25) !important;
     }
 
-    /* Full-width Hero Banner - Fills all side edges edge-to-edge */
+    /* Full-width Hero Banner - Fills all side edges 100% edge-to-edge with ZERO side gaps */
     .home-hero-banner {
-        min-height: 380px !important;
+        min-height: 420px !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 0 32px 0 !important;
-        padding: 64px 48px 48px 48px !important;
-        border-radius: 0 0 28px 28px !important;
+        padding: 72px 32px 48px 32px !important;
+        border-radius: 0 !important;
         box-sizing: border-box !important;
     }
 
     .home-hero-title {
-        font-size: 2.6rem !important;
+        font-size: 2.8rem !important;
         line-height: 1.2 !important;
-        max-width: 800px !important;
+        max-width: 850px !important;
     }
 
     .home-hero-search {
@@ -7158,7 +7158,8 @@ body.dark-theme .handpicked-card-location {
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
     }
 
-    /* Desktop Full-Width Page Sections & Grids */
+    /* Desktop Full-Width Page Sections & Grids - Edge-to-Edge Canvas */
+    .app-viewport,
     .screen,
     .home-screen,
     #screen-home,
@@ -7171,6 +7172,8 @@ body.dark-theme .handpicked-card-location {
         max-width: 100% !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
     .handpicked-section-wrap,
@@ -7180,8 +7183,8 @@ body.dark-theme .handpicked-card-location {
     .home-section {
         width: 100% !important;
         max-width: 100% !important;
-        padding-left: 40px !important;
-        padding-right: 40px !important;
+        padding-left: 24px !important;
+        padding-right: 24px !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
         box-sizing: border-box !important;
@@ -7192,11 +7195,14 @@ body.dark-theme .handpicked-card-location {
     .handpicked-scroller {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 28px !important;
+        gap: 24px !important;
         width: 100% !important;
         max-width: 100% !important;
         overflow-x: visible !important;
-        padding-bottom: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
     .category-grid {

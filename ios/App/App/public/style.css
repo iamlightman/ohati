@@ -6960,12 +6960,12 @@ body.dark-theme .handpicked-card-location {
 }
 
 /* ==========================================================================
-   DESKTOP & TABLET / IPAD RESPONSIVE OVERRIDES (>= 768px - INCLUDING IPAD 820x1180)
+   DESKTOP & LAPTOP WEB APP RESPONSIVE OVERRIDES (>= 768px & body.is-desktop / body.is-laptop)
    ========================================================================== */
-@media (min-width: 768px) {
+@media (min-width: 768px), screen and (min-device-width: 768px) {
 
-    /* 1. App Canvas Container */
-    html, body {
+    /* 1. App Canvas Container - 100% Full Screen Desktop Web App */
+    html, body, html.is-desktop, body.is-desktop, html.is-laptop, body.is-laptop {
         width: 100% !important;
         height: 100% !important;
         min-height: 100vh !important;

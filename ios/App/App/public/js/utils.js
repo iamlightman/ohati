@@ -649,6 +649,39 @@ window.compressImageFileBeforeUpload = function(file, maxWidth = 1600, maxHeight
     reader.onerror = () => { if (typeof callback === 'function') callback(file); };
     reader.readAsDataURL(file);
 };
+window.detectLaptopDeviceDimensions = function() {
+    const width = window.innerWidth || document.documentElement.clientWidth || document.body?.clientWidth || 0;
+    const height = window.innerHeight || document.documentElement.clientHeight || document.body?.clientHeight || 0;
+    const screenW = window.screen?.width || width;
+    const screenH = window.screen?.height || height;
+    const dpr = window.devicePixelRatio || 1;
 
+    const isDesktop = width >= 768;
+    const isLargeDesktop = width >= 992;
 
+    if (document.documentElement) {
+        document.documentElement.classList.toggle('is-desktop', isDesktop);
+        document.documentElement.classList.toggle('is-laptop', isLargeDesktop);
+    }
+    if (document.body) {
+        document.body.classList.toggle('is-desktop', isDesktop);
+        document.body.classList.toggle('is-laptop', isLargeDesktop);
+    }
 
+    const info = {
+        viewportWidth: width,
+        viewportHeight: height,
+        screenWidth: screenW,
+        screenHeight: screenH,
+        devicePixelRatio: dpr,
+        mode: isLargeDesktop ? 'Laptop / Desktop (Full Web App View)' : (isDesktop ? 'Tablet / iPad View' : 'Mobile Phone View')
+    };
+
+    console.log("%c [OHATI DEVICE DETECTION] ", "background:#1B2B4B; color:#F2A735; font-weight:bold; font-size:13px;", info);
+    return info;
+};
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', () => window.detectLaptopDeviceDimensions());
+    window.addEventListener('resize', () => window.detectLaptopDeviceDimensions());
+}

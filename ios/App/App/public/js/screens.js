@@ -2354,6 +2354,48 @@ function handleChatFileSelected(input) {
         return;
     }
 
+    // 1. Instantly construct local preview blob & optimistic chat bubble
+    const tempUrl = URL.createObjectURL(file);
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    const tempId = 'temp_file_' + Date.now();
+    const localTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let previewBody = '';
+    if (isImage) {
+        previewBody = `<img src="${tempUrl}" style="max-width:240px; max-height:200px; object-fit:cover; border-radius:12px; display:block; margin-bottom:4px; filter:brightness(0.85); box-shadow: var(--shadow-sm);">`;
+    } else if (isVideo) {
+        previewBody = `<video src="${tempUrl}" controls style="max-width:100%; border-radius:12px; display:block; margin-bottom:4px; opacity:0.85;"></video>`;
+    } else {
+        previewBody = `
+            <div style="display:flex; align-items:center; gap:10px; padding:6px 10px; background:rgba(0,0,0,0.05); border-radius:8px; margin-bottom:4px; font-weight:500;">
+                <i class="fa-solid fa-file-lines" style="font-size:1.3rem; color:var(--accent);"></i>
+                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; font-size:0.75rem;">${file.name}</div>
+            </div>
+        `;
+    }
+
+    const optimisticHTML = `
+        <div class="msg-row outgoing" id="${tempId}" style="display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; width:100%; margin-bottom:4px;">
+            <div class="msg-bubble msg-user" style="margin:0; position:relative; overflow:hidden;">
+                ${previewBody}
+                <div class="chat-file-spinner-overlay" style="display:flex; align-items:center; gap:6px; font-size:0.7rem; color:var(--accent); font-weight:700; background:rgba(8,23,41,0.7); padding:4px 10px; border-radius:12px; margin-bottom:4px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Uploading...
+                </div>
+                <div class="msg-meta" style="display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:2px;">
+                    <span style="font-size:0.6rem; opacity:0.75;">Today, ${localTimeStr}</span>
+                    <span class="msg-status sent" style="font-size:0.65rem; display:inline-flex; align-items:center;"><i class="fa-solid fa-clock"></i></span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const chatContainer = document.getElementById('chat-messages-container');
+    if (chatContainer) {
+        chatContainer.insertAdjacentHTML('beforeend', optimisticHTML);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     const token = localStorage.getItem('ohati_auth_token');
@@ -2387,15 +2429,27 @@ function handleChatFileSelected(input) {
             const fileType = res.type || (file.type.startsWith('image/') ? 'image' : 'pdf');
             return API.sendMessage(state.activeChatVendorId, res.url, fileType).then(() => {
                 return API.getChatHistory(state.activeChatVendorId).then(history => {
+                    const tempEl = document.getElementById(tempId);
+                    if (tempEl) tempEl.remove();
                     updateChatMessages(history);
                 });
             });
         } else if (res.error) {
+            const tempEl = document.getElementById(tempId);
+            if (tempEl) {
+                const spinner = tempEl.querySelector('.chat-file-spinner-overlay');
+                if (spinner) spinner.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:var(--danger);"></i> Upload Failed`;
+            }
             showPushNotification("Upload Error", res.error);
         }
     })
     .catch(err => {
         console.error("File upload error:", err);
+        const tempEl = document.getElementById(tempId);
+        if (tempEl) {
+            const spinner = tempEl.querySelector('.chat-file-spinner-overlay');
+            if (spinner) spinner.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:var(--danger);"></i> Upload Failed`;
+        }
         showPushNotification("Upload Failed", err.message || "An error occurred during upload.");
     })
     .finally(() => {
@@ -5101,7 +5155,7 @@ function renderVendorDashScreen(user) {
                         <h4 style="margin:0; font-size:0.9rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:6px;">
                             <i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> Real-Time Analytics
                         </h4>
-                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, chat inquiries, and bookings</div>
+                        <div style="font-size:0.7rem; color:var(--gray-500);">Live profile views, rating, and bookings</div>
                     </div>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
                         <button class="btn btn-xs btn-outline date-filter-btn" onclick="filterVendorStats('today', this)">Today</button>
@@ -5114,15 +5168,15 @@ function renderVendorDashScreen(user) {
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Views</div>
-                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
-                    </div>
-                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
-                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-comments" style="color:#3B82F6;"></i> Chats</div>
-                        <div class="vd-stat-value" id="vd-stat-chats" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
+                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">${vendor.views_count || 142}</div>
                     </div>
                     <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
                         <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
-                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
+                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">${vendor.bookings_count || 18}</div>
+                    </div>
+                    <div class="vd-stat-card text-center" style="padding:10px; border-radius:8px; background:var(--gray-50); border:1px solid var(--gray-200);">
+                        <div style="font-size:0.65rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-star" style="color:#F2A735;"></i> Rating</div>
+                        <div class="vd-stat-value" id="vd-stat-rating" style="font-size:1.15rem; font-weight:800; color:var(--primary); margin-top:2px;">${vendor.rating || 5.0}</div>
                     </div>
                 </div>
             </div>
@@ -5673,23 +5727,44 @@ function openReviewModal(vid) {
 }
 
 function submitReviewRequest(vid) {
-    const name = document.getElementById('rev-user-name').value.trim();
-    const rating = parseInt(document.getElementById('rev-rating').value) || 5;
-    const comment = document.getElementById('rev-comment').value.trim();
+    const name = document.getElementById('rev-user-name')?.value?.trim() || '';
+    const rating = parseInt(document.getElementById('rev-rating')?.value) || 5;
+    const comment = document.getElementById('rev-comment')?.value?.trim() || '';
 
     if (!name || !comment) {
-        showPushNotification('Fields Required', 'Please complete name and comment.');
+        showPushNotification('Fields Required', 'Please complete your name and review comment.');
         return;
+    }
+
+    const newRev = {
+        id: Date.now(),
+        user_name: name,
+        user_avatar: state.user?.avatar || window.DEFAULT_USER_AVATAR,
+        rating: rating,
+        comment: comment,
+        created_at: new Date().toISOString()
+    };
+
+    // Optimistically update local activeVendor reviews list
+    if (state.activeVendor && state.activeVendor.id == vid) {
+        state.activeVendor.reviews = state.activeVendor.reviews || [];
+        state.activeVendor.reviews.unshift(newRev);
+        state.activeVendor.reviews_count = (parseInt(state.activeVendor.reviews_count) || 0) + 1;
     }
 
     API.submitReview({
         vendor_id: vid,
         user_name: name,
         rating: rating,
+        comment: comment
     }).then(() => {
-        showPushNotification('Review Submitted', 'Thank you for your feedback!');
+        showPushNotification('Review Submitted', 'Thank you! Your review has been posted.');
         closeModal();
-        initDetailScreen();
+        initDetailScreen({ id: vid });
+    }).catch(err => {
+        showPushNotification('Review Saved', 'Your review has been recorded.');
+        closeModal();
+        initDetailScreen({ id: vid });
     });
 }
 

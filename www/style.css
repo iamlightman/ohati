@@ -7107,52 +7107,89 @@ body.dark-theme .handpicked-card-location {
         background: rgba(255, 255, 255, 0.25) !important;
     }
 
-    .header-avatar {
-        width: 36px !important;
-        height: 36px !important;
-        border-radius: 50% !important;
-        border: 2px solid #FFFFFF !important;
-    }
-}
-
-    /* Full-width Hero Banner */
+    /* Full-width Hero Banner - Fills all side edges edge-to-edge */
     .home-hero-banner {
-        min-height: 360px !important;
-        padding: 56px 48px 44px 48px !important;
-        border-radius: 0 0 28px 28px !important;
+        min-height: 380px !important;
+        width: 100% !important;
         max-width: 100% !important;
-        margin-bottom: 32px !important;
+        margin: 0 0 32px 0 !important;
+        padding: 64px 48px 48px 48px !important;
+        border-radius: 0 0 28px 28px !important;
+        box-sizing: border-box !important;
     }
 
     .home-hero-title {
-        font-size: 2.5rem !important;
+        font-size: 2.6rem !important;
         line-height: 1.2 !important;
-        max-width: 700px !important;
+        max-width: 800px !important;
     }
 
     .home-hero-search {
         max-width: 100% !important;
         width: 100% !important;
-        padding: 8px 10px 8px 24px !important;
+        padding: 8px 12px 8px 24px !important;
         border-radius: 36px !important;
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
     }
 
+    /* Desktop Full-Width Page Sections & Grids */
+    .screen,
+    .home-screen,
+    #screen-home,
+    #screen-search,
+    #screen-event,
+    #screen-user-jobs,
+    #screen-vendor-jobs,
+    #screen-bookings {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .handpicked-section-wrap,
+    .category-section-wrap,
+    .p-section,
+    .section-padding,
+    .home-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 40px !important;
+        padding-right: 40px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
     /* Handpicked Vendor Catalog Grid (4 per row on Desktop) */
-    #ohati-app .handpicked-scroller {
+    #ohati-app .handpicked-scroller,
+    .handpicked-scroller {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 24px !important;
+        gap: 28px !important;
+        width: 100% !important;
+        max-width: 100% !important;
         overflow-x: visible !important;
         padding-bottom: 0 !important;
+    }
+
+    .category-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        gap: 20px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 20px 0 !important;
     }
 
     #search-vendors-list {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
         gap: 28px !important;
+        width: 100% !important;
         max-width: 100% !important;
-        padding: 0 32px 40px 32px !important;
+        padding: 0 40px 40px 40px !important;
     }
 }
 

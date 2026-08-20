@@ -1,5 +1,5 @@
-// js/utils.js — Ohati Utility Helpers
 window.DEFAULT_USER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+window.DEFAULT_BUSINESS_COVER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><rect width='600' height='400' fill='%23081729'/><g fill='none' stroke='%23F2A735' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'><path d='M220 320 V120 L380 120 V320 Z'/><path d='M250 160 H270 M330 160 H350 M250 200 H270 M330 200 H350 M250 240 H270 M330 240 H350'/><path d='M285 320 V280 H315 V320'/><path d='M140 320 V200 L220 160'/><path d='M380 160 L460 200 V320'/><path d='M100 320 H500'/></g></svg>";
 
 /** Format number to compact form (1.2K, 3.4M) */
 function formatCompact(n) {
@@ -597,7 +597,7 @@ window.OhatiNavManager = {
 
         // 9. If targetScreen from popstate is specified
         if (fromPopState && targetScreen && targetScreen !== currentScreen && typeof navigateTo === 'function') {
-            navigateTo(targetScreen, true);
+            navigateTo(targetScreen, {}, { fromPopState: true, force: true });
             return true;
         }
 
@@ -649,39 +649,6 @@ window.compressImageFileBeforeUpload = function(file, maxWidth = 1600, maxHeight
     reader.onerror = () => { if (typeof callback === 'function') callback(file); };
     reader.readAsDataURL(file);
 };
-window.detectLaptopDeviceDimensions = function() {
-    const width = window.innerWidth || document.documentElement.clientWidth || document.body?.clientWidth || 0;
-    const height = window.innerHeight || document.documentElement.clientHeight || document.body?.clientHeight || 0;
-    const screenW = window.screen?.width || width;
-    const screenH = window.screen?.height || height;
-    const dpr = window.devicePixelRatio || 1;
 
-    const isDesktop = width >= 768;
-    const isLargeDesktop = width >= 992;
 
-    if (document.documentElement) {
-        document.documentElement.classList.toggle('is-desktop', isDesktop);
-        document.documentElement.classList.toggle('is-laptop', isLargeDesktop);
-    }
-    if (document.body) {
-        document.body.classList.toggle('is-desktop', isDesktop);
-        document.body.classList.toggle('is-laptop', isLargeDesktop);
-    }
 
-    const info = {
-        viewportWidth: width,
-        viewportHeight: height,
-        screenWidth: screenW,
-        screenHeight: screenH,
-        devicePixelRatio: dpr,
-        mode: isLargeDesktop ? 'Laptop / Desktop (Full Web App View)' : (isDesktop ? 'Tablet / iPad View' : 'Mobile Phone View')
-    };
-
-    console.log("%c [OHATI DEVICE DETECTION] ", "background:#1B2B4B; color:#F2A735; font-weight:bold; font-size:13px;", info);
-    return info;
-};
-
-if (typeof window !== 'undefined') {
-    window.addEventListener('DOMContentLoaded', () => window.detectLaptopDeviceDimensions());
-    window.addEventListener('resize', () => window.detectLaptopDeviceDimensions());
-}

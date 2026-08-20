@@ -1,5 +1,5 @@
-// js/utils.js — Ohati Utility Helpers
 window.DEFAULT_USER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+window.DEFAULT_BUSINESS_COVER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><rect width='600' height='400' fill='%23081729'/><g fill='none' stroke='%23F2A735' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'><path d='M220 320 V120 L380 120 V320 Z'/><path d='M250 160 H270 M330 160 H350 M250 200 H270 M330 200 H350 M250 240 H270 M330 240 H350'/><path d='M285 320 V280 H315 V320'/><path d='M140 320 V200 L220 160'/><path d='M380 160 L460 200 V320'/><path d='M100 320 H500'/></g></svg>";
 
 /** Format number to compact form (1.2K, 3.4M) */
 function formatCompact(n) {
@@ -480,11 +480,53 @@ window.OhatiNavManager = {
 
         // Handle Browser Back / Forward buttons (pushState/popstate)
         window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.screenId) {
-                this.handleBackPress(true, event.state.screenId);
-            } else {
-                this.handleBackPress(true);
+            let targetScreen = event.state && event.state.screenId ? event.state.screenId : null;
+            let targetParams = event.state && event.state.params ? event.state.params : {};
+
+            // If state payload is missing/null, derive route from window.location
+            if (!targetScreen) {
+                const path = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+                const search = new URLSearchParams(window.location.search);
+                if (path === 'planner.php') targetScreen = 'event';
+                else if (path === 'search.php') targetScreen = 'search';
+                else if (path === 'detail.php') {
+                    targetScreen = 'detail';
+                    const vid = parseInt(search.get('id') || search.get('vendor_id'));
+                    if (vid) targetParams = { id: vid };
+                }
+                else if (path === 'chat.php') {
+                    targetScreen = 'chat';
+                    const vid = parseInt(search.get('vendor_id') || search.get('id'));
+                    if (vid) targetParams = { vendor_id: vid };
+                }
+                else if (path === 'bookings.php') {
+                    targetScreen = 'bookings';
+                    const bId = parseInt(search.get('id'));
+                    if (bId) targetParams = { id: bId };
+                }
+                else if (path === 'favorites.php') targetScreen = 'favorites';
+                else if (path === 'compare.php') targetScreen = 'compare';
+                else if (path === 'notifications.php') targetScreen = 'notifications';
+                else if (path === 'profile.php') targetScreen = 'profile';
+                else if (path === 'vendor-dash.php') targetScreen = 'vendor-dash';
+                else if (path === 'promotions.php') targetScreen = 'vendor-ads';
+                else if (path === 'help.php') targetScreen = 'help';
+                else if (path === 'about.php') targetScreen = 'about';
+                else if (path === 'report-issue.php') targetScreen = 'report-issue';
+                else if (path === 'blog.php') {
+                    const bId = parseInt(search.get('id'));
+                    const bSlug = search.get('slug');
+                    if (bId || bSlug) {
+                        targetScreen = 'blog-detail';
+                        targetParams = { id: bId, slug: bSlug };
+                    } else {
+                        targetScreen = 'blog';
+                    }
+                }
+                else targetScreen = 'home';
             }
+
+            this.handleBackPress(true, targetScreen, targetParams);
         });
     },
 
@@ -492,7 +534,7 @@ window.OhatiNavManager = {
         this.isPaymentProcessing = processing;
     },
 
-    handleBackPress(fromPopState = false, targetScreen = null) {
+    handleBackPress(fromPopState = false, targetScreen = null, targetParams = {}) {
         // 1. Payment Processing Guard
         if (this.isPaymentProcessing) {
             showPushNotification("Transaction Processing", "Your payment is currently being processed. Please wait to prevent double charges.");
@@ -514,14 +556,33 @@ window.OhatiNavManager = {
             }
         }
 
-        // 3. Open Custom Overlay Modals & Lightbox
-        const customModal = document.querySelector('#account-deletion-custom-modal, #account-deleted-pro-modal, #voiceCallModal, .modal-overlay.open, #lightbox');
+        // 3. Open Custom Overlay Modals, Global Modal Root & Lightbox
+        const globalRoot = document.getElementById('ohati-global-modal-root');
+        if (globalRoot && globalRoot.classList.contains('open')) {
+            if (typeof closeConfirmModal === 'function') closeConfirmModal(false);
+            if (typeof closeBlogReportModal === 'function') closeBlogReportModal();
+            if (typeof closeBlogBlockModal === 'function') closeBlogBlockModal();
+            if (typeof closeChatReportModal === 'function') closeChatReportModal();
+            if (typeof closeChatBlockModal === 'function') closeChatBlockModal();
+            if (fromPopState && typeof state !== 'undefined' && state.currentScreen) {
+                history.pushState({ screenId: state.currentScreen }, '', window.location.href);
+            }
+            return true;
+        }
+
+        const customModal = document.querySelector('#account-deletion-custom-modal, #account-deleted-pro-modal, #voiceCallModal, .modal-overlay.open, .blog-modal-backdrop, #lightbox');
         if (customModal) {
             if (typeof closeAccountDeletionModal === 'function') closeAccountDeletionModal();
             if (typeof closeAccountDeletedProModal === 'function') closeAccountDeletedProModal();
             if (typeof closeDocModal === 'function') closeDocModal();
-            if (customModal.parentNode) customModal.remove();
-            else customModal.style.display = 'none';
+            if (typeof closeBlogReportModal === 'function') closeBlogReportModal();
+            if (typeof closeBlogBlockModal === 'function') closeBlogBlockModal();
+            if (typeof closeChatReportModal === 'function') closeChatReportModal();
+            if (typeof closeChatBlockModal === 'function') closeChatBlockModal();
+            if (typeof closeModal === 'function') closeModal();
+            if (customModal.parentNode) {
+                try { customModal.remove(); } catch(e) { customModal.style.display = 'none'; }
+            }
             if (fromPopState && typeof state !== 'undefined' && state.currentScreen) {
                 history.pushState({ screenId: state.currentScreen }, '', window.location.href);
             }
@@ -576,7 +637,13 @@ window.OhatiNavManager = {
             }
         }
 
-        // 8. Root Screens (Home or Vendor Dashboard) -> Double Press Exit App
+        // 8. If fromPopState is true, navigate directly to targetScreen
+        if (fromPopState && targetScreen && typeof navigateTo === 'function') {
+            navigateTo(targetScreen, targetParams || {}, { fromPopState: true, force: true });
+            return true;
+        }
+
+        // 9. Root Screens (Home or Vendor Dashboard) -> Double Press Exit App
         const currentScreen = typeof state !== 'undefined' ? state.currentScreen : 'home';
         const isRoot = (currentScreen === 'home' || currentScreen === 'vendor-dash' || !currentScreen);
         if (isRoot) {
@@ -588,16 +655,7 @@ window.OhatiNavManager = {
             } else {
                 this.lastBackPressTime = now;
                 showPushNotification("Exit Ohati", "Press back again to exit the application.");
-                if (fromPopState && currentScreen) {
-                    history.pushState({ screenId: currentScreen }, '', window.location.href);
-                }
             }
-            return true;
-        }
-
-        // 9. If targetScreen from popstate is specified
-        if (fromPopState && targetScreen && targetScreen !== currentScreen && typeof navigateTo === 'function') {
-            navigateTo(targetScreen, true);
             return true;
         }
 
@@ -608,6 +666,7 @@ window.OhatiNavManager = {
         return true;
     }
 };
+
 
 window.compressImageFileBeforeUpload = function(file, maxWidth = 1600, maxHeight = 1600, quality = 0.8, callback) {
     if (!file || !file.type || !file.type.startsWith('image/')) {
@@ -649,39 +708,6 @@ window.compressImageFileBeforeUpload = function(file, maxWidth = 1600, maxHeight
     reader.onerror = () => { if (typeof callback === 'function') callback(file); };
     reader.readAsDataURL(file);
 };
-window.detectLaptopDeviceDimensions = function() {
-    const width = window.innerWidth || document.documentElement.clientWidth || document.body?.clientWidth || 0;
-    const height = window.innerHeight || document.documentElement.clientHeight || document.body?.clientHeight || 0;
-    const screenW = window.screen?.width || width;
-    const screenH = window.screen?.height || height;
-    const dpr = window.devicePixelRatio || 1;
 
-    const isDesktop = width >= 768;
-    const isLargeDesktop = width >= 992;
 
-    if (document.documentElement) {
-        document.documentElement.classList.toggle('is-desktop', isDesktop);
-        document.documentElement.classList.toggle('is-laptop', isLargeDesktop);
-    }
-    if (document.body) {
-        document.body.classList.toggle('is-desktop', isDesktop);
-        document.body.classList.toggle('is-laptop', isLargeDesktop);
-    }
 
-    const info = {
-        viewportWidth: width,
-        viewportHeight: height,
-        screenWidth: screenW,
-        screenHeight: screenH,
-        devicePixelRatio: dpr,
-        mode: isLargeDesktop ? 'Laptop / Desktop (Full Web App View)' : (isDesktop ? 'Tablet / iPad View' : 'Mobile Phone View')
-    };
-
-    console.log("%c [OHATI DEVICE DETECTION] ", "background:#1B2B4B; color:#F2A735; font-weight:bold; font-size:13px;", info);
-    return info;
-};
-
-if (typeof window !== 'undefined') {
-    window.addEventListener('DOMContentLoaded', () => window.detectLaptopDeviceDimensions());
-    window.addEventListener('resize', () => window.detectLaptopDeviceDimensions());
-}

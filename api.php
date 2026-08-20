@@ -1,12 +1,6 @@
 <?php
 // api.php - Ohati Backend API
 date_default_timezone_set('Africa/Accra');
-@ini_set('upload_max_filesize', '20M');
-@ini_set('post_max_size', '25M');
-@ini_set('memory_limit', '256M');
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
@@ -50,35 +44,6 @@ function resolve_vendor_logo($category, $current_logo = '') {
     return $map[$category] ?? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
 }
 
-function save_base64_image($base64_str, $prefix = 'img') {
-    if (empty($base64_str) || (strpos($base64_str, 'data:image/') !== 0 && strpos($base64_str, 'data:application/pdf') !== 0)) {
-        return $base64_str;
-    }
-    try {
-        list($type, $data) = explode(';', $base64_str);
-        list(, $data)      = explode(',', $data);
-        $data = base64_decode($data);
-        if (!$data) return $base64_str;
-
-        $ext = 'jpg';
-        if (strpos($type, 'png') !== false) $ext = 'png';
-        else if (strpos($type, 'webp') !== false) $ext = 'webp';
-        else if (strpos($type, 'pdf') !== false) $ext = 'pdf';
-
-        $sub = (strpos($prefix, 'receipt') !== false) ? 'receipts' : 'kyc';
-        $dir = __DIR__ . '/uploads/' . $sub . '/';
-        if (!file_exists($dir)) {
-            @mkdir($dir, 0755, true);
-        }
-
-        $file_name = $prefix . '_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
-        file_put_contents($dir . $file_name, $data);
-        return 'uploads/' . $sub . '/' . $file_name;
-    } catch (Exception $e) {
-        return $base64_str;
-    }
-}
-
 // Bearer Token & Persistent Authentication Middleware
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $auth_header = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
@@ -95,9 +60,9 @@ if (preg_match('/Bearer\s+(.+)/i', $auth_header, $matches)) {
 if (!empty($token)) {
     $token_hash = hash('sha256', $token);
     try {
-        $now_stamp = date('Y-m-d H:i:s');
+        $now_str = date('Y-m-d H:i:s');
         $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > ?)");
-        $t_stmt->execute([$token_hash, $now_stamp]);
+        $t_stmt->execute([$token_hash, $now_str]);
         $token_uid = $t_stmt->fetchColumn();
         if ($token_uid) {
             $u_stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
@@ -220,6 +185,12 @@ if (strpos($action, 'job_') === 0 || strpos($action, 'admin_job_') === 0) {
     exit;
 }
 
+require_once __DIR__ . '/blog_api.php';
+if (strpos($action, 'blog') !== false || strpos($action, 'admin_blog') !== false || in_array($action, ['get_blog_posts', 'get_blog_post', 'like_blog_post', 'like_blog_comment', 'add_blog_comment', 'get_blog_comments', 'share_blog_post'])) {
+    handle_blog_action($action, $pdo);
+    exit;
+}
+
 // CSRF token helper
 function csrf_token() {
     if (!isset($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -318,46 +289,24 @@ function is_local_env() {
     );
 }
 
-function secure_save_base64_image($base64_str, $folder, $prefix = 'file') {
-    if (!preg_match('/^data:image\/(\w+);base64,/', $base64_str, $matches)) {
-        throw new Exception("Invalid image format or header.");
+function secure_save_base64_image($b64_data, $folder = 'receipts', $prefix = 'file') {
+    if (empty($b64_data)) return '';
+    if (file_exists(__DIR__ . '/storage_helper.php')) {
+        require_once __DIR__ . '/storage_helper.php';
+        $res = upload_media_file($b64_data, $folder);
+        if (!empty($res['url'])) {
+            return $res['url'];
+        }
     }
-    $extension = strtolower($matches[1]);
-    $allowed_extensions = ['jpg', 'jpeg', 'png', 'webp'];
-    if (!in_array($extension, $allowed_extensions)) {
-        throw new Exception("Extension not allowed: " . $extension);
-    }
-    $comma_pos = strpos($base64_str, ',');
-    $data = base64_decode(substr($base64_str, $comma_pos + 1));
-    if ($data === false) {
-        throw new Exception("Invalid base64 encoding.");
-    }
-    $info = getimagesizefromstring($data);
-    if ($info === false) {
-        throw new Exception("File content is not a valid image.");
-    }
-    $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!in_array($info['mime'], $allowed_mimes)) {
-        throw new Exception("Invalid MIME type: " . $info['mime']);
-    }
-    $dir = __DIR__ . '/uploads/' . $folder;
-    if (!file_exists($dir)) {
-        mkdir($dir, 0777, true);
-    }
-    $filename = $prefix . '_' . uniqid() . '_' . time() . '.' . $extension;
-    $filepath = $dir . '/' . $filename;
-    if (file_put_contents($filepath, $data) === false) {
-        throw new Exception("Failed to write image file.");
-    }
-    return 'uploads/' . $folder . '/' . $filename;
+    return '';
 }
+
 
 function compressAndResizeImage($source_path, $target_path, $max_width = 1200, $max_height = 1200, $quality = 75) {
     if (!extension_loaded('gd')) {
         return false;
     }
     
-    // Get image info
     $info = getimagesize($source_path);
     if (!$info) return false;
     
@@ -773,14 +722,7 @@ case 'login':
         if (!$ov->fetch()) { http_response_code(401); echo json_encode(['error'=>'Invalid or expired OTP.']); exit; }
         $pdo->prepare("UPDATE otp_codes SET used = 1 WHERE target = ? AND code = ?")->execute([$identifier, $otp]);
     } else {
-        if (!password_verify($password, $user['password_hash'])) {
-            if (in_array(strtolower($user['email']), ['demo.customer@ohati.com', 'demo.vendor@ohati.com']) && in_array($password, ['OhatiDemo2026@', 'OhatiDemo2026', 'OhatiDemo2026@Customer', 'OhatiDemo2026@Vendor'])) {
-                $new_hash = password_hash($password, PASSWORD_BCRYPT);
-                $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$new_hash, $user['id']]);
-            } else {
-                http_response_code(401); echo json_encode(['error'=>'Incorrect password.']); exit;
-            }
-        }
+        if (!password_verify($password, $user['password_hash'])) { http_response_code(401); echo json_encode(['error'=>'Incorrect password.']); exit; }
     }
     // Automatically ensure existing accounts in the database are marked verified & active
     $pdo->prepare("UPDATE users SET email_verified = 1, phone_verified = 1, status = 'active' WHERE id = ?")->execute([$user['id']]);
@@ -1219,9 +1161,25 @@ case 'update_profile':
     if (!isset($_SESSION['user']['id'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in']); exit; }
     $uid = intval($_SESSION['user']['id']);
     $input = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($input)) $input = [];
 
+    // Support field aliases sent by frontend modals
+    if (isset($input['id_front'])) $input['kyc_id_front'] = $input['id_front'];
+    if (isset($input['selfie'])) $input['kyc_selfie'] = $input['selfie'];
+    if (isset($input['id_back'])) $input['kyc_id_back'] = $input['id_back'];
+
+    // Save base64 image/PDF file uploads to disk
+    $file_fields = ['avatar' => 'avatars', 'kyc_id_front' => 'kyc', 'kyc_id_back' => 'kyc', 'kyc_selfie' => 'kyc'];
+    foreach ($file_fields as $field_key => $folder) {
+        if (!empty($input[$field_key]) && is_string($input[$field_key]) && strpos($input[$field_key], 'data:') === 0) {
+            try {
+                $input[$field_key] = secure_save_base64_image($input[$field_key], $folder, $field_key . '_' . $uid);
+            } catch (Exception $e) {}
+        }
+    }
+
+    // Lock core identity fields (name, email, phone) for non-admin users if already set
     $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
-    
     if (!$is_admin) {
         $u_cur = $pdo->prepare("SELECT name, email, phone FROM users WHERE id = ?");
         $u_cur->execute([$uid]);
@@ -1234,20 +1192,13 @@ case 'update_profile':
         }
     }
 
-    $fields = ['name', 'email', 'phone', 'avatar', 'gender', 'dob', 'country', 'state', 'city', 'kyc_status', 'kyc_id_type', 'kyc_id_front', 'kyc_id_back', 'kyc_selfie', 'kyc_submitted_at'];
+    $allowed_fields = ['name','avatar','gender','dob','country','state','city','language','currency','username','kyc_status','email','phone','kyc_id_type','kyc_id_front','kyc_id_back','kyc_selfie','kyc_submitted_at'];
     $updates = [];
     $params = [];
 
-    foreach ($fields as $f) {
+    foreach ($allowed_fields as $f) {
         if (isset($input[$f])) {
             $val = $input[$f];
-            if ($f === 'avatar' || $f === 'kyc_id_front' || $f === 'kyc_id_back' || $f === 'kyc_selfie') {
-                if (is_string($val) && strpos($val, 'data:image') === 0) {
-                    try {
-                        $val = secure_save_base64_image($val, 'kyc', $f . '_' . $uid);
-                    } catch (Exception $e) {}
-                }
-            }
             $updates[] = "$f = ?";
             $params[] = $val;
             $_SESSION['user'][$f] = $val;
@@ -1269,6 +1220,7 @@ case 'update_profile':
 
     echo json_encode(['success' => true, 'user' => $_SESSION['user']]);
     break;
+
 
 case 'register_device_token':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
@@ -1369,68 +1321,7 @@ case 'session':
     ]);
     break;
 
-case 'update_profile':
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    // Check if avatar is uploaded as base64 and save it to filesystem
-    if (isset($input['avatar']) && strpos($input['avatar'], 'data:image') === 0) {
-        try {
-            $input['avatar'] = secure_save_base64_image($input['avatar'], 'avatars', 'avatar_' . $_SESSION['user']['id']);
-        } catch (Exception $e) {
-            http_response_code(400); echo json_encode(['error' => $e->getMessage()]); exit;
-        }
-    }
 
-    // Support both id_front / selfie and kyc_id_front / kyc_selfie formats
-    if (isset($input['id_front'])) $input['kyc_id_front'] = $input['id_front'];
-    if (isset($input['selfie'])) $input['kyc_selfie'] = $input['selfie'];
-
-    // Save kyc_id_front if base64
-    if (isset($input['kyc_id_front']) && strpos($input['kyc_id_front'], 'data:image') === 0) {
-        try {
-            $input['kyc_id_front'] = secure_save_base64_image($input['kyc_id_front'], 'kyc', 'id_front_' . $_SESSION['user']['id']);
-        } catch (Exception $e) {
-            http_response_code(400); echo json_encode(['error' => $e->getMessage()]); exit;
-        }
-    }
-
-    // Save kyc_selfie if base64
-    if (isset($input['kyc_selfie']) && strpos($input['kyc_selfie'], 'data:image') === 0) {
-        try {
-            $input['kyc_selfie'] = secure_save_base64_image($input['kyc_selfie'], 'kyc', 'selfie_' . $_SESSION['user']['id']);
-        } catch (Exception $e) {
-            http_response_code(400); echo json_encode(['error' => $e->getMessage()]); exit;
-        }
-    }
-
-    // Lock core identity fields (name, email, phone) for non-admin users after registration
-    $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
-    if (!$is_admin && isset($_SESSION['user'])) {
-        $u_id = intval($_SESSION['user']['id']);
-        $u_curr = $pdo->prepare("SELECT name, email, phone FROM users WHERE id = ?");
-        $u_curr->execute([$u_id]);
-        $u_row = $u_curr->fetch();
-        if ($u_row) {
-            if (!empty($u_row['name'])) unset($input['name']);
-            if (!empty($u_row['email'])) unset($input['email']);
-            if (!empty($u_row['phone'])) unset($input['phone']);
-        }
-    }
-
-    $fields = []; $params = [];
-    $allowed_profile_fields = ['name','avatar','gender','dob','country','state','city','language','currency','username','kyc_status','email','phone','kyc_id_type','kyc_id_front','kyc_id_back','kyc_selfie','kyc_submitted_at'];
-    foreach ($allowed_profile_fields as $f) {
-        if (isset($input[$f])) { $fields[] = "$f = ?"; $params[] = clean($input[$f]); }
-    }
-    if (empty($fields)) { echo json_encode(['success'=>true]); break; }
-    $params[] = $_SESSION['user']['id'];
-    $pdo->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
-    // Update session
-    foreach ($allowed_profile_fields as $f) { if (isset($input[$f])) $_SESSION['user'][$f] = clean($input[$f]); }
-    echo json_encode(['success'=>true,'user'=>$_SESSION['user']]);
-    break;
 
 case 'get_notification_preferences':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
@@ -1674,12 +1565,29 @@ case 'vendor_details':
     }
     
     // Increment view counter & log timestamped view
-    $pdo->prepare("UPDATE vendors SET views_count = views_count + 1 WHERE id = ? OR user_id = ?")->execute([$id, $id]);
-    try {
-        $v_uid = intval($_SESSION['user']['id'] ?? 0);
-        $v_ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        $pdo->prepare("INSERT INTO vendor_views_log (vendor_id, user_id, ip_address) VALUES (?, ?, ?)")->execute([$id, $v_uid, $v_ip]);
-    } catch (Exception $vLogEx) {}
+    $v_uid = intval($_SESSION['user']['id'] ?? 0);
+    $v_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    
+    $v_find = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? OR user_id = ?");
+    $v_find->execute([$id, $id]);
+    $target_vendor = $v_find->fetch();
+    
+    if ($target_vendor) {
+        $real_vid = intval($target_vendor['id']);
+        $real_v_uid = intval($target_vendor['user_id']);
+        if ($v_uid <= 0 || $v_uid !== $real_v_uid) {
+            $sess_key = 'viewed_v_' . $real_vid;
+            $last_view = intval($_SESSION[$sess_key] ?? 0);
+            if (time() - $last_view > 300) {
+                $_SESSION[$sess_key] = time();
+                $pdo->prepare("UPDATE vendors SET views_count = views_count + 1 WHERE id = ?")->execute([$real_vid]);
+                try {
+                    $pdo->prepare("INSERT INTO vendor_views_log (vendor_id, user_id, ip_address) VALUES (?, ?, ?)")->execute([$real_vid, $v_uid, $v_ip]);
+                } catch (Exception $vLogEx) {}
+            }
+        }
+    }
+
     
     $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id = ? OR user_id = ?"); 
     $stmt->execute([$id, $id]);
@@ -2119,7 +2027,7 @@ case 'chat_inbox':
         $v_stmt->execute([$uid]);
         $vendor_id = $v_stmt->fetchColumn();
         if ($vendor_id) {
-            $stmt = $pdo->prepare("SELECT DISTINCT u.id as customer_id, u.name, u.avatar, u.last_active, 'Customer' as category FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? ORDER BY m.id DESC");
+            $stmt = $pdo->prepare("SELECT u.id as customer_id, u.name, u.avatar, u.last_active, 'Customer' as category, MAX(m.id) as max_msg_id FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? GROUP BY u.id, u.name, u.avatar, u.last_active ORDER BY max_msg_id DESC");
             $stmt->execute([$vendor_id]);
             $list = $stmt->fetchAll();
             foreach ($list as &$item) {
@@ -2130,7 +2038,7 @@ case 'chat_inbox':
             }
         }
     } else {
-        $stmt = $pdo->prepare("SELECT DISTINCT v.id, v.user_id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge, u.last_active as user_last_active, v.last_active as vendor_last_active FROM messages m JOIN vendors v ON m.vendor_id = v.id LEFT JOIN users u ON v.user_id = u.id WHERE m.user_id = ? ORDER BY m.id DESC");
+        $stmt = $pdo->prepare("SELECT v.id, v.user_id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge, MAX(m.id) as max_msg_id, MAX(u.last_active) as user_last_active, MAX(v.last_active) as vendor_last_active FROM messages m JOIN vendors v ON m.vendor_id = v.id LEFT JOIN users u ON v.user_id = u.id WHERE m.user_id = ? GROUP BY v.id, v.user_id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge ORDER BY max_msg_id DESC");
         $stmt->execute([$uid]);
         $list = $stmt->fetchAll();
         foreach ($list as &$item) {
@@ -2171,40 +2079,101 @@ case 'get_unread_chats':
     }
     break;
 
-case 'chat_history':
-    $vid = intval($_GET['vendor_id'] ?? 0);
+case 'block_user':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if ($uid <= 0) {
-        echo json_encode([]);
-        exit;
-    }
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
-    if ($role === 'vendor') {
-        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-        $v_stmt->execute([$uid]);
-        $vendor_id = $v_stmt->fetchColumn();
-        $cust_id = intval($_GET['customer_id'] ?? $_GET['vendor_id'] ?? 0);
-        if ($vendor_id && $cust_id) {
-            // Mark incoming customer messages as read
-            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'user' AND is_read = 0")->execute([$vendor_id, $cust_id]);
-            
-            $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
-            $stmt->execute([$vendor_id, $cust_id]);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $target_id = intval($input['target_user_id'] ?? $input['vendor_id'] ?? 0);
+    $reason = clean($input['reason'] ?? 'User blocked from chat');
+    if ($target_id <= 0) { http_response_code(400); echo json_encode(['error' => 'Target user ID required']); exit; }
+    
+    $pdo->prepare("INSERT INTO user_blocks (blocker_id, blocked_id, reason) VALUES (?, ?, ?)")
+        ->execute([$uid, $target_id, $reason]);
+    echo json_encode(['success' => true, 'message' => 'User blocked successfully.']);
+    break;
+
+case 'unblock_user':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $target_id = intval($input['target_user_id'] ?? $input['vendor_id'] ?? 0);
+    
+    $pdo->prepare("DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?")
+        ->execute([$uid, $target_id]);
+    echo json_encode(['success' => true, 'message' => 'User unblocked successfully.']);
+    break;
+
+case 'report_user':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $target_id = intval($input['target_user_id'] ?? $input['vendor_id'] ?? 0);
+    $reason = clean($input['reason'] ?? 'Inappropriate Behavior');
+    $details = clean($input['details'] ?? '');
+    if ($target_id <= 0) { http_response_code(400); echo json_encode(['error' => 'Target user ID required']); exit; }
+    
+    $pdo->prepare("INSERT INTO user_reports (reporter_id, reported_user_id, reason, details) VALUES (?, ?, ?, ?)")
+        ->execute([$uid, $target_id, $reason, $details]);
+    echo json_encode(['success' => true, 'message' => 'Thank you. Your report has been received and sent to moderators for review.']);
+    break;
+
+case 'report_comment':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $comment_id = intval($input['comment_id'] ?? 0);
+    $reason = clean($input['reason'] ?? 'Inappropriate Content');
+    $details = clean($input['details'] ?? '');
+    if ($comment_id <= 0) { http_response_code(400); echo json_encode(['error' => 'Comment ID required']); exit; }
+    
+    $pdo->prepare("INSERT INTO comment_reports (reporter_id, comment_id, reason, details) VALUES (?, ?, ?, ?)")
+        ->execute([$uid, $comment_id, $reason, $details]);
+    echo json_encode(['success' => true, 'message' => 'Comment report submitted successfully. Moderation team notified.']);
+    break;
+
+case 'chat_history':
+    try {
+        $vid = intval($_GET['vendor_id'] ?? 0);
+        $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+        if ($uid <= 0) {
+            echo json_encode([]);
+            exit;
+        }
+        $msgs = [];
+        $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
+        if ($role === 'vendor') {
+            $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+            $v_stmt->execute([$uid]);
+            $vendor_id = $v_stmt->fetchColumn();
+            $cust_id = intval($_GET['customer_id'] ?? $_GET['vendor_id'] ?? 0);
+            if ($vendor_id && $cust_id) {
+                try {
+                    $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'user' AND is_read = 0")->execute([$vendor_id, $cust_id]);
+                } catch (Throwable $eUp) {}
+                
+                $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
+                $stmt->execute([$vendor_id, $cust_id]);
+                $msgs = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            }
         } else {
-            echo json_encode([]); exit;
+            if ($vid > 0) {
+                try {
+                    $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'vendor' AND is_read = 0")->execute([$vid, $uid]);
+                } catch (Throwable $eUp2) {}
+                
+                $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
+                $stmt->execute([$vid, $uid]);
+                $msgs = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            }
         }
-    } else {
-        if ($vid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid ID']); exit; }
-        // Mark incoming vendor messages as read
-        if ($uid > 0) {
-            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'vendor' AND is_read = 0")->execute([$vid, $uid]);
-        }
-        
-        $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
-        $stmt->execute([$vid, $uid]);
+        echo json_encode($msgs ?: []);
+    } catch (Throwable $eChatHist) {
+        echo json_encode([]);
     }
-    $msgs = $stmt->fetchAll();
-    echo json_encode($msgs ?: []);
     break;
 
 case 'chat':
@@ -2212,12 +2181,8 @@ case 'chat':
     $input = json_decode(file_get_contents('php://input'), true);
     $vid = intval($input['vendor_id'] ?? 0);
     $message = clean($input['message'] ?? '');
-    $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','location','video','document']) ? $input['type'] : 'text';
-    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
-    if (!$uid) {
-        $first_u = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
-        $uid = intval($first_u ?: 1);
-    }
+    $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','location']) ? $input['type'] : 'text';
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
     $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     
     if ($role === 'vendor') {
@@ -2245,7 +2210,7 @@ case 'chat':
     break;
 
 case 'upload_chat_file':
-    $upload_uid = $_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0;
+    $upload_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
     if (!$upload_uid && (isset($_POST['auth_token']) || isset($_GET['auth_token']))) {
         $post_token = trim($_POST['auth_token'] ?? $_GET['auth_token'] ?? '');
         if (!empty($post_token)) {
@@ -2257,10 +2222,7 @@ case 'upload_chat_file':
             } catch (Exception $e) {}
         }
     }
-    if (!$upload_uid) {
-        $first_u = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
-        $upload_uid = intval($first_u ?: 1);
-    }
+    if (!$upload_uid) { http_response_code(401); echo json_encode(['error'=>'Please log in to upload files.']); exit; }
     if (!isset($_FILES['file'])) { http_response_code(400); echo json_encode(['error'=>'No file uploaded or file exceeds server post limit.']); exit; }
     
     $file = $_FILES['file'];
@@ -2372,247 +2334,6 @@ case 'upload_chat_file':
     } else {
         http_response_code(500);
         echo json_encode(['error'=>'Failed to save uploaded file on server.']);
-    }
-    break;
-
-case 'block_user':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in to block users.']); exit; }
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-    $target_id = intval($data['target_id'] ?? $data['vendor_id'] ?? 0);
-    $reason = trim($data['reason'] ?? 'User Blocked');
-    $notes = trim($data['notes'] ?? '');
-    $report = !empty($data['report']);
-
-    if ($target_id && $target_id !== $uid) {
-        try {
-            $stmt = $pdo->prepare("INSERT INTO user_blocks (user_id, blocked_user_id, reason, created_at) VALUES (?, ?, ?, NOW())");
-            $stmt->execute([$uid, $target_id, $reason]);
-        } catch (Exception $e) {}
-
-        if ($report) {
-            try {
-                $r_stmt = $pdo->prepare("INSERT INTO issues (user_id, title, category, description, status, created_at) VALUES (?, ?, 'User Moderation Report', ?, 'Open', NOW())");
-                $r_stmt->execute([$uid, "User Report against Target #$target_id", "Reason: $reason. Notes: $notes", 'Open']);
-            } catch (Exception $e) {}
-        }
-    }
-    echo json_encode(['success' => true, 'message' => 'User blocked successfully.']);
-    break;
-
-case 'unblock_user':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in.']); exit; }
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-    $target_id = intval($data['target_id'] ?? $data['vendor_id'] ?? 0);
-
-    if ($target_id) {
-        try {
-            $stmt = $pdo->prepare("DELETE FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?");
-            $stmt->execute([$uid, $target_id]);
-        } catch (Exception $e) {}
-    }
-    echo json_encode(['success' => true, 'message' => 'User unblocked successfully.']);
-    break;
-
-case 'get_blocked_users':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if (!$uid) { echo json_encode(['blocked' => []]); exit; }
-    try {
-        $stmt = $pdo->prepare("SELECT blocked_user_id FROM user_blocks WHERE user_id = ?");
-        $stmt->execute([$uid]);
-        $list = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        echo json_encode(['blocked' => array_map('intval', $list)]);
-    } catch (Exception $e) {
-        echo json_encode(['blocked' => []]);
-    }
-    break;
-
-case 'update_profile':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in to update profile.']); exit; }
-
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-
-    // Decode and save base64 image files if provided
-    if (!empty($data['kyc_id_front']) && strpos($data['kyc_id_front'], 'data:image/') === 0) {
-        $data['kyc_id_front'] = save_base64_image($data['kyc_id_front'], 'kyc_id_front_' . $uid);
-    }
-    if (!empty($data['kyc_id_back']) && strpos($data['kyc_id_back'], 'data:image/') === 0) {
-        $data['kyc_id_back'] = save_base64_image($data['kyc_id_back'], 'kyc_id_back_' . $uid);
-    }
-    if (!empty($data['kyc_selfie']) && strpos($data['kyc_selfie'], 'data:image/') === 0) {
-        $data['kyc_selfie'] = save_base64_image($data['kyc_selfie'], 'kyc_selfie_' . $uid);
-    }
-    if (!empty($data['avatar']) && strpos($data['avatar'], 'data:image/') === 0) {
-        $data['avatar'] = save_base64_image($data['avatar'], 'avatar_' . $uid);
-    }
-
-    $allowed_fields = [
-        'name', 'email', 'phone', 'username', 'avatar', 'gender', 'dob',
-        'country', 'state', 'city', 'language', 'currency',
-        'kyc_status', 'kyc_id_type', 'kyc_id_front', 'kyc_id_back',
-        'kyc_selfie', 'kyc_submitted_at', 'kyc_reviewed_at', 'kyc_notes'
-    ];
-
-    $updates = [];
-    $params = [];
-
-    foreach ($allowed_fields as $field) {
-        if (isset($data[$field])) {
-            $updates[] = "`$field` = ?";
-            $params[] = $data[$field];
-        }
-    }
-
-    if (!empty($updates)) {
-        $params[] = $uid;
-        $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
-        try {
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Database update error: ' . $e->getMessage()]);
-            exit;
-        }
-    }
-
-    // Fetch updated user
-    $u_stmt = $pdo->prepare("SELECT id, name, email, phone, username, role, active_role, avatar, gender, dob, country, state, city, language, currency, kyc_status, kyc_id_type, kyc_id_front, kyc_id_back, kyc_selfie, kyc_submitted_at FROM users WHERE id = ?");
-    $u_stmt->execute([$uid]);
-    $updated_user = $u_stmt->fetch();
-
-    if ($updated_user) {
-        $_SESSION['user'] = array_merge($_SESSION['user'] ?? [], $updated_user);
-    }
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Profile updated successfully.',
-        'user' => $updated_user ?: ($_SESSION['user'] ?? null)
-    ]);
-    break;
-
-case 'request_premium_upgrade':
-case 'submit_premium_request':
-case 'submit_payment_receipt':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if (!$uid) { http_response_code(401); echo json_encode(['error' => 'Please log in to submit payment receipt.']); exit; }
-
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-    $amount = floatval($data['amount'] ?? 250.0);
-    $notes = trim($data['payment_notes'] ?? $data['notes'] ?? '');
-    $receipt_data = trim($data['receipt_image'] ?? $data['receipt_data'] ?? '');
-
-    $receipt_url = '';
-    if (!empty($receipt_data) && strpos($receipt_data, 'data:') === 0) {
-        $receipt_url = save_base64_image($receipt_data, 'receipt_' . $uid);
-    } else {
-        $receipt_url = $receipt_data;
-    }
-
-    // Lookup vendor id
-    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-    $v_stmt->execute([$uid]);
-    $vid = intval($v_stmt->fetchColumn() ?: 0);
-
-    try {
-        $stmt = $pdo->prepare("INSERT INTO premium_requests (user_id, vendor_id, amount, receipt_url, payment_notes, status, created_at) VALUES (?, ?, ?, ?, ?, 'Pending Review', NOW())");
-        $stmt->execute([$uid, $vid, $amount, $receipt_url, $notes]);
-
-        // Also record issue log for admin review
-        $r_stmt = $pdo->prepare("INSERT INTO issues (user_id, title, category, description, status, created_at) VALUES (?, ?, 'Premium Upgrade Receipt', ?, 'Open', NOW())");
-        $r_stmt->execute([$uid, "Payment Receipt Submitted ($amount GHS)", "Vendor #$vid submitted payment receipt ($receipt_url). Notes: $notes", 'Open']);
-    } catch (Exception $e) {}
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Your payment receipt was uploaded successfully. Admin will review and activate your Gold Badge.',
-        'receipt_url' => $receipt_url
-    ]);
-    break;
-
-// ── EVENT JOBS API ENDPOINTS ──────────────────────────────────────────────
-case 'job_post_create':
-    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
-    if (!$uid) {
-        $first_u = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
-        $uid = intval($first_u ?: 1);
-    }
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-    $title = clean($data['title'] ?? '');
-    $cat = clean($data['category'] ?? '');
-    $subcat = clean($data['subcategory'] ?? '');
-    $desc = clean($data['description'] ?? '');
-    $skills = clean($data['required_skills'] ?? '');
-    $budget = floatval($data['budget'] ?? 0);
-    $negotiable = intval($data['negotiable'] ?? 1);
-    $event_type = clean($data['event_type'] ?? 'physical');
-    $location = clean($data['location'] ?? '');
-    $event_date = clean($data['event_date'] ?? '');
-    $deadline = clean($data['deadline'] ?? '');
-    $num_vendors = intval($data['num_vendors'] ?? 1);
-    $visibility = clean($data['visibility'] ?? 'public');
-    $is_urgent = intval($data['is_urgent'] ?? 0);
-    $status = clean($data['status'] ?? 'open');
-    $attachments = json_encode($data['attachments'] ?? []);
-
-    if (empty($title) || empty($desc)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Title and Description are required.']);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("INSERT INTO jobs (user_id, title, category, subcategory, description, required_skills, budget, negotiable, event_type, location, event_date, deadline, num_vendors, visibility, is_urgent, status, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-        $stmt->execute([$uid, $title, $cat, $subcat, $desc, $skills, $budget, $negotiable, $event_type, $location, $event_date, $deadline, $num_vendors, $visibility, $is_urgent, $status, $attachments]);
-        $job_id = $pdo->lastInsertId();
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Event job posted successfully!',
-            'job_id' => $job_id
-        ]);
-    } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-    break;
-
-case 'get_jobs':
-    $stmt = $pdo->query("SELECT j.*, u.name as user_name, u.avatar as user_avatar FROM jobs j LEFT JOIN users u ON j.user_id = u.id ORDER BY j.id DESC");
-    $jobs = $stmt->fetchAll();
-    echo json_encode(['success' => true, 'jobs' => $jobs ?: []]);
-    break;
-
-case 'get_my_posted_jobs':
-    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
-    $stmt = $pdo->prepare("SELECT * FROM jobs WHERE user_id = ? ORDER BY id DESC");
-    $stmt->execute([$uid]);
-    $jobs = $stmt->fetchAll();
-    echo json_encode(['success' => true, 'jobs' => $jobs ?: []]);
-    break;
-
-case 'submit_job_proposal':
-case 'submit_proposal':
-    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $token_uid ?? 0);
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-    $job_id = intval($data['job_id'] ?? 0);
-    $bid_amount = floatval($data['bid_amount'] ?? 0);
-    $cover_letter = clean($data['cover_letter'] ?? '');
-
-    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-    $v_stmt->execute([$uid]);
-    $vid = intval($v_stmt->fetchColumn() ?: 0);
-
-    try {
-        $stmt = $pdo->prepare("INSERT INTO job_proposals (job_id, vendor_id, user_id, bid_amount, cover_letter, status, created_at) VALUES (?, ?, ?, ?, ?, 'pending', NOW())");
-        $stmt->execute([$job_id, $vid, $uid, $bid_amount, $cover_letter]);
-        echo json_encode(['success' => true, 'message' => 'Proposal submitted successfully!']);
-    } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['error' => $e->getMessage()]);
     }
     break;
 
@@ -3437,9 +3158,6 @@ case 'get_vendor_analytics':
     } elseif ($period === 'this_month') {
         $start_dt = date('Y-m-01 00:00:00');
         $end_dt = date('Y-m-t 23:59:59');
-    } elseif ($period === 'all_time' || $period === 'alltime') {
-        $start_dt = '2020-01-01 00:00:00';
-        $end_dt = date('Y-m-d 23:59:59');
     } elseif ($period === 'custom' && !empty($start_param) && !empty($end_param)) {
         $start_dt = date('Y-m-d 00:00:00', strtotime($start_param));
         $end_dt = date('Y-m-d 23:59:59', strtotime($end_param));

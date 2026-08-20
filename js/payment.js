@@ -66,11 +66,15 @@ function renderManualPaymentModal(bookingId, reference, amount, details) {
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 6px;">
-                        Transaction ID (TxID) / MoMo Reference <span style="color: #EF4444;">*</span>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 8px;">
+                        Upload Payment Receipt Screenshot or PDF <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="text" id="manualTxIdInput" class="form-control" placeholder="e.g. 24819038210 or MoMo Ref" style="width: 100%; padding: 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 0.9rem;">
-                    <div style="font-size: 0.72rem; color: #64748B; margin-top: 4px;">Enter the transaction reference received from your bank or Mobile Money provider.</div>
+                    <div id="manualReceiptDropzone" onclick="document.getElementById('manualReceiptFileInput').click()" style="cursor: pointer; padding: 22px; text-align: center; border: 2px dashed #F2A735; border-radius: 14px; background: rgba(242, 167, 53, 0.08); transition: all 0.2s ease;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color: #F2A735; margin-bottom: 8px; display: block;"></i>
+                        <strong style="font-size: 0.9rem; color: #081729; display: block;">Tap Here to Upload Payment Receipt</strong>
+                        <p id="manualReceiptStatusText" style="margin: 4px 0 0 0; font-size: 0.78rem; color: #64748B;">Supports JPG, PNG, WEBP, or PDF (Max 20MB)</p>
+                        <input type="file" id="manualReceiptFileInput" accept="image/*,application/pdf" style="display: none;" onchange="handleManualReceiptFileSelect(event)">
+                    </div>
                 </div>
 
                 <button onclick="submitManualPaymentProof('${escapeHtml(reference)}')" style="width: 100%; padding: 14px; background: #081729; color: #FFF; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -83,6 +87,21 @@ function renderManualPaymentModal(bookingId, reference, amount, details) {
     modal.style.display = 'flex';
 }
 
+window._manualPaymentReceiptData = '';
+
+window.handleManualReceiptFileSelect = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const statusText = document.getElementById('manualReceiptStatusText');
+    if (statusText) statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Reading receipt file...`;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        window._manualPaymentReceiptData = e.target.result;
+        if (statusText) statusText.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> <strong>${file.name.substring(0, 30)}</strong> loaded successfully!`;
+    };
+    reader.readAsDataURL(file);
+};
+
 window.closeManualPaymentModal = function() {
     const modal = document.getElementById('manualPaymentModal');
     if (modal) {
@@ -91,14 +110,13 @@ window.closeManualPaymentModal = function() {
 };
 
 window.submitManualPaymentProof = function(reference) {
-    const txIdInput = document.getElementById('manualTxIdInput');
-    const txId = txIdInput ? txIdInput.value.trim() : '';
+    const receiptData = window._manualPaymentReceiptData;
 
-    if (!txId) {
+    if (!receiptData) {
         if (typeof showPushNotification === 'function') {
-            showPushNotification('Input Required', 'Please enter your payment Transaction ID (TxID).');
+            showPushNotification('Receipt Required', 'Please tap the upload box to attach your Payment Receipt screenshot or PDF.');
         } else {
-            alert('Please enter your payment Transaction ID (TxID).');
+            alert('Please attach your Payment Receipt screenshot or PDF.');
         }
         return;
     }
@@ -109,7 +127,8 @@ window.submitManualPaymentProof = function(reference) {
 
     API.post('submit_manual_payment', {
         reference: reference,
-        tx_id: txId
+        tx_id: 'RECEIPT_UPLOADED',
+        receipt_data: receiptData
     })
     .then(res => {
         closeManualPaymentModal();

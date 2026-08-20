@@ -154,9 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (path === 'compare.php') startScreen = 'compare';
             else if (path === 'notifications.php') startScreen = 'notifications';
             else if (path === 'profile.php') startScreen = 'profile';
+            else if (path === 'profile-edit.php') startScreen = 'profile-edit';
             else if (path === 'vendor-dash.php') startScreen = 'vendor-dash';
             else if (path === 'promotions.php') startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home';
             else if (path === 'report-issue.php') startScreen = 'report-issue';
+            else if (path === 'help.php') startScreen = 'help';
+            else if (path === 'about.php') startScreen = 'about';
+            else if (path === 'vendor-auto-response.php') startScreen = 'vendor-auto-response';
             else if (path === 'jobs.php') {
                 startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-jobs' : 'user-jobs';
                 const jId = parseInt(urlParams.get('id'));
@@ -402,6 +406,9 @@ function updateAppHeader() {
             avatar.src = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
         }
     }
+    if (typeof window.updateHeaderNavRoleVisibility === 'function') {
+        window.updateHeaderNavRoleVisibility();
+    }
 }
 
 // Update notification count badge globally
@@ -537,32 +544,9 @@ window.checkReferralWebLanding = function() {
                         </div>
                     `;
                     openModal(html);
+                }
+            }, 800);
+        }
     }
 };
-
-// Capacitor Native Hardware Back Button Handler
-if (typeof window !== 'undefined') {
-    document.addEventListener('deviceready', () => {
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-            window.Capacitor.Plugins.App.addListener('backButton', () => {
-                const activeModal = document.querySelector('#modal-overlay.open, .modal-overlay.open');
-                if (activeModal) {
-                    if (typeof closeModal === 'function') closeModal();
-                    return;
-                }
-                const activeSidebar = document.querySelector('#sidebar.open, .sidebar.open');
-                if (activeSidebar) {
-                    if (typeof toggleSidebar === 'function') toggleSidebar(false);
-                    return;
-                }
-                if (typeof state !== 'undefined' && state.currentScreen && state.currentScreen !== 'home' && state.currentScreen !== 'vendor-dash') {
-                    if (typeof navigateBack === 'function') navigateBack();
-                    return;
-                }
-                window.Capacitor.Plugins.App.exitApp();
-            });
-        }
-    }, false);
-}
-
 

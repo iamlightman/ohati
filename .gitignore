@@ -13,3 +13,4 @@ uploads/*
 *.certSigningRequest
 *.mobileprovision
 node_modules/
+scratch/

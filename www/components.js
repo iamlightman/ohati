@@ -2146,7 +2146,12 @@ function renderNegotiationSection(b, negHistory) {
 
 window.startVendorChat = function(vid) {
     console.log("Opening chat with vendor/user ID:", vid);
-    if (vid) state.activeChatVendorId = vid;
+    if (!state.user) {
+        if (typeof showPushNotification === 'function') showPushNotification('Login Required', 'Please log in to chat with vendors.');
+        if (typeof openAuthModal === 'function') openAuthModal('login');
+        return;
+    }
+    if (vid) state.activeChatVendorId = parseInt(vid);
     if (typeof navigateTo === 'function') {
         navigateTo('chat');
     }
@@ -2507,7 +2512,12 @@ async function toggleFavorite(vendorId, buttonEl) {
 
 window.startVendorChat = function(vid) {
     console.log("Opening chat with vendor/user ID:", vid);
-    if (vid) state.activeChatVendorId = vid;
+    if (!state.user) {
+        if (typeof showPushNotification === 'function') showPushNotification('Login Required', 'Please log in to chat with vendors.');
+        if (typeof openAuthModal === 'function') openAuthModal('login');
+        return;
+    }
+    if (vid) state.activeChatVendorId = parseInt(vid);
     if (typeof navigateTo === 'function') {
         navigateTo('chat');
     }

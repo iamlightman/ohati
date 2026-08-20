@@ -6,7 +6,7 @@ window.submitVendorReview = function(vendorId, rating, comment) {
         return Promise.reject(new Error('Review comment too short'));
     }
 
-    const userName = state.user ? state.user.name : 'Verified Customer';
+    const userName = state.user ? state.user.name : 'Verified Client';
 
     return API.post('review', {
         vendor_id: vendorId,

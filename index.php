@@ -1,5 +1,5 @@
-﻿<?php
-// index.php â€” Ohati Event Marketplace Web App
+<?php
+// index.php — Ohati Event Marketplace Web App
 session_start();
 if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -10,7 +10,7 @@ if (empty($_SESSION['csrf'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ohati â€” Find. Compare. Book. Celebrate.</title>
+    <title>Ohati — Find. Compare. Book. Celebrate.</title>
     <meta name="csrf-token" content="">
     <meta name="description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta name="theme-color" content="#1B2B4B">
@@ -34,13 +34,13 @@ if (empty($_SESSION['csrf'])) {
     <meta name="twitter:app:url:googleplay" content="https://play.google.com/store/apps/details?id=com.ohati.app">
 
     <!-- SEO & Link Preview Meta Tags (Open Graph / Twitter) -->
-    <meta property="og:title" content="Ohati â€” Find. Compare. Book. Celebrate.">
+    <meta property="og:title" content="Ohati — Find. Compare. Book. Celebrate.">
     <meta property="og:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta property="og:image" content="https://ohati.com/img/app_icon.png">
     <meta property="og:url" content="https://ohati.com">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Ohati â€” Find. Compare. Book. Celebrate.">
+    <meta name="twitter:title" content="Ohati — Find. Compare. Book. Celebrate.">
     <meta name="twitter:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
     <meta name="twitter:image" content="https://ohati.com/img/app_icon.png">
 
@@ -60,7 +60,7 @@ if (empty($_SESSION['csrf'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=3.5.0">
+    <link rel="stylesheet" href="style.css?v=1.1.9">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -156,26 +156,26 @@ if (empty($_SESSION['csrf'])) {
             </button>
             <!-- Desktop Navigation Menu -->
             <div class="desktop-nav" id="desktop-nav">
-                <a href="#" class="desktop-nav-item active" data-screen="home" onclick="navigateTo('home'); event.preventDefault();">
+                <a href="index.php" class="desktop-nav-item active" data-screen="home" onclick="navigateTo('home', {}, { force: true }); event.preventDefault();">
                     <i class="fa-solid fa-house"></i> Home
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="search" onclick="navigateTo('search'); event.preventDefault();">
+                <a href="search.php" class="desktop-nav-item" data-screen="search" onclick="navigateTo('search', {}, { force: true }); event.preventDefault();">
                     <i class="fa-solid fa-compass"></i> Vendors
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="event" onclick="navigateTo('event'); event.preventDefault();">
+                <a href="planner.php" class="desktop-nav-item" data-screen="event" onclick="navigateTo('event', {}, { force: true }); event.preventDefault();">
                     <i class="fa-solid fa-calendar-check"></i> Planner
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="chat" onclick="navigateTo('chat'); event.preventDefault();" style="position:relative;">
+                <a href="chat.php" class="desktop-nav-item" data-screen="chat" onclick="state.activeChatVendorId = null; navigateTo('chat', {}, { force: true }); event.preventDefault();" style="position:relative;">
                     <i class="fa-solid fa-comment-dots"></i> Messages
                     <span class="nav-badge" id="chat-nav-badge-desktop" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--danger); color:#fff; border-radius:50%; font-size:0.6rem; min-width:14px; height:14px; align-items:center; justify-content:center; font-weight:700;"></span>
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="user-jobs" onclick="navigateTo('user-jobs'); event.preventDefault();">
+                <a href="jobs.php" class="desktop-nav-item" data-screen="user-jobs" id="desktop-nav-post-job" onclick="navigateTo('user-jobs', {}, { force: true }); event.preventDefault();">
                     <i class="fa-solid fa-briefcase"></i> Post Job
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="vendor-jobs" onclick="navigateTo('vendor-jobs'); event.preventDefault();">
+                <a href="jobs.php" class="desktop-nav-item" data-screen="vendor-jobs" id="desktop-nav-find-jobs" onclick="navigateTo('vendor-jobs', {}, { force: true }); event.preventDefault();">
                     <i class="fa-solid fa-list-check"></i> Find Jobs
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="bookings" onclick="navigateTo('bookings'); event.preventDefault();">
+                <a href="bookings.php" class="desktop-nav-item" data-screen="bookings" onclick="navigateTo('bookings', {}, { force: true }); event.preventDefault();">
                     <i class="fa-solid fa-layer-group"></i> Bookings
                 </a>
             </div>
@@ -240,6 +240,8 @@ if (empty($_SESSION['csrf'])) {
             <section id="screen-about" class="screen" style="display:none;"></section>
             <section id="screen-user-jobs" class="screen" style="display:none;"></section>
             <section id="screen-vendor-jobs" class="screen" style="display:none;"></section>
+            <section id="screen-blog" class="screen" style="display:none;"></section>
+            <section id="screen-blog-detail" class="screen" style="display:none;"></section>
         </main>
 
         <!-- ===== BOTTOM NAVIGATION ===== -->
@@ -290,6 +292,9 @@ if (empty($_SESSION['csrf'])) {
                     </a>
                     <a class="sidebar-link" onclick="navigateTo('favorites'); toggleSidebar(false)">
                         <i class="fa-solid fa-heart"></i><span>Saved Vendors</span>
+                    </a>
+                    <a class="sidebar-link" onclick="navigateTo('blog'); toggleSidebar(false)">
+                        <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
                     </a>
                     <a class="sidebar-link" onclick="navigateTo('bookings'); toggleSidebar(false)">
                         <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
@@ -374,10 +379,10 @@ if (empty($_SESSION['csrf'])) {
                     <div class="welcome-popup-logo">
                         <img src="img/logo black transparent small.png" alt="Ohati Logo" class="welcome-logo-img">
                     </div>
-                    <h2 class="welcome-popup-title">Welcome to Ohati ðŸŽ‰</h2>
+                    <h2 class="welcome-popup-title">Welcome to Ohati 🎉</h2>
                     <p class="welcome-popup-tagline">Finding trusted event vendors has never been easier.</p>
                     <p class="welcome-popup-desc">
-                        Whether you're planning a wedding, birthday, engagement, corporate event, or any special occasion, Ohati helps you discover, compare, chat with, negotiate, and book verified event professionalsâ€”all in one place.
+                        Whether you're planning a wedding, birthday, engagement, corporate event, or any special occasion, Ohati helps you discover, compare, chat with, negotiate, and book verified event professionals—all in one place.
                     </p>
                     <div class="welcome-popup-motto">Find. Compare. Book. Celebrate.</div>
                     
@@ -415,26 +420,29 @@ if (empty($_SESSION['csrf'])) {
 
     </div><!-- /app-container -->
 
+    <!-- Global Modal Root Container (Unified Modal Overlays) -->
+    <div id="ohati-global-modal-root"></div>
+
     
-    <script src="js/utils.js?v=2.0.0"></script>
-    <script src="js/helpers.js?v=2.0.0"></script>
-    <script src="js/api.js?v=2.0.0"></script>
-    <script src="js/action_lock.js?v=2.0.0"></script>
-    <script src="js/state.js?v=2.0.0"></script>
-    <script src="js/modals.js?v=2.0.0"></script>
-    <script src="js/auth.js?v=2.0.0"></script>
-    <script src="js/booking.js?v=2.0.0"></script>
-    <script src="js/vendor.js?v=2.0.0"></script>
-    <script src="js/chat.js?v=2.0.0"></script>
-    <script src="js/search.js?v=2.0.0"></script>
-    <script src="js/review.js?v=2.0.0"></script>
-    <script src="js/notification.js?v=2.0.0"></script>
-    <script src="js/payment.js?v=2.0.0"></script>
-    <script src="js/screens.js?v=2.0.0"></script>
-    <script src="js/calling.js?v=2.0.0"></script>
-    <script src="js/jobs.js?v=2.0.0"></script>
-    <script src="js/app.js?v=2.0.0"></script>
+    <script src="js/utils.js?v=3.5.0"></script>
+    <script src="js/helpers.js?v=3.5.0"></script>
+    <script src="js/api.js?v=3.5.0"></script>
+    <script src="js/action_lock.js?v=3.5.0"></script>
+    <script src="js/state.js?v=3.5.0"></script>
+    <script src="js/modals.js?v=3.5.0"></script>
+    <script src="js/auth.js?v=3.5.0"></script>
+    <script src="js/booking.js?v=3.5.0"></script>
+    <script src="js/vendor.js?v=3.5.0"></script>
+    <script src="js/chat.js?v=3.5.0"></script>
+    <script src="js/search.js?v=3.5.0"></script>
+    <script src="js/review.js?v=3.5.0"></script>
+    <script src="js/notification.js?v=3.5.0"></script>
+    <script src="js/payment.js?v=3.5.0"></script>
+    <script src="js/screens.js?v=3.5.0"></script>
+    <script src="js/calling.js?v=3.5.0"></script>
+    <script src="js/jobs.js?v=3.5.0"></script>
+    <script src="js/blog.js?v=3.5.0"></script>
+    <script src="js/app.js?v=3.5.0"></script>
 
 </body>
 </html>
-

@@ -369,7 +369,7 @@ const JobsModule = {
 
                 <div style="background:var(--gray-100); padding:12px; border-radius:8px; margin-bottom:16px; font-size:0.85rem;">
                     <strong style="display:block; color:var(--primary);">${escapeHtml(jobTitle)}</strong>
-                    <span style="color:var(--gray-600);">Customer Budget: GHS ${number_format(budget, 2)}</span>
+                    <span style="color:var(--gray-600);">Client Budget: GHS ${number_format(budget, 2)}</span>
                 </div>
 
                 <form onsubmit="event.preventDefault(); JobsModule.submitProposal(${jobId});">
@@ -547,16 +547,24 @@ const JobsModule = {
     },
 
     async hireVendor(appId, jobId, vendorName) {
-        if (!confirm(`Are you sure you want to hire ${vendorName} for this job?`)) return;
-
-        try {
-            const res = await API.post('job_hire_vendor', { application_id: appId });
-            if (res && res.success) {
-                showToast(`🎉 Congratulations! You have hired ${vendorName}.`, 'success');
-                closeModal();
-                if (typeof navigateTo === 'function') navigateTo('user-jobs');
-            } else showToast(res.error || 'Failed to hire vendor.', 'error');
-        } catch (e) { showToast('Network error while hiring vendor.', 'error'); }
+        showConfirmModal({
+            title: 'Hire Vendor?',
+            message: `Are you sure you want to hire <strong>${escapeHtml(vendorName)}</strong> for this job?`,
+            icon: 'fa-handshake',
+            confirmText: 'Hire Vendor',
+            cancelText: 'Cancel',
+            type: 'primary',
+            onConfirm: async () => {
+                try {
+                    const res = await API.post('job_hire_vendor', { application_id: appId });
+                    if (res && res.success) {
+                        showToast(`🎉 Congratulations! You have hired ${vendorName}.`, 'success');
+                        closeModal();
+                        if (typeof navigateTo === 'function') navigateTo('user-jobs');
+                    } else showToast(res.error || 'Failed to hire vendor.', 'error');
+                } catch (e) { showToast('Network error while hiring vendor.', 'error'); }
+            }
+        });
     },
 
     async toggleSaveJob(jobId, btnElem) {

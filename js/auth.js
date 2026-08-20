@@ -466,15 +466,11 @@ function submitOTPVerify(event) {
         showPushNotification('Verified', 'Verification successful!');
         closeModal();
         updateAppHeader();
-        if (state.user && (state.user.active_role || state.user.role) === 'vendor') {
-            if (state.user.vendor_onboarding_completed) {
-                navigateTo('home');
-            } else {
-                showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
-                state.authMode = 'vendor-register';
-                state.authStep = 1;
-                renderAuthModal();
-            }
+        if (state.user && (state.user.active_role || state.user.role) === 'vendor' && !state.user.vendor_onboarding_completed) {
+            showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
+            state.authMode = 'vendor-register';
+            state.authStep = 1;
+            renderAuthModal();
         } else {
             navigateTo('home');
         }
@@ -509,15 +505,11 @@ function submitLogin(event) {
             showPushNotification('Welcome', 'Logged in successfully!');
             closeModal();
             updateAppHeader();
-            if ((state.user.active_role || state.user.role) === 'vendor') {
-                if (state.user && (state.user.active_role || state.user.role) === 'vendor') {
-                    navigateTo('home');
-                } else {
-                    showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
-                    state.authMode = 'vendor-register';
-                    state.authStep = 1;
-                    renderAuthModal();
-                }
+            if ((state.user.active_role || state.user.role) === 'vendor' && !state.user.vendor_onboarding_completed) {
+                showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
+                state.authMode = 'vendor-register';
+                state.authStep = 1;
+                renderAuthModal();
             } else {
                 navigateTo('home');
             }
@@ -1076,7 +1068,7 @@ function saveVendorStep5() {
             showPushNotification('Application Submitted', 'Our moderation team will review your application.');
             closeModal();
             if (typeof updateSidebarUI === 'function') updateSidebarUI();
-            if (typeof navigateTo === 'function') navigateTo('home');
+            if (typeof navigateTo === 'function') navigateTo('vendor-dash');
         } catch (e) {
             showPushNotification('Submission Error', e.message || 'Error completing application');
         }
@@ -1255,17 +1247,25 @@ window.closeAccountDeletedProModal = function() {
 };
 
 window.triggerAccountDeletionFlow = function() {
-    if (confirm("Are you sure you want to delete your account? This will deactivate your profile and log you out.")) {
-        if (window.API && typeof API.deleteAccount === 'function') {
-            API.deleteAccount().then(res => {
+    showConfirmModal({
+        title: 'Delete Account?',
+        message: 'Are you sure you want to delete your account? This will deactivate your profile and log you out immediately.',
+        icon: 'fa-trash-can',
+        confirmText: 'Yes, Delete Account',
+        cancelText: 'Cancel',
+        type: 'danger',
+        onConfirm: () => {
+            if (window.API && typeof API.deleteAccount === 'function') {
+                API.deleteAccount().then(res => {
+                    showAccountDeletedSuccessModal();
+                }).catch(err => {
+                    showAccountDeletedSuccessModal();
+                });
+            } else {
                 showAccountDeletedSuccessModal();
-            }).catch(err => {
-                showAccountDeletedSuccessModal();
-            });
-        } else {
-            showAccountDeletedSuccessModal();
+            }
         }
-    }
+    });
 };
 
 window.showMandatoryAuthLockScreen = function(initialMode) {
@@ -1512,7 +1512,7 @@ window.handleMandatoryLoginSubmit = function(e) {
                 state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
                 
                 if (typeof navigateTo === 'function') {
-                    navigateTo('home');
+                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
                 }
             });
         } else {

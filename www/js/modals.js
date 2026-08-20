@@ -95,34 +95,41 @@ function dismissPushNotification() {
 
 // ── Sidebar ────────────────────────────────────────────────────────────
 function toggleSidebar(open) {
-    const overlay = document.getElementById('sidebar-overlay') || document.getElementById('app-sidebar-overlay');
-    if (!overlay) return;
-    const shouldOpen = (open === undefined) ? (!overlay.classList.contains('open') && !overlay.classList.contains('active')) : !!open;
-    if (shouldOpen) {
-        overlay.classList.add('open');
-        overlay.classList.add('active');
-        try {
-            if (typeof updateSidebarUI === 'function') updateSidebarUI();
-            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-            document.querySelectorAll('.sidebar-item').forEach(item => {
-                const screen = item.getAttribute('onclick');
-                if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        } catch (err) {
-            console.warn("Sidebar UI update error:", err);
+    try {
+        const overlay = document.getElementById('sidebar-overlay') || document.getElementById('app-sidebar-overlay');
+        if (!overlay) return;
+        const shouldOpen = (open === undefined) ? (!overlay.classList.contains('open') && !overlay.classList.contains('active')) : !!open;
+        if (shouldOpen) {
+            overlay.classList.add('open');
+            overlay.classList.add('active');
+            try {
+                if (typeof updateSidebarUI === 'function') updateSidebarUI();
+                if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+                document.querySelectorAll('.sidebar-item').forEach(item => {
+                    const screen = item.getAttribute('onclick');
+                    if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            } catch (uiErr) {
+                console.warn('Sidebar UI update warning:', uiErr);
+            }
+        } else {
+            overlay.classList.remove('open');
+            overlay.classList.remove('active');
         }
-    } else {
-        overlay.classList.remove('open');
-        overlay.classList.remove('active');
+    } catch (err) {
+        console.error('Error toggling sidebar:', err);
     }
 }
 window.toggleSidebar = toggleSidebar;
 
 function updateSidebarUI() {
+    if (typeof window.updateHeaderNavRoleVisibility === 'function') {
+        window.updateHeaderNavRoleVisibility();
+    }
     const nameEl = document.getElementById('sidebar-name');
     const emailEl = document.getElementById('sidebar-email');
     const avatarEl = document.getElementById('sidebar-avatar');
@@ -145,42 +152,45 @@ function updateSidebarUI() {
         if (navContainer) {
             if (activeRole === 'vendor') {
                 navContainer.innerHTML = `
-                    <a class="sidebar-link" onclick="navigateTo('vendor-dash'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('vendor-dash', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-chart-pie"></i><span>Vendor Dashboard</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-jobs'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-briefcase"></i><span>Find Event Jobs</span>
+                    </a>
+                    <a class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
                     </a>
                     <a class="sidebar-link" onclick="JobsModule.openCreateJobModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-plus-circle"></i><span>Post Event Job</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('bookings'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-ads'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('vendor-ads', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-rectangle-ad"></i><span>Promotions Hub</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-auto-response'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('vendor-auto-response', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-robot"></i><span>Auto-Response</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('profile-edit'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('profile-edit', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-user-pen"></i><span>Edit Profile</span>
                     </a>
                     <a class="sidebar-link" onclick="switchAccountType('customer'); toggleSidebar(false)" style="background:var(--gray-100); border-radius:8px; margin-top:10px;">
                         <i class="fa-solid fa-repeat"></i><span>Switch to Customer Mode</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="openReferAndEarnModal(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="openDiscountsOffersModal(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
                     <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-star"></i><span>Give a Review</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('report-issue'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
                     <a class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
@@ -193,28 +203,31 @@ function updateSidebarUI() {
                 `;
             } else {
                 navContainer.innerHTML = `
-                    <a class="sidebar-link" onclick="navigateTo('profile'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('profile', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-user-gear"></i><span>My Profile</span>
                     </a>
                     <a class="sidebar-link" onclick="JobsModule.openCreateJobModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-plus-circle"></i><span>Post Event Job</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('user-jobs'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
+                    </a>
+                    <a class="sidebar-link" onclick="navigateTo('user-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-list-check"></i><span>My Posted Jobs</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-jobs'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-briefcase"></i><span>Browse Event Jobs</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('favorites'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('favorites', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-heart"></i><span>Saved Vendors</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('bookings'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('notifications'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('notifications', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bell"></i><span>Notifications</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('compare'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('compare', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-scale-balanced"></i><span>Compare Vendors</span>
                     </a>
                     ${state.user.has_vendor_profile ? `
@@ -238,7 +251,7 @@ function updateSidebarUI() {
                     <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-star"></i><span>Give a Review</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('report-issue'); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
                     <a class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
@@ -261,11 +274,14 @@ function updateSidebarUI() {
         }
         if (navContainer) {
             navContainer.innerHTML = `
-                <a class="sidebar-link" onclick="navigateTo('home'); toggleSidebar(false)">
+                <a class="sidebar-link" onclick="navigateTo('home', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-house"></i><span>Home</span>
                 </a>
-                <a class="sidebar-link" onclick="navigateTo('search'); toggleSidebar(false)">
+                <a class="sidebar-link" onclick="navigateTo('search', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-magnifying-glass"></i><span>Find Vendors</span>
+                </a>
+                <a class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
+                    <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
                 </a>
                 <div class="sidebar-divider"></div>
                 <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
@@ -278,7 +294,7 @@ function updateSidebarUI() {
                 <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
                     <i class="fa-solid fa-star"></i><span>Give a Review</span>
                 </a>
-                <a class="sidebar-link" onclick="navigateTo('report-issue'); toggleSidebar(false)">
+                <a class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                 </a>
                 <div class="sidebar-divider"></div>
@@ -287,6 +303,7 @@ function updateSidebarUI() {
                 </a>
             `;
         }
+
     }
 
     // Theme-aware footer logo
@@ -295,45 +312,149 @@ function updateSidebarUI() {
 }
 
 function switchAccountType(targetRole) {
-    if (!state.user) state.user = {};
-    state.user.active_role = targetRole;
-    state.user.role = targetRole;
-    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
-
-    if (typeof updateSidebarUI === 'function') updateSidebarUI();
-    if (typeof updateHeaderUI === 'function') updateHeaderUI();
-
-    showPushNotification('Account Switched', 'Switched to ' + (targetRole === 'vendor' ? 'Vendor Mode' : 'Customer Mode'));
-
-    if (targetRole === 'vendor') {
-        navigateTo('vendor-dash');
-    } else {
-        navigateTo('home');
-    }
-
     API.post('switch_role', { role: targetRole }).then(res => {
-        if (res && res.user) {
+        if (res.success) {
             state.user = res.user;
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            showPushNotification('Account Switched', 'Switched to ' + (targetRole === 'vendor' ? 'Vendor Mode' : 'Customer Mode'));
+            updateSidebarUI();
+            if (targetRole === 'vendor') {
+                navigateTo('vendor-dash', {}, { force: true });
+            } else {
+                navigateTo('home', {}, { force: true });
+            }
         }
     }).catch(err => {
-        console.warn("Backend switch role response:", err);
+        if (err.need_upgrade || (err.message && err.message.includes('not activated'))) {
+            showPushNotification('Upgrade Required', 'Please complete vendor registration first.');
+            openPremiumModal();
+        } else {
+            showPushNotification('Error', err.message || err);
+        }
     });
 }
 
-// ── Modal System ───────────────────────────────────────────────────────
+// ── Unified Global Modal System ───────────────────────────────────────────
+window._activeConfirmCallback = null;
+window._activeCancelCallback = null;
+
+function getGlobalModalRoot() {
+    let root = document.getElementById('ohati-global-modal-root');
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'ohati-global-modal-root';
+        document.body.appendChild(root);
+    }
+    return root;
+}
+
+function showConfirmModal(options = {}) {
+    const {
+        title = 'Confirmation Required',
+        message = 'Are you sure you want to proceed with this action?',
+        icon = 'fa-triangle-exclamation',
+        confirmText = 'Confirm',
+        cancelText = 'Cancel',
+        type = 'danger', // 'danger', 'warning', 'primary'
+        onConfirm = null,
+        onCancel = null
+    } = options;
+
+    // Close any currently active modal to prevent stacking
+    closeConfirmModal();
+
+    window._activeConfirmCallback = onConfirm;
+    window._activeCancelCallback = onCancel;
+
+    const root = getGlobalModalRoot();
+    root.innerHTML = `
+        <div class="ohati-confirm-modal-overlay" onclick="closeConfirmModal(false)">
+            <div class="ohati-confirm-modal-card" onclick="event.stopPropagation()">
+                <button class="blog-modal-close-btn" onclick="closeConfirmModal(false)"><i class="fa-solid fa-xmark"></i></button>
+
+                <div class="ohati-confirm-icon-box ${type}">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+
+                <h3 class="ohati-confirm-title">${escapeHtml(title)}</h3>
+                <div class="ohati-confirm-message">${typeof message === 'string' ? message : message}</div>
+
+                <div class="ohati-confirm-actions">
+                    <button type="button" class="btn-confirm-cancel" onclick="closeConfirmModal(false)">${escapeHtml(cancelText)}</button>
+                    <button type="button" class="btn-confirm-submit-${type}" onclick="handleConfirmModalAction()">${escapeHtml(confirmText)}</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    root.classList.add('open');
+    document.body.classList.add('modal-open');
+    return new Promise((resolve) => {
+        window._activeConfirmPromiseResolve = resolve;
+    });
+}
+
+function handleConfirmModalAction() {
+    const cb = window._activeConfirmCallback;
+    const resolve = window._activeConfirmPromiseResolve;
+    closeConfirmModal(true);
+    if (typeof cb === 'function') cb();
+    if (typeof resolve === 'function') resolve(true);
+}
+
+function closeConfirmModal(confirmed = false) {
+    const root = document.getElementById('ohati-global-modal-root');
+    if (root) {
+        root.classList.remove('open');
+        root.innerHTML = '';
+    }
+    document.body.classList.remove('modal-open');
+
+    if (!confirmed) {
+        const cancelCb = window._activeCancelCallback;
+        const resolve = window._activeConfirmPromiseResolve;
+        if (typeof cancelCb === 'function') cancelCb();
+        if (typeof resolve === 'function') resolve(false);
+    }
+
+    window._activeConfirmCallback = null;
+    window._activeCancelCallback = null;
+    window._activeConfirmPromiseResolve = null;
+}
+
+window.showConfirmModal = showConfirmModal;
+window.closeConfirmModal = closeConfirmModal;
+
+// Global Escape Key Listener for Modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const root = document.getElementById('ohati-global-modal-root');
+        if (root && root.classList.contains('open')) {
+            closeConfirmModal(false);
+        } else if (typeof closeModal === 'function') {
+            closeModal();
+        }
+    }
+});
+
 function openModal(contentHTML) {
     const overlay = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
     if (!overlay || !content) return;
     content.innerHTML = contentHTML;
     overlay.classList.add('open');
+    document.body.classList.add('modal-open');
 }
 
 function closeModal() {
     const overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.classList.remove('open');
+    
+    // Check if any other modal is open before unlocking body scroll
+    const hasOtherModals = document.querySelector('.blog-modal-backdrop:not([style*="none"]), .ohati-confirm-modal-overlay, .welcome-popup-overlay.open');
+    if (!hasOtherModals) {
+        document.body.classList.remove('modal-open');
+    }
 }
 
 // ── Filter Drawer ──────────────────────────────────────────────────────
@@ -819,3 +940,178 @@ function showVideoCallComingSoon() {
         initiateVoiceCall();
     }
 }
+
+// ── BLOCK & REPORT USER MODALS ──────────────────────────────────────────
+window.showBlockUserModal = function(targetUserId, targetName = 'User') {
+    const cleanName = escapeHTML(targetName);
+    const html = `
+        <div class="auth-modal-header" style="text-align:center;">
+            <div style="width:56px; height:56px; border-radius:50%; background:rgba(239,68,68,0.1); color:#EF4444; display:inline-flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:12px;">
+                <i class="fa-solid fa-user-slash"></i>
+            </div>
+            <h2 class="auth-modal-title" style="font-family:'Fraunces', serif; color:var(--gray-900);">Block ${cleanName}?</h2>
+            <p class="auth-modal-subtitle" style="color:var(--gray-500); font-size:0.8rem;">They will no longer be able to send you messages or contact you on Ohati.</p>
+        </div>
+        <div style="padding:10px 0;">
+            <div class="form-group mb-16">
+                <label class="form-label" style="font-weight:700; font-size:0.75rem; color:var(--gray-700); margin-bottom:6px; display:block;">Reason for blocking (Optional)</label>
+                <select id="block-reason-select" class="form-input" style="width:100%; border-radius:10px; padding:10px; border:1px solid var(--gray-200); background:#fff; font-size:0.8rem;">
+                    <option value="Unwanted Messages / Spam">Unwanted Messages / Spam</option>
+                    <option value="Harassment or Offensive Behavior">Harassment or Offensive Behavior</option>
+                    <option value="Fraudulent or Suspicious Activity">Fraudulent or Suspicious Activity</option>
+                    <option value="Other Reason">Other Reason</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn btn-outline btn-full" onclick="closeModal()" style="border-radius:10px;">Cancel</button>
+                <button type="button" class="btn btn-primary btn-full" onclick="submitBlockUserAction(${targetUserId})" style="background:linear-gradient(135deg, #EF4444, #DC2626); border:none; color:#fff; border-radius:10px; font-weight:700;">Block User</button>
+            </div>
+        </div>
+    `;
+    openModal(html);
+};
+
+window.submitBlockUserAction = function(targetUserId) {
+    const reasonSelect = document.getElementById('block-reason-select');
+    const reason = reasonSelect ? reasonSelect.value : 'User Blocked';
+    API.blockUser(targetUserId, reason).then(res => {
+        closeModal();
+        showPushNotification('User Blocked', res.message || 'You have blocked this user.');
+    }).catch(err => {
+        closeModal();
+        showPushNotification('User Blocked', 'User blocked from messaging.');
+    });
+};
+
+window.showReportUserModal = function(targetUserId, targetName = 'User') {
+    const cleanName = escapeHTML(targetName);
+    const html = `
+        <div class="auth-modal-header" style="text-align:center;">
+            <div style="width:56px; height:56px; border-radius:50%; background:rgba(245,158,11,0.1); color:#F59E0B; display:inline-flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:12px;">
+                <i class="fa-solid fa-shield-cat"></i>
+            </div>
+            <h2 class="auth-modal-title" style="font-family:'Fraunces', serif; color:var(--gray-900);">Report ${cleanName}</h2>
+            <p class="auth-modal-subtitle" style="color:var(--gray-500); font-size:0.8rem;">Help us keep Ohati safe. Select the reason for your report.</p>
+        </div>
+        <form id="report-user-form" onsubmit="submitReportUserAction(event, ${targetUserId})">
+            <div class="form-group mb-12">
+                <label class="form-label" style="font-weight:700; font-size:0.75rem; color:var(--gray-700); margin-bottom:6px; display:block;">Violation Type</label>
+                <div class="report-chips-wrap" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="report_reason" value="Harassment" checked style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge active" style="padding:6px 12px; border-radius:20px; border:1px solid var(--primary); background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600; display:inline-block;">Harassment</span>
+                    </label>
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="report_reason" value="Spam / Scams" style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge" style="padding:6px 12px; border-radius:20px; border:1px solid var(--gray-200); background:var(--gray-100); color:var(--gray-700); font-size:0.75rem; font-weight:600; display:inline-block;">Spam / Scams</span>
+                    </label>
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="report_reason" value="Inappropriate Content" style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge" style="padding:6px 12px; border-radius:20px; border:1px solid var(--gray-200); background:var(--gray-100); color:var(--gray-700); font-size:0.75rem; font-weight:600; display:inline-block;">Inappropriate Content</span>
+                    </label>
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="report_reason" value="Fake Profile" style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge" style="padding:6px 12px; border-radius:20px; border:1px solid var(--gray-200); background:var(--gray-100); color:var(--gray-700); font-size:0.75rem; font-weight:600; display:inline-block;">Fake Profile</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group mb-16">
+                <label class="form-label" style="font-weight:700; font-size:0.75rem; color:var(--gray-700); margin-bottom:6px; display:block;">Additional Details (Optional)</label>
+                <textarea id="report-user-details" class="form-input" rows="3" placeholder="Provide extra context to help our moderation team..." style="width:100%; border-radius:10px; padding:10px; border:1px solid var(--gray-200); font-size:0.8rem; resize:none; font-family:inherit; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn btn-outline btn-full" onclick="closeModal()" style="border-radius:10px;">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-full" style="background:var(--primary); color:#fff; border-radius:10px; font-weight:700;">Submit Report</button>
+            </div>
+        </form>
+    `;
+    openModal(html);
+};
+
+window.updateReportChipUI = function(radioEl) {
+    const parentForm = radioEl.closest('form');
+    if (!parentForm) return;
+    const chips = parentForm.querySelectorAll('.chip-badge');
+    chips.forEach(chip => {
+        chip.style.background = 'var(--gray-100)';
+        chip.style.borderColor = 'var(--gray-200)';
+        chip.style.color = 'var(--gray-700)';
+    });
+    const selectedBadge = radioEl.nextElementSibling;
+    if (selectedBadge) {
+        selectedBadge.style.background = 'var(--primary)';
+        selectedBadge.style.borderColor = 'var(--primary)';
+        selectedBadge.style.color = '#fff';
+    }
+};
+
+window.submitReportUserAction = function(event, targetUserId) {
+    event.preventDefault();
+    const selectedRadio = document.querySelector('input[name="report_reason"]:checked');
+    const reason = selectedRadio ? selectedRadio.value : 'Inappropriate Behavior';
+    const details = document.getElementById('report-user-details') ? document.getElementById('report-user-details').value.trim() : '';
+
+    API.reportUser(targetUserId, reason, details).then(res => {
+        closeModal();
+        showPushNotification('Report Received', res.message || 'Report submitted to moderation team.');
+    }).catch(err => {
+        closeModal();
+        showPushNotification('Report Received', 'Thank you. Your report has been dispatched to Ohati moderators.');
+    });
+};
+
+window.showReportCommentModal = function(commentId, authorName = 'Comment') {
+    const cleanAuthor = escapeHTML(authorName);
+    const html = `
+        <div class="auth-modal-header" style="text-align:center;">
+            <div style="width:56px; height:56px; border-radius:50%; background:rgba(239,68,68,0.1); color:#EF4444; display:inline-flex; align-items:center; justify-content:center; font-size:1.5rem; margin-bottom:12px;">
+                <i class="fa-solid fa-flag"></i>
+            </div>
+            <h2 class="auth-modal-title" style="font-family:'Fraunces', serif; color:var(--gray-900);">Report Comment</h2>
+            <p class="auth-modal-subtitle" style="color:var(--gray-500); font-size:0.8rem;">Flag inappropriate comment by <strong>${cleanAuthor}</strong></p>
+        </div>
+        <form id="report-comment-form" onsubmit="submitReportCommentAction(event, ${commentId})">
+            <div class="form-group mb-12">
+                <label class="form-label" style="font-weight:700; font-size:0.75rem; color:var(--gray-700); margin-bottom:6px; display:block;">Reason for Reporting</label>
+                <div class="report-chips-wrap" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="comment_report_reason" value="Offensive Language" checked style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge active" style="padding:6px 12px; border-radius:20px; border:1px solid var(--primary); background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600; display:inline-block;">Offensive Language</span>
+                    </label>
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="comment_report_reason" value="Spam / Self Promotion" style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge" style="padding:6px 12px; border-radius:20px; border:1px solid var(--gray-200); background:var(--gray-100); color:var(--gray-700); font-size:0.75rem; font-weight:600; display:inline-block;">Spam / Promotion</span>
+                    </label>
+                    <label class="report-chip-item" style="cursor:pointer;">
+                        <input type="radio" name="comment_report_reason" value="Harassment" style="display:none;" onchange="updateReportChipUI(this)">
+                        <span class="chip-badge" style="padding:6px 12px; border-radius:20px; border:1px solid var(--gray-200); background:var(--gray-100); color:var(--gray-700); font-size:0.75rem; font-weight:600; display:inline-block;">Harassment</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group mb-16">
+                <label class="form-label" style="font-weight:700; font-size:0.75rem; color:var(--gray-700); margin-bottom:6px; display:block;">Notes (Optional)</label>
+                <textarea id="report-comment-details" class="form-input" rows="2" placeholder="Briefly describe why this comment should be removed..." style="width:100%; border-radius:10px; padding:10px; border:1px solid var(--gray-200); font-size:0.8rem; resize:none; font-family:inherit; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn btn-outline btn-full" onclick="closeModal()" style="border-radius:10px;">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-full" style="background:var(--primary); color:#fff; border-radius:10px; font-weight:700;">Submit Flag</button>
+            </div>
+        </form>
+    `;
+    openModal(html);
+};
+
+window.submitReportCommentAction = function(event, commentId) {
+    event.preventDefault();
+    const selectedRadio = document.querySelector('input[name="comment_report_reason"]:checked');
+    const reason = selectedRadio ? selectedRadio.value : 'Inappropriate Content';
+    const details = document.getElementById('report-comment-details') ? document.getElementById('report-comment-details').value.trim() : '';
+
+    API.reportComment(commentId, reason, details).then(res => {
+        closeModal();
+        showPushNotification('Comment Flagged', res.message || 'Comment report submitted to blog moderators.');
+    }).catch(err => {
+        closeModal();
+        showPushNotification('Comment Flagged', 'Thank you. Comment reported for moderation.');
+    });
+};

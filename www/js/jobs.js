@@ -103,87 +103,84 @@ const JobsModule = {
                 <div class="wizard-step" id="job-step-indicator-3" style="font-weight:600; color:var(--gray-500); font-size:0.85rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:2px 8px; border-radius:50%; margin-right:6px;">3</span> Media & Settings</div>
             </div>
 
-            <form id="post-job-form" onsubmit="event.preventDefault();" style="padding:20px; max-height:75vh; overflow-y:auto; background:#F8FAFC;">
+            <form id="post-job-form" onsubmit="event.preventDefault();" style="padding:20px; max-height:75vh; overflow-y:auto;">
                 <!-- STEP 1 -->
                 <div class="job-step-pane" id="job-step-pane-1">
-                    <div class="form-group" style="margin-bottom:16px;">
-                        <label class="form-label"><i class="fa-solid fa-heading" style="color:var(--accent,#F2A735);"></i> Event Job Title *</label>
-                        <input type="text" id="job-input-title" class="form-control" placeholder="e.g. Wedding MC needed for Accra ceremony" value="${jobToEdit ? escapeHtml(jobToEdit.title) : ''}" required>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Event Job Title *</label>
+                        <input type="text" id="job-input-title" class="form-control" placeholder="e.g. Wedding MC needed for Accra ceremony" value="${jobToEdit ? escapeHtml(jobToEdit.title) : ''}" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                     </div>
 
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-list" style="color:var(--accent,#F2A735);"></i> Category *</label>
-                            <select id="job-input-category" class="form-select">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Category *</label>
+                            <select id="job-input-category" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                                 ${this.currentCategories.map(c => `<option value="${escapeHtml(c.name)}" ${jobToEdit && jobToEdit.category === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-tag" style="color:var(--gray-500);"></i> Subcategory (Optional)</label>
-                            <input type="text" id="job-input-subcategory" class="form-input" placeholder="e.g. Traditional Wedding" value="${jobToEdit ? escapeHtml(jobToEdit.subcategory || '') : ''}">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Subcategory (Optional)</label>
+                            <input type="text" id="job-input-subcategory" class="form-control" placeholder="e.g. Traditional Wedding" value="${jobToEdit ? escapeHtml(jobToEdit.subcategory || '') : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:16px;">
-                        <label class="form-label"><i class="fa-solid fa-align-left" style="color:var(--accent,#F2A735);"></i> Job Description *</label>
-                        <textarea id="job-input-description" class="form-textarea" rows="4" placeholder="Describe the job duties, event theme, guest count, and expectations in detail..." required>${jobToEdit ? escapeHtml(jobToEdit.description) : ''}</textarea>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Job Description *</label>
+                        <textarea id="job-input-description" class="form-control" rows="4" placeholder="Describe the job duties, event theme, guest count, and expectations in detail..." required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">${jobToEdit ? escapeHtml(jobToEdit.description) : ''}</textarea>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:16px;">
-                        <label class="form-label"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--gray-500);"></i> Required Skills / Equipment</label>
-                        <input type="text" id="job-input-skills" class="form-input" placeholder="e.g. Drone Camera, English & Twi fluency, Wireless Mics" value="${jobToEdit ? escapeHtml(jobToEdit.required_skills || '') : ''}">
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Required Skills / Equipment</label>
+                        <input type="text" id="job-input-skills" class="form-control" placeholder="e.g. Drone Camera, English & Twi fluency, Wireless Mics" value="${jobToEdit ? escapeHtml(jobToEdit.required_skills || '') : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                     </div>
 
-                    <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                    <div style="display:flex; justify-content:flex-end; margin-top:16px;">
                         <button type="button" class="btn btn-primary" onclick="JobsModule.goToStep(2)">Next: Budget & Location <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i></button>
                     </div>
                 </div>
 
                 <!-- STEP 2 -->
                 <div class="job-step-pane" id="job-step-pane-2" style="display:none;">
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-money-bill-wave" style="color:#10B981;"></i> Budget (GHS) *</label>
-                            <div style="position:relative;">
-                                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--gray-500); font-size:0.85rem;">GH₵</span>
-                                <input type="number" id="job-input-budget" class="form-input" placeholder="e.g. 5000" min="0" value="${jobToEdit ? jobToEdit.budget : ''}" required style="padding-left:46px !important;">
-                            </div>
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Budget (GHS) *</label>
+                            <input type="number" id="job-input-budget" class="form-control" placeholder="e.g. 5000" min="0" value="${jobToEdit ? jobToEdit.budget : ''}" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                         </div>
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-scale-balanced" style="color:var(--gray-500);"></i> Negotiable?</label>
-                            <select id="job-input-negotiable" class="form-select">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Negotiable?</label>
+                            <select id="job-input-negotiable" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                                 <option value="1" ${!jobToEdit || jobToEdit.negotiable == 1 ? 'selected' : ''}>Yes, open to quotes</option>
                                 <option value="0" ${jobToEdit && jobToEdit.negotiable == 0 ? 'selected' : ''}>No, fixed budget</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-building" style="color:var(--gray-500);"></i> Event Type</label>
-                            <select id="job-input-event-type" class="form-select">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Event Type</label>
+                            <select id="job-input-event-type" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                                 <option value="physical" ${!jobToEdit || jobToEdit.event_type === 'physical' ? 'selected' : ''}>Physical Event Location</option>
                                 <option value="online" ${jobToEdit && jobToEdit.event_type === 'online' ? 'selected' : ''}>Online / Virtual</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-location-dot" style="color:#EF4444;"></i> Location / Region</label>
-                            <input type="text" id="job-input-location" class="form-input" placeholder="e.g. East Legon, Accra" value="${jobToEdit ? escapeHtml(jobToEdit.location || '') : ''}">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Location / Region</label>
+                            <input type="text" id="job-input-location" class="form-control" placeholder="e.g. East Legon, Accra" value="${jobToEdit ? escapeHtml(jobToEdit.location || '') : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                         </div>
                     </div>
 
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-calendar-day" style="color:#3B82F6;"></i> Event Date</label>
-                            <input type="date" id="job-input-event-date" class="form-input" value="${jobToEdit ? jobToEdit.event_date : ''}">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Event Date</label>
+                            <input type="date" id="job-input-event-date" class="form-control" value="${jobToEdit ? jobToEdit.event_date : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                         </div>
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-hourglass-half" style="color:#F59E0B;"></i> Proposal Deadline</label>
-                            <input type="date" id="job-input-deadline" class="form-input" value="${jobToEdit ? jobToEdit.deadline : ''}">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Proposal Deadline</label>
+                            <input type="date" id="job-input-deadline" class="form-control" value="${jobToEdit ? jobToEdit.deadline : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                         </div>
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-top:16px;">
                         <button type="button" class="btn btn-secondary" onclick="JobsModule.goToStep(1)"><i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i> Back</button>
                         <button type="button" class="btn btn-primary" onclick="JobsModule.goToStep(3)">Next: Media & Options <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i></button>
                     </div>
@@ -191,14 +188,14 @@ const JobsModule = {
 
                 <!-- STEP 3 -->
                 <div class="job-step-pane" id="job-step-pane-3" style="display:none;">
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-users" style="color:var(--gray-500);"></i> Vendors Needed</label>
-                            <input type="number" id="job-input-num-vendors" class="form-input" min="1" value="${jobToEdit ? jobToEdit.num_vendors : '1'}">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Vendors Needed</label>
+                            <input type="number" id="job-input-num-vendors" class="form-control" min="1" value="${jobToEdit ? jobToEdit.num_vendors : '1'}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                         </div>
                         <div class="form-group">
-                            <label class="form-label"><i class="fa-solid fa-eye" style="color:var(--gray-500);"></i> Visibility</label>
-                            <select id="job-input-visibility" class="form-select">
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Visibility</label>
+                            <select id="job-input-visibility" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
                                 <option value="public" ${!jobToEdit || jobToEdit.visibility === 'public' ? 'selected' : ''}>Public (All Vendors)</option>
                                 <option value="invite_only" ${jobToEdit && jobToEdit.visibility === 'invite_only' ? 'selected' : ''}>Invite Only</option>
                                 <option value="private" ${jobToEdit && jobToEdit.visibility === 'private' ? 'selected' : ''}>Private Draft</option>
@@ -206,20 +203,16 @@ const JobsModule = {
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:16px; background:#fff; padding:12px 14px; border-radius:10px; border:1px solid #CBD5E1;">
-                        <label style="font-weight:700; font-size:0.85rem; margin:0; display:flex; align-items:center; cursor:pointer;">
-                            <input type="checkbox" id="job-input-urgent" ${jobToEdit && jobToEdit.is_urgent == 1 ? 'checked' : ''} style="margin-right:8px; width:18px; height:18px; accent-color:#DC2626;">
-                            <span style="color:#DC2626; font-weight:800;"><i class="fa-solid fa-bolt"></i> Mark as Urgent Job</span> <span style="font-size:0.75rem; color:#64748B; font-weight:400; margin-left:6px;">(Highlights your job card)</span>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block; cursor:pointer;">
+                            <input type="checkbox" id="job-input-urgent" ${jobToEdit && jobToEdit.is_urgent == 1 ? 'checked' : ''} style="margin-right:6px;">
+                            <span style="color:#DC2626; font-weight:700;"><i class="fa-solid fa-bolt"></i> Mark as Urgent Job</span> (Highlights your job card)
                         </label>
                     </div>
 
-                    <div class="form-group mb-16">
-                        <label class="form-label"><i class="fa-solid fa-paperclip" style="color:var(--accent);"></i> Attachments (Images, PDF, Floor Plans)</label>
-                        <div class="job-file-upload-zone" onclick="document.getElementById('job-input-files').click()" style="cursor:pointer; padding:16px; text-align:center; border:2px dashed #CBD5E1; border-radius:10px; background:#fff;">
-                            <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.8rem; color:var(--accent); margin-bottom:6px;"></i>
-                            <p id="job-file-status-text" style="margin:0; font-size:0.8rem; color:#64748B; font-weight:600;">Click to Attach Reference Photos or PDF Briefs</p>
-                            <input type="file" id="job-input-files" multiple accept="image/*,.pdf,video/*" style="display:none;" onchange="JobsModule.handleJobFilesSelected(this)">
-                        </div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Attachments (Images, PDF, Floor Plans)</label>
+                        <input type="file" id="job-input-files" multiple accept="image/*,.pdf,video/*" class="form-control" style="width:100%; padding:8px; border:1px dashed var(--gray-400); border-radius:8px;">
                     </div>
 
                     <div style="display:flex; justify-content:space-between; margin-top:20px;">
@@ -358,19 +351,6 @@ const JobsModule = {
         });
     },
 
-    handleJobFilesSelected(input) {
-        const statusText = document.getElementById('job-file-status-text');
-        if (!input || !input.files || input.files.length === 0) {
-            if (statusText) statusText.textContent = "Click to Attach Reference Photos or PDF Briefs";
-            return;
-        }
-        const count = input.files.length;
-        if (statusText) {
-            statusText.style.color = '#047857';
-            statusText.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> ${count} attachment file${count > 1 ? 's' : ''} selected`;
-        }
-    },
-
     // ── PROPOSAL SUBMISSION MODAL ─────────────────────────────────────────
     openApplyModal(jobId, jobTitle, budget) {
         const user = this.getUser();
@@ -389,7 +369,7 @@ const JobsModule = {
 
                 <div style="background:var(--gray-100); padding:12px; border-radius:8px; margin-bottom:16px; font-size:0.85rem;">
                     <strong style="display:block; color:var(--primary);">${escapeHtml(jobTitle)}</strong>
-                    <span style="color:var(--gray-600);">Customer Budget: GHS ${number_format(budget, 2)}</span>
+                    <span style="color:var(--gray-600);">Client Budget: GHS ${number_format(budget, 2)}</span>
                 </div>
 
                 <form onsubmit="event.preventDefault(); JobsModule.submitProposal(${jobId});">
@@ -567,16 +547,24 @@ const JobsModule = {
     },
 
     async hireVendor(appId, jobId, vendorName) {
-        if (!confirm(`Are you sure you want to hire ${vendorName} for this job?`)) return;
-
-        try {
-            const res = await API.post('job_hire_vendor', { application_id: appId });
-            if (res && res.success) {
-                showToast(`🎉 Congratulations! You have hired ${vendorName}.`, 'success');
-                closeModal();
-                if (typeof navigateTo === 'function') navigateTo('user-jobs');
-            } else showToast(res.error || 'Failed to hire vendor.', 'error');
-        } catch (e) { showToast('Network error while hiring vendor.', 'error'); }
+        showConfirmModal({
+            title: 'Hire Vendor?',
+            message: `Are you sure you want to hire <strong>${escapeHtml(vendorName)}</strong> for this job?`,
+            icon: 'fa-handshake',
+            confirmText: 'Hire Vendor',
+            cancelText: 'Cancel',
+            type: 'primary',
+            onConfirm: async () => {
+                try {
+                    const res = await API.post('job_hire_vendor', { application_id: appId });
+                    if (res && res.success) {
+                        showToast(`🎉 Congratulations! You have hired ${vendorName}.`, 'success');
+                        closeModal();
+                        if (typeof navigateTo === 'function') navigateTo('user-jobs');
+                    } else showToast(res.error || 'Failed to hire vendor.', 'error');
+                } catch (e) { showToast('Network error while hiring vendor.', 'error'); }
+            }
+        });
     },
 
     async toggleSaveJob(jobId, btnElem) {

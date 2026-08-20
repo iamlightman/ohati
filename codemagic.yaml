@@ -28,6 +28,10 @@ workflows:
             echo "Applying App Store Privacy Permissions to Info.plist..."
             cp ios_templates/Info.plist ios/App/App/Info.plist
           fi
+          if [ -f "ios_templates/PrivacyInfo.xcprivacy" ]; then
+            echo "Applying Apple Privacy Manifest PrivacyInfo.xcprivacy..."
+            cp ios_templates/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
+          fi
           if [ -d "ios_templates/Assets.xcassets/AppIcon.appiconset" ]; then
             echo "Applying official Ohati App Icon to Xcode Assets..."
             mkdir -p ios/App/App/Assets.xcassets/AppIcon.appiconset

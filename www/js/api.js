@@ -11,9 +11,6 @@ window.getOhatiApiBaseUrl = function() {
     if (isNativeApp) {
         return 'https://ohati.com/api.php';
     }
-    if (window.location.pathname && window.location.pathname.includes('/www/')) {
-        return '../api.php';
-    }
     return 'api.php';
 };
 
@@ -164,6 +161,10 @@ const API = {
     getUnreadChats() { return this.get('get_unread_chats'); },
     getChatHistory(vendorId) { return this.get('chat_history', { vendor_id: vendorId }); },
     sendMessage(vendorId, message, type = 'text') { return this.post('chat', { vendor_id: vendorId, message, type }); },
+    blockUser(targetUserId, reason = '') { return this.post('block_user', { target_user_id: targetUserId, reason }); },
+    unblockUser(targetUserId) { return this.post('unblock_user', { target_user_id: targetUserId }); },
+    reportUser(targetUserId, reason, details = '') { return this.post('report_user', { target_user_id: targetUserId, reason, details }); },
+    reportComment(commentId, reason, details = '') { return this.post('report_comment', { comment_id: commentId, reason, details }); },
 
     // ── Events ──
     saveEvent(data) { return this.post('save_event', data); },
@@ -211,4 +212,17 @@ const API = {
     // ── Followers ──
     followVendor(vendorId) { return this.post('follow_vendor', { vendor_id: vendorId }); },
     getFollowingVendors() { return this.get('get_following_vendors'); },
+
+    // ── Blog API ──
+    getBlogPosts(params = {}) { return this.get('get_blog_posts', params); },
+    getBlogPost(idOrSlug) {
+        const params = typeof idOrSlug === 'number' || !isNaN(parseInt(idOrSlug)) && isFinite(idOrSlug) ? { id: parseInt(idOrSlug) } : { slug: idOrSlug };
+        return this.get('get_blog_post', params);
+    },
+    likeBlogPost(postId) { return this.post('like_blog_post', { post_id: postId }); },
+    likeBlogComment(commentId) { return this.post('like_blog_comment', { comment_id: commentId }); },
+    addBlogComment(postId, commentData) { return this.post('add_blog_comment', Object.assign({ post_id: postId }, commentData)); },
+    shareBlogPost(postId) { return this.post('share_blog_post', { post_id: postId }); },
+    reportBlogComment(commentId, reason = 'Inappropriate content') { return this.post('report_blog_comment', { comment_id: commentId, reason }); },
+    blockBlogUser(blockedAuthor, blockedUserId = 0) { return this.post('block_blog_user', { blocked_author: blockedAuthor, blocked_user_id: blockedUserId }); }
 };

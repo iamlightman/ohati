@@ -132,10 +132,10 @@ try {
 
 // Dynamic column updates for users & activity tracking
 try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+    $pdo->exec("ALTER TABLE users ADD COLUMN last_active VARCHAR(50) DEFAULT ''");
 } catch (Exception $e) {}
 try {
-    $pdo->exec("ALTER TABLE vendors ADD COLUMN last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+    $pdo->exec("ALTER TABLE vendors ADD COLUMN last_active VARCHAR(50) DEFAULT ''");
 } catch (Exception $e) {}
 try {
     $pdo->exec("ALTER TABLE users ADD COLUMN referral_code VARCHAR(50) DEFAULT NULL");
@@ -197,6 +197,220 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS discounts (
     is_active INT DEFAULT 1,
     created_at $NOW
 )");
+
+// ── BLOG TABLES ─────────────────────────────────────────────────────────────
+$pdo->exec("CREATE TABLE IF NOT EXISTS blog_posts (
+    id $AI,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    subheadline VARCHAR(500) DEFAULT '',
+    category VARCHAR(100) DEFAULT 'General',
+    tags VARCHAR(255) DEFAULT '',
+    cover_image VARCHAR(500) DEFAULT '',
+    content TEXT,
+    video_url VARCHAR(500) DEFAULT '',
+    author_name VARCHAR(100) DEFAULT 'Ohati Editorial',
+    author_avatar VARCHAR(500) DEFAULT '',
+    status VARCHAR(20) DEFAULT 'published',
+    scheduled_at VARCHAR(50) DEFAULT '',
+    published_at VARCHAR(50) DEFAULT '',
+    views_count INT DEFAULT 0,
+    likes_count INT DEFAULT 0,
+    comments_count INT DEFAULT 0,
+    shares_count INT DEFAULT 0,
+    reading_time INT DEFAULT 4,
+    featured INT DEFAULT 0,
+    created_at $NOW,
+    updated_at $NOW
+)");
+
+try {
+    $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug)");
+} catch (Exception $e) {}
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS blog_comments (
+    id $AI,
+    post_id INT NOT NULL,
+    parent_id INT DEFAULT 0,
+    user_id INT DEFAULT 0,
+    author_name VARCHAR(150) NOT NULL,
+    author_email VARCHAR(150) DEFAULT '',
+    author_avatar VARCHAR(500) DEFAULT '',
+    comment TEXT NOT NULL,
+    likes_count INT DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'approved',
+    created_at $NOW
+)");
+
+try {
+    $pdo->exec("ALTER TABLE blog_comments ADD COLUMN parent_id INT DEFAULT 0");
+} catch (Exception $e) {}
+try {
+    $pdo->exec("ALTER TABLE blog_comments ADD COLUMN likes_count INT DEFAULT 0");
+} catch (Exception $e) {}
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS blog_likes (
+    id $AI,
+    post_id INT NOT NULL,
+    user_id INT DEFAULT 0,
+    ip_address VARCHAR(100) DEFAULT '',
+    session_id VARCHAR(100) DEFAULT '',
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS blog_comment_likes (
+    id $AI,
+    comment_id INT NOT NULL,
+    user_id INT DEFAULT 0,
+    ip_address VARCHAR(100) DEFAULT '',
+    session_id VARCHAR(100) DEFAULT '',
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS blog_comment_reports (
+    id $AI,
+    comment_id INT NOT NULL,
+    reporter_user_id INT DEFAULT 0,
+    reporter_ip VARCHAR(100) DEFAULT '',
+    reason VARCHAR(255) DEFAULT 'Inappropriate content',
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS blog_user_blocks (
+    id $AI,
+    blocker_user_id INT DEFAULT 0,
+    blocker_ip VARCHAR(100) DEFAULT '',
+    blocked_author_name VARCHAR(150) NOT NULL,
+    blocked_user_id INT DEFAULT 0,
+    created_at $NOW
+)");
+
+// Seed initial 5 sample wedding blog posts if table is empty
+try {
+    $blog_cnt = $pdo->query("SELECT COUNT(*) FROM blog_posts")->fetchColumn();
+    if ($blog_cnt == 0) {
+        $now_str = date('Y-m-d H:i:s');
+        $seed_posts = [
+            [
+                'title' => 'The Ultimate Wedding Planning Timeline for Ghanaian Couples: From Engagement to "I Do"',
+                'slug' => 'wedding-planning-timeline-ghana',
+                'subheadline' => 'Avoid last-minute rush and keep your wedding stress-free with this month-by-month planning roadmap.',
+                'category' => 'Planning & Timeline',
+                'tags' => 'Wedding Planning, Timeline, Vendor Booking, Ghana Wedding',
+                'cover_image' => 'img/chill/event1.jpg',
+                'video_url' => 'img/chill/v1_opt.mp4',
+                'author_name' => 'Chill & Serve Editorial',
+                'author_avatar' => 'img/chill/logo.jpg',
+                'status' => 'published',
+                'published_at' => $now_str,
+                'views_count' => 23450,
+                'likes_count' => 3420,
+                'comments_count' => 128,
+                'shares_count' => 840,
+                'reading_time' => 5,
+                'featured' => 1,
+                'content' => '<p class="lead">Planning a wedding in Ghana is an exhilarating journey, but managing vendors, family expectations, traditional rites, and reception logistics can quickly become overwhelming without a structured roadmap.</p><h2>12 to 9 Months Before: Foundation & Rites</h2><p>Start by establishing your total budget and determining key priorities with your partner. In Ghana, early consultation with family elders regarding the traditional Knocking ceremony (Kokoako) is essential to lock in dates before booking reception venues.</p><blockquote>"Securing your core venue and high-demand vendors 9 to 12 months ahead guarantees peace of mind and prevents last-minute compromises."</blockquote><div class="article-image-box"><img src="img/chill/event2.jpg" alt="Wedding Event Setup"><p class="caption">Early venue selection sets the tone for your wedding theme and guest capacity.</p></div><h2>8 to 6 Months Before: Securing Key Professionals</h2><p>This is the critical window to book your photographer, decorator, caterer, and drinks dispatch team. Ensure vendors are verified and review their previous job portfolios on Ohati.</p><ul><li>Finalize bridal party attire and traditional Kente designs.</li><li>Book your wedding planner or day-of coordinator.</li><li>Confirm beverage logistics with professional chilling services to handle ice and cold storage.</li></ul><div class="article-image-box"><img src="img/chill/1.jpg" alt="Chill and Serve Beverage Logistics"><p class="caption">Professional beverage dispatchers ensuring ice-cold drinks for reception guests.</p></div><h2>3 Months to 1 Month Before: Final Details</h2><p>Send out formal invitations, conduct food and cake tastings, and schedule hair/makeup trials. Confirm sound system setups and timeline flow with your MC and DJ.</p>'
+            ],
+            [
+                'title' => 'How to Choose the Perfect Wedding Venue in Ghana: Indoor Halls vs Outdoor Gardens',
+                'slug' => 'choosing-perfect-wedding-venue-ghana',
+                'subheadline' => 'Key factors to consider including guest capacity, weather backups, vendor accessibility, and sound restrictions.',
+                'category' => 'Venues & Locations',
+                'tags' => 'Wedding Venues, Garden Wedding, Event Space, Accra Venues',
+                'cover_image' => 'img/chill/event3.jpg',
+                'video_url' => 'img/chill/v2_opt.mp4',
+                'author_name' => 'Kojo Mensah',
+                'author_avatar' => 'img/app_icon.png',
+                'status' => 'published',
+                'published_at' => $now_str,
+                'views_count' => 18920,
+                'likes_count' => 2150,
+                'comments_count' => 86,
+                'shares_count' => 530,
+                'reading_time' => 4,
+                'featured' => 0,
+                'content' => '<p class="lead">Your wedding venue sets the backdrop for your entire celebration. Choosing between an air-conditioned ballroom and a lush outdoor garden requires balancing aesthetics, guest comfort, and climate realities.</p><h2>Indoor Ballrooms: Elegance & Climate Control</h2><p>Indoor venues offer complete protection against Ghana\'s sudden tropical rains and intense afternoon heat. They provide controlled lighting for photographers and built-in sound isolation.</p><div class="article-image-box"><img src="img/chill/event4.jpg" alt="Indoor Wedding Hall Setup"><p class="caption">Indoor halls provide climate comfort and dramatic ceiling drape potential.</p></div><h2>Outdoor Gardens: Natural Splendor & Airiness</h2><p>Outdoor lawns in Airport City, Cantonments, or Aburi offer breathtaking botanical scenery and flexible space for large traditional gatherings. Always ensure your venue contract includes a marquee tent fallback option in case of rain.</p><blockquote>"Always inspect restroom facilities, backup power generator capacity, and parking space before signing your venue contract."</blockquote><div class="article-image-box"><img src="img/chill/3.jpg" alt="Outdoor Lawn Event Setup"><p class="caption">Lush outdoor lawns offer magnificent photo opportunities when paired with marquee tents.</p></div>'
+            ],
+            [
+                'title' => 'Modern Ghanaian Wedding Decor Trends: Blending Traditional Kente Aesthetics with Minimalist Elegance',
+                'slug' => 'modern-ghanaian-wedding-decor-trends',
+                'subheadline' => 'Transform your reception hall with fairy lighting, lush floral arches, velvet drape accents, and authentic heritage touches.',
+                'category' => 'Decoration & Styling',
+                'tags' => 'Wedding Decor, Kente Decor, Floral Styling, Reception Trends',
+                'cover_image' => 'img/chill/event6.jpg',
+                'video_url' => 'img/chill/v3_opt.mp4',
+                'author_name' => 'Ama Serwaa',
+                'author_avatar' => 'img/new_icon_ohati.png',
+                'status' => 'published',
+                'published_at' => $now_str,
+                'views_count' => 14830,
+                'likes_count' => 1840,
+                'comments_count' => 64,
+                'shares_count' => 410,
+                'reading_time' => 4,
+                'featured' => 0,
+                'content' => '<p class="lead">Today\'s couples are redefining wedding styling by pairing rich heritage textures with sleek contemporary minimalism. Here is how leading decorators are bringing high glamour to Ghanaian receptions.</p><h2>1. Heritage Fusion Color Palettes</h2><p>Combining traditional gold, royal blue, or burgundy Kente accents with neutral ivory drapes creates a sophisticated balance between cultural reverence and modern luxury.</p><div class="article-image-box"><img src="img/chill/event7.jpg" alt="Floral Stage Decor"><p class="caption">Lush floral stages combined with soft ambient lighting create an unforgettable entrance.</p></div><h2>2. Statement Head Tables & Fairy Light Canopy</h2><p>Mirrored bridal tables surrounded by cascading white roses and warm LED fairy light canopies draw immediate focus to the newlyweds, providing stunning background visuals for video highlights.</p><blockquote>"Strategic lighting transforms simple decor into an enchanting cinematic experience."</blockquote><div class="article-image-box"><img src="img/chill/4.jpg" alt="Table Styling and Lighting"><p class="caption">Ambient table centerpieces elevate guest dining experiences.</p></div>'
+            ],
+            [
+                'title' => 'Elevating the Guest Experience: Cold Drinks, Gourmet Catering & Flawless Bar Dispatch',
+                'slug' => 'elevating-guest-experience-food-drinks',
+                'subheadline' => 'Why pre-chilled beverages, prompt cocktail service, and diverse menu options are the secret to an unforgettable reception.',
+                'category' => 'Food & Drinks',
+                'tags' => 'Wedding Catering, Chill and Serve, Drinks Dispatch, Guest Comfort',
+                'cover_image' => 'img/chill/services.jpg',
+                'video_url' => 'img/chill/v4_opt.mp4',
+                'author_name' => 'Chill & Serve Hospitality Team',
+                'author_avatar' => 'img/chill/logo.jpg',
+                'status' => 'published',
+                'published_at' => $now_str,
+                'views_count' => 21670,
+                'likes_count' => 2980,
+                'comments_count' => 112,
+                'shares_count' => 790,
+                'reading_time' => 5,
+                'featured' => 1,
+                'content' => '<p class="lead">Long after the wedding ceremony concludes, guests remember two main aspects: the music energy and the food & drink service quality. Ensuring your drinks are ice-cold from the start is paramount.</p><h2>The Ice & Chilling Logistics Secret</h2><p>Ghana\'s warm weather demands proactive pre-cooling. Standard venue fridges cannot handle hundreds of beverages simultaneously. Partnering with professional chilling specialists who bring mobile refrigerated containers and block ice guarantees drinks remain sub-zero all night.</p><div class="article-image-box"><img src="img/chill/5.jpg" alt="Chill and Serve Ice Chests"><p class="caption">Refrigerated vans and dedicated ice chests keep soft drinks, wine, and beer thoroughly chilled.</p></div><h2>Buffet Flow & Drink Dispatching</h2><p>Prevent long queues by placing dual service stations and employing uniformed drinks waiters who circulate continuously between guest tables.</p><blockquote>"Guests shouldn\'t have to search for a cold beverage. Proactive table service keeps the celebratory atmosphere vibrant."</blockquote><div class="article-image-box"><img src="img/chill/6.jpg" alt="Professional Drink Servers"><p class="caption">Uniformed servers ensure prompt drink delivery throughout the reception.</p></div>'
+            ],
+            [
+                'title' => 'Capturing Timeless Memories: 7 Essential Moments Your Wedding Photographer Must Capture',
+                'slug' => 'capturing-timeless-wedding-memories',
+                'subheadline' => 'From the emotional first look to unscripted dance floor joy, ensure your photo album tells your true love story.',
+                'category' => 'Photography & Media',
+                'tags' => 'Wedding Photography, Photography Guide, Memories, Ghana Bride',
+                'cover_image' => 'img/chill/2.jpg',
+                'video_url' => 'img/chill/v5_opt.mp4',
+                'author_name' => 'Yaw Asante Studio',
+                'author_avatar' => 'img/app_icon.png',
+                'status' => 'published',
+                'published_at' => $now_str,
+                'views_count' => 16410,
+                'likes_count' => 2340,
+                'comments_count' => 78,
+                'shares_count' => 490,
+                'reading_time' => 4,
+                'featured' => 0,
+                'content' => '<p class="lead">Your wedding photos and video reels will outlast the flowers and cake. Communicating your key shot list with your photography team ensures no precious emotional moment is missed.</p><h2>1. The Emotional First Look & Preparation</h2><p>Candid images during bridal makeup and groom prep reveal genuine excitement and anticipation. Capture subtle detail shots of the rings, gown, shoes, and traditional accessories.</p><div class="article-image-box"><img src="img/chill/Before the rings… there is this moment ❤️#VEEVALACOLD⸻Bride- @Vtabi_officialGroom- @Kingcold__Ev.jpg" alt="Pre-wedding Moment"><p class="caption">Quiet moments before the ceremony preserve pure emotion.</p></div><h2>2. Family Blessing & Dance Floor High Energy</h2><p>Ghanaian weddings are famous for unscripted dance floor joy and heartfelt parental blessings. Ensure your photographer has clear line-of-sight during the entrance dance and bouquet toss.</p><blockquote>"The best wedding photos aren\'t posed—they are authentic reflections of love, family, and joy."</blockquote><div class="article-image-box"><img src="img/chill/event5.jpg" alt="Dance Floor Celebration"><p class="caption">High-energy celebration images bring your wedding album to life.</p></div>'
+            ]
+        ];
+
+        $ins_stmt = $pdo->prepare("INSERT INTO blog_posts (title, slug, subheadline, category, tags, cover_image, video_url, author_name, author_avatar, status, published_at, views_count, likes_count, comments_count, shares_count, reading_time, featured, content) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        foreach ($seed_posts as $sp) {
+            $ins_stmt->execute([
+                $sp['title'], $sp['slug'], $sp['subheadline'], $sp['category'], $sp['tags'],
+                $sp['cover_image'], $sp['video_url'], $sp['author_name'], $sp['author_avatar'],
+                $sp['status'], $sp['published_at'], $sp['views_count'], $sp['likes_count'],
+                $sp['comments_count'], $sp['shares_count'], $sp['reading_time'], $sp['featured'],
+                $sp['content']
+            ]);
+        }
+
+        // Seed sample comments for Post #1 and Post #4
+        $ins_com = $pdo->prepare("INSERT INTO blog_comments (post_id, author_name, author_avatar, comment, status, created_at) VALUES (?,?,?,?,?,?)");
+        $ins_com->execute([1, 'Efia Dufie', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150', 'This timeline guide saved our wedding planning! The recommendation to book chilling services 6 months ahead was spot on.', 'approved', $now_str]);
+        $ins_com->execute([1, 'Kwadwo Poku', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150', 'Great article! Highly recommend locking in venues early in Accra.', 'approved', $now_str]);
+        $ins_com->execute([4, 'Akosua Baako', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150', 'Chill & Serve Ghana handled our drinks at Airport City and everything stayed freezing cold all night!', 'approved', $now_str]);
+    }
+} catch (Exception $e) {}
 
 try {
     $c = $pdo->query("SELECT COUNT(*) FROM discounts")->fetchColumn();
@@ -262,7 +476,20 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS vendors (
     created_at $NOW
 )");
 
+try {
+    $pdo->exec("ALTER TABLE vendors ADD COLUMN views_count INT DEFAULT 0");
+} catch (Exception $e) {}
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS vendor_views_log (
+    id $AI,
+    vendor_id INT NOT NULL,
+    user_id INT DEFAULT 0,
+    ip_address VARCHAR(50) DEFAULT '',
+    created_at $NOW
+)");
+
 // Dynamic column updates
+
 try {
     $pdo->exec("ALTER TABLE vendors ADD COLUMN welcome_message TEXT DEFAULT NULL");
 } catch (Exception $e) {}
@@ -297,61 +524,6 @@ try {
         duration INT DEFAULT 0,
         created_at $NOW,
         updated_at $NOW
-    )");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS user_blocks (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        blocked_user_id INT NOT NULL,
-        reason VARCHAR(255) DEFAULT '',
-        created_at $NOW
-    )");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS premium_requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        vendor_id INT DEFAULT 0,
-        amount FLOAT DEFAULT 250.0,
-        receipt_url VARCHAR(500) DEFAULT '',
-        payment_notes TEXT,
-        status VARCHAR(30) DEFAULT 'Pending Review',
-        created_at $NOW
-    )");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS jobs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        subcategory VARCHAR(100) DEFAULT '',
-        description TEXT NOT NULL,
-        required_skills TEXT,
-        budget FLOAT DEFAULT 0.0,
-        negotiable TINYINT DEFAULT 1,
-        event_type VARCHAR(50) DEFAULT 'physical',
-        location VARCHAR(255) DEFAULT '',
-        event_date VARCHAR(50) DEFAULT '',
-        deadline VARCHAR(50) DEFAULT '',
-        num_vendors INT DEFAULT 1,
-        visibility VARCHAR(50) DEFAULT 'public',
-        is_urgent TINYINT DEFAULT 0,
-        status VARCHAR(50) DEFAULT 'open',
-        attachments TEXT,
-        created_at $NOW
-    )");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS job_proposals (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        job_id INT NOT NULL,
-        vendor_id INT NOT NULL,
-        user_id INT NOT NULL,
-        bid_amount FLOAT NOT NULL,
-        cover_letter TEXT NOT NULL,
-        delivery_days INT DEFAULT 1,
-        status VARCHAR(50) DEFAULT 'pending',
-        created_at $NOW
     )");
 } catch (Exception $e) {}
 try {
@@ -459,6 +631,34 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS messages (
     message TEXT NOT NULL,
     media_url VARCHAR(500) DEFAULT '',
     is_read INT DEFAULT 0,
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS user_blocks (
+    id $AI,
+    blocker_id INT NOT NULL,
+    blocked_id INT NOT NULL,
+    reason VARCHAR(255) DEFAULT '',
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS user_reports (
+    id $AI,
+    reporter_id INT NOT NULL,
+    reported_user_id INT NOT NULL,
+    reason VARCHAR(100) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS comment_reports (
+    id $AI,
+    reporter_id INT NOT NULL,
+    comment_id INT NOT NULL,
+    reason VARCHAR(100) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
     created_at $NOW
 )");
 
@@ -892,7 +1092,7 @@ try {
     $admin_count = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn();
     if ($admin_count == 0) {
         $admin_email = 'admin@ohati.com';
-        $admin_name = 'Ohati Administrator';
+        $admin_name = 'Chill & Serve Ghana';
         $admin_hash = password_hash('OhatiAdmin2026@Pass', PASSWORD_BCRYPT);
         $pdo->prepare("INSERT INTO users (name, email, password_hash, role, email_verified, is_active) VALUES (?, ?, ?, 'admin', 1, 1)")
             ->execute([$admin_name, $admin_email, $admin_hash]);
@@ -900,7 +1100,7 @@ try {
     $demo_cust_count = $pdo->query("SELECT COUNT(*) FROM users WHERE email = 'demo.customer@ohati.com'")->fetchColumn();
     if ($demo_cust_count == 0) {
         $cust_hash = password_hash('OhatiDemo2026@Customer', PASSWORD_BCRYPT);
-        $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active) VALUES ('App Review Customer', 'demo.customer@ohati.com', '+233240649883', ?, 'customer', 1, 1, 1)")
+        $pdo->prepare("INSERT INTO users (name, email, phone, password_hash, role, email_verified, phone_verified, is_active) VALUES ('App Review Customer', 'demo.customer@ohati.com', '+233200000001', ?, 'customer', 1, 1, 1)")
             ->execute([$cust_hash]);
     }
     $demo_vnd_count = $pdo->query("SELECT COUNT(*) FROM users WHERE email = 'demo.vendor@ohati.com'")->fetchColumn();
@@ -911,6 +1111,17 @@ try {
         $v_uid = $pdo->lastInsertId();
         $pdo->prepare("INSERT INTO vendors (user_id, name, category, location, rating, verified, verification_badge, is_active) VALUES (?, 'App Review Event Services', 'Photography', 'Accra, Ghana', 5.0, 1, 'gold', 1)")
             ->execute([$v_uid]);
+    }
+
+    $msg_count = $pdo->query("SELECT COUNT(*) FROM messages")->fetchColumn();
+    if ($msg_count < 2) {
+        $now_stamp = date('Y-m-d H:i:s');
+        $pdo->prepare("INSERT INTO messages (vendor_id, user_id, sender, message, type, created_at) VALUES (1, 3, 'user', 'Hello Chill & Serve, I would like to inquire about your event chilling packages.', 'text', ?)")
+            ->execute([$now_stamp]);
+        $pdo->prepare("INSERT INTO messages (vendor_id, user_id, sender, message, type, created_at) VALUES (1, 3, 'vendor', 'Hello! Thank you for reaching out. We offer premium beverage cooling and bar service packages for all events.', 'text', ?)")
+            ->execute([$now_stamp]);
+        $pdo->prepare("INSERT INTO messages (vendor_id, user_id, sender, message, type, created_at) VALUES (2, 3, 'user', 'Hi Jojo, are you available for wedding coverage next month?', 'text', ?)")
+            ->execute([$now_stamp]);
     }
 } catch (Exception $e) {}
 

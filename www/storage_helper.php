@@ -95,14 +95,21 @@ function upload_media_file($file_input, $folder = 'general', $max_width = 1920) 
     $original_name = 'upload';
     $is_base64 = false;
 
-    // Handle Base64 Data String
-    if (is_string($file_input) && (strpos($file_input, 'data:image') === 0 || strpos($file_input, 'base64,') !== false)) {
+    // Handle Base64 Data String (images, PDFs, documents)
+    if (is_string($file_input) && (strpos($file_input, 'data:') === 0 || strpos($file_input, 'base64,') !== false)) {
         $is_base64 = true;
-        $file_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $file_input));
+        $base64_str = preg_replace('#^data:[^;]+;base64,#i', '', $file_input);
+        $file_data = base64_decode($base64_str);
         if (empty($file_data)) {
-            return ['success' => false, 'error' => 'Invalid base64 image encoding'];
+            return ['success' => false, 'error' => 'Invalid base64 file data encoding'];
         }
-        $tmp_file = sys_get_temp_dir() . '/' . $unique_name . '.tmp';
+        $ext = 'jpg';
+        if (preg_match('#^data:application/pdf#i', $file_input)) $ext = 'pdf';
+        else if (preg_match('#^data:image/png#i', $file_input)) $ext = 'png';
+        else if (preg_match('#^data:image/webp#i', $file_input)) $ext = 'webp';
+        else if (preg_match('#^data:image/gif#i', $file_input)) $ext = 'gif';
+
+        $tmp_file = sys_get_temp_dir() . '/' . $unique_name . '.' . $ext;
         file_put_contents($tmp_file, $file_data);
     }
     // Handle Standard $_FILES Upload Item
@@ -117,12 +124,12 @@ function upload_media_file($file_input, $folder = 'general', $max_width = 1920) 
     $target_filename = preg_replace('/[^a-zA-Z0-9_-]/', '', $original_name) . '_' . $unique_name . '.webp';
     $target_file_path = $upload_base_dir . $target_filename;
 
-    // Perform WebP compression
+    // Perform WebP compression if image
     $compressed = compress_to_webp($tmp_file, $target_file_path, 82, $max_width);
     
     if (!$compressed) {
         // Fallback: Copy raw file if WebP conversion is unsupported for non-image formats (PDFs, docs)
-        $ext = is_array($file_input) ? strtolower(pathinfo($file_input['name'] ?? '', PATHINFO_EXTENSION)) : 'jpg';
+        $ext = is_array($file_input) ? strtolower(pathinfo($file_input['name'] ?? '', PATHINFO_EXTENSION)) : (isset($ext) ? $ext : 'jpg');
         $target_filename = preg_replace('/[^a-zA-Z0-9_-]/', '', $original_name) . '_' . $unique_name . '.' . ($ext ?: 'jpg');
         $target_file_path = $upload_base_dir . $target_filename;
         @copy($tmp_file, $target_file_path);

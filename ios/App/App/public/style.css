@@ -6990,7 +6990,7 @@ body.dark-theme .handpicked-card-location {
         box-shadow: none !important;
     }
 
-    /* 2. Hide Mobile Bottom Navigation */
+    /* 2. Mobile Bottom Navigation hidden on Desktop (>= 992px) */
     .bottom-nav {
         display: none !important;
     }
@@ -7038,7 +7038,13 @@ body.dark-theme .handpicked-card-location {
         color: #FFFFFF !important;
     }
 
-    /* 4. Desktop & iPad Navigation link bar - Flexbox Flow */
+}
+
+/* ==========================================================================
+   DESKTOP NAVIGATION BREAKPOINT (>= 992px ONLY)
+   ========================================================================== */
+@media (min-width: 992px) {
+    /* Desktop Navigation link bar - Visible ONLY on Desktop */
     .desktop-nav {
         display: flex !important;
         align-items: center !important;
@@ -7048,8 +7054,6 @@ body.dark-theme .handpicked-card-location {
         transform: none !important;
         margin: 0 16px !important;
         flex: 1 !important;
-        overflow-x: auto !important;
-        scrollbar-width: none !important;
     }
 
     .desktop-nav::-webkit-scrollbar {
@@ -7112,6 +7116,22 @@ body.dark-theme .handpicked-card-location {
     body.dark-theme .desktop-nav-item.active i {
         color: #081729 !important;
     }
+}
+
+/* ==========================================================================
+   MOBILE & TABLET / IPAD MODE (< 992px - including 820x1180 iPad Air 5)
+   ========================================================================== */
+@media (max-width: 991px) {
+    /* Hide Desktop Nav Header Links completely on iPads and Tablets */
+    .desktop-nav {
+        display: none !important;
+    }
+
+    /* Keep Mobile Bottom Navigation Bar visible on iPads and Tablets */
+    .bottom-nav {
+        display: flex !important;
+    }
+}
 
     /* 5. Home Screen Categories & Handpicked layouts */
     .category-grid {

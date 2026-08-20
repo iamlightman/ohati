@@ -6956,13 +6956,16 @@ body.dark-theme .handpicked-card-location {
    ========================================================================== */
 @media (min-width: 768px) {
 
-    /* 1. App Canvas Container - Full Screen Desktop Mode */
+    /* 1. App Canvas Container - Full Screen Desktop Web App Mode */
     html, body {
         width: 100% !important;
         height: 100% !important;
+        min-height: 100vh !important;
         background: var(--ivory) !important;
         display: block !important;
         overflow-x: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     body.dark-theme {
@@ -6979,6 +6982,7 @@ body.dark-theme .handpicked-card-location {
         border: none !important;
         box-shadow: none !important;
         margin: 0 !important;
+        position: relative !important;
     }
 
     body.dark-theme .app-container {

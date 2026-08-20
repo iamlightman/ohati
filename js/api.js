@@ -11,6 +11,9 @@ window.getOhatiApiBaseUrl = function() {
     if (isNativeApp) {
         return 'https://ohati.com/api.php';
     }
+    if (window.location.pathname && window.location.pathname.includes('/www/')) {
+        return '../api.php';
+    }
     return 'api.php';
 };
 

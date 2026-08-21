@@ -686,6 +686,7 @@ function openSettingsModal() {
         </div>
     `);
 }
+window.openSettingsModal = openSettingsModal;
 
 function openNotificationsModal() {
     navigateTo('notifications');
@@ -877,6 +878,9 @@ function showComingSoonReferral(title = 'Refer & Earn') {
         </div>
     `);
 }
+window.showComingSoonReferral = showComingSoonReferral;
+window.openReferAndEarnModal = function() { showComingSoonReferral('Refer & Earn'); };
+window.openDiscountsAndOffersModal = function() { showComingSoonReferral('Discounts & Offers'); };
 
 function openAllPlatformReviewsModal() {
     const reviewsHtml = state.platformReviews.map(r => `
@@ -904,6 +908,7 @@ function openAllPlatformReviewsModal() {
     `;
     openModal(html);
 }
+window.openAllPlatformReviewsModal = openAllPlatformReviewsModal;
 
 function openPlatformReviewModal() {
     const defaultName = (state.user && state.user.name) ? state.user.name : '';
@@ -942,6 +947,7 @@ function openPlatformReviewModal() {
     // Trigger initial star select UI update
     setTimeout(() => setSelectRating(5), 10);
 }
+window.openPlatformReviewModal = openPlatformReviewModal;
 
 window.setSelectRating = function (rating) {
     document.getElementById('review-rating-val').value = rating;

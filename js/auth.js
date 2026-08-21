@@ -472,7 +472,7 @@ function submitOTPVerify(event) {
             state.authStep = 1;
             renderAuthModal();
         } else {
-            navigateTo('home');
+            window.location.reload();
         }
     }).catch(e => {
         err.textContent = e.message;
@@ -502,6 +502,9 @@ function submitLogin(event) {
                 localStorage.setItem('ohati_auth_token', res.auth_token);
             }
             state.user = res.user;
+            if (res.user) {
+                localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            }
             showPushNotification('Welcome', 'Logged in successfully!');
             if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
             else {
@@ -515,7 +518,7 @@ function submitLogin(event) {
                 state.authStep = 1;
                 renderAuthModal();
             } else {
-                navigateTo('home');
+                window.location.reload();
             }
         } catch (e) {
             if (e.message && (e.message.includes('verify your email') || e.message.includes('verify your phone number') || e.message.includes('verify your email address or phone number'))) {
@@ -1504,26 +1507,7 @@ window.handleMandatoryLoginSubmit = function (e) {
             else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
 
-            Promise.allSettled([
-                API.getCategories(),
-                API.getVendors(),
-                API.getVendors({ premium_only: 1 }),
-                API.get('get_advertisements'),
-                API.getPopularVendors(),
-                API.getBookings(),
-                API.getFavorites(),
-                API.getEvent(),
-                API.get('get_faqs')
-            ]).then(results => {
-                state.categories = results[0].status === 'fulfilled' ? results[0].value : [];
-                state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
-                state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
-                state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
-
-                if (typeof navigateTo === 'function') {
-                    navigateTo('home');
-                }
-            });
+            window.location.reload();
         } else {
             unlockLogin();
             throw new Error(res.error || 'Login failed.');
@@ -1745,9 +1729,7 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
                 state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
                 state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
 
-                if (typeof navigateTo === 'function') {
-                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
-                }
+                window.location.reload();
             });
         } else {
             unlockOTP();

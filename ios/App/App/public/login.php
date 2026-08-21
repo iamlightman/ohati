@@ -89,6 +89,8 @@ if (isset($_SESSION['user'])) {
 
             API.login({ identifier, password })
                 .then(res => {
+                    if (res.auth_token) localStorage.setItem('ohati_auth_token', res.auth_token);
+                    if (res.user) localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
                     if (res.user.role === 'admin') {
                         window.location.href = 'admin/index.php';
                     } else {

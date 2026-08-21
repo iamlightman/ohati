@@ -18,6 +18,27 @@ header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization'
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 require_once __DIR__ . '/db.php';
 
+if (!function_exists('respond_json_fast')) {
+    function respond_json_fast($data, $status_code = 200) {
+        if (!headers_sent()) {
+            http_response_code($status_code);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Connection: close');
+        }
+        $json = json_encode($data);
+        if (!headers_sent()) {
+            header('Content-Length: ' . strlen($json));
+        }
+        echo $json;
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } else {
+            @ob_end_flush();
+            @flush();
+        }
+    }
+}
+
 function getBlockedUserIds($uid, $pdo) {
     if ($uid <= 0 || !$pdo) return [];
     try {
@@ -2832,7 +2853,7 @@ case 'update_vendor':
         $_SESSION['vendor'] = $fresh_vendor;
     }
 
-    echo json_encode([
+    respond_json_fast([
         'success' => true,
         'vendor_id' => $vid,
         'vendor' => $_SESSION['vendor'] ?? null,
@@ -3125,6 +3146,8 @@ case 'create_advertisement':
     $notif = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Ad Campaign Submitted', ?, 'clock')");
     $notif->execute([$_SESSION['user']['id'], "Your campaign '$title' has been submitted and is waiting for admin approval."]);
 
+    respond_json_fast(['success' => true, 'ad_id' => $ad_id, 'message' => 'Campaign submitted for admin review']);
+
     try {
         require_once __DIR__ . '/mail_helper.php';
         send_admin_activity_notification(
@@ -3133,7 +3156,6 @@ case 'create_advertisement':
         );
     } catch (Exception $adminEx) {}
 
-    echo json_encode(['success' => true, 'ad_id' => $ad_id, 'message' => 'Campaign submitted for admin review']);
     break;
 
 case 'update_ad_status':

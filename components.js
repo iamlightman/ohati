@@ -618,9 +618,6 @@ function renderHomeScreen() {
                         <div class="recommended-card anim-fade-in" onclick="viewVendorDetails(${v.id})">
                             <div class="recommended-img-wrapper">
                                 <img src="${v.cover_photo}" alt="${v.name}" class="recommended-cover">
-                                <button class="card-favorite-btn ${v.is_favorite ? 'active' : ''}" data-id="${v.id}">
-                                    <i class="fa-solid fa-heart"></i>
-                                </button>
                             </div>
                             <div class="recommended-details">
                                 <h4 class="recommended-title" style="display: flex; align-items: center; gap: 4px; width: 100%;">
@@ -838,9 +835,6 @@ function renderVendorList(vendorsList) {
                 <div class="card-img-wrapper">
                     <img src="${v.cover_photo}" alt="${v.name}" class="card-cover">
                     <span class="card-badge">${v.category}</span>
-                    <button class="card-favorite-btn ${v.is_favorite ? 'active' : ''}" data-id="${v.id}">
-                        <i class="fa-solid fa-heart"></i>
-                    </button>
                     <div class="card-logo-wrapper">
                         <img src="${v.logo}" alt="Logo" class="card-logo">
                     </div>
@@ -905,7 +899,6 @@ function renderVendorDetailScreen(v) {
                 <img src="${v.cover_photo}" alt="${v.name}" class="detail-cover">
                 <div class="detail-nav-overlay">
                     <button class="btn-icon back-btn"><i class="fa-solid fa-arrow-left"></i></button>
-                    <button class="btn-icon card-favorite-btn ${v.is_favorite ? 'active' : ''}" data-id="${v.id}"><i class="fa-solid fa-heart"></i></button>
                 </div>
                 <div class="detail-logo-wrapper">
                     <img src="${v.logo}" alt="Logo" class="detail-logo">

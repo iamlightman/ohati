@@ -2737,7 +2737,9 @@ body.dark-theme .category-name {
 }
 
 .vendor-card-fav,
-.card-favorite-btn {
+.card-favorite-btn,
+.handpicked-fav-btn {
+    display: none !important;
     position: absolute !important;
     top: 8px !important;
     right: 8px !important;

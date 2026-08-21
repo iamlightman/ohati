@@ -467,6 +467,34 @@ function closeModal() {
     }
 }
 
+window.clearAllAuthOverlays = function () {
+    try {
+        if (typeof closeModal === 'function') closeModal();
+        if (typeof toggleSidebar === 'function') toggleSidebar(false);
+        if (typeof unlockMandatoryAuthScreen === 'function') unlockMandatoryAuthScreen();
+
+        ['sidebar-overlay', 'app-sidebar-overlay', 'mandatory-auth-lock-overlay', 'modal-overlay', 'filter-drawer-overlay'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('open', 'active');
+                if (id === 'mandatory-auth-lock-overlay') {
+                    el.style.display = 'none';
+                    try { el.remove(); } catch (e) { }
+                } else {
+                    el.style.visibility = 'hidden';
+                    el.style.pointerEvents = 'none';
+                }
+            }
+        });
+
+        document.body.classList.remove('modal-open', 'sidebar-open', 'no-scroll');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+    } catch (err) {
+        console.warn('Error clearing auth overlays:', err);
+    }
+};
+
 // ── Filter Drawer ──────────────────────────────────────────────────────
 function openFilterDrawer() {
     const overlay = document.getElementById('filter-drawer-overlay');

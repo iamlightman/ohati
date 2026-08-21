@@ -6,6 +6,27 @@ if (file_exists(__DIR__ . '/sms_helper.php')) { require_once __DIR__ . '/sms_hel
 if (file_exists(__DIR__ . '/mail_helper.php')) { require_once __DIR__ . '/mail_helper.php'; }
 if (file_exists(__DIR__ . '/storage_helper.php')) { require_once __DIR__ . '/storage_helper.php'; }
 
+if (!function_exists('respond_json_fast')) {
+    function respond_json_fast($data, $status_code = 200) {
+        if (!headers_sent()) {
+            http_response_code($status_code);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Connection: close');
+        }
+        $json = json_encode($data);
+        if (!headers_sent()) {
+            header('Content-Length: ' . strlen($json));
+        }
+        echo $json;
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } else {
+            @ob_end_flush();
+            @flush();
+        }
+    }
+}
+
 /**
  * Dispatch Multi-Channel Notifications (In-App, Push, SMS, Email) across multi-DB architecture
  */
@@ -141,7 +162,10 @@ function handle_job_action($action, $pdo) {
                     }
                 }
 
-                // Multi-channel notification to Host & Matching Vendors
+                // Respond immediately to host user client for fast UI performance
+                respond_json_fast(['success' => true, 'job_id' => $job_id, 'message' => ($status === 'draft' ? 'Job saved as draft.' : 'Job posted successfully!')]);
+
+                // Background Multi-channel notification to Host & Matching Vendors
                 if ($status === 'open') {
                     send_job_multichannel_notification(
                         $db_main, $user_id, 'job_posted', $job_id, 0,
@@ -162,8 +186,6 @@ function handle_job_action($action, $pdo) {
                         }
                     } catch (Exception $e) {}
                 }
-
-                echo json_encode(['success' => true, 'job_id' => $job_id, 'message' => ($status === 'draft' ? 'Job saved as draft.' : 'Job posted successfully!')]);
             } catch (Throwable $e) {
                 echo json_encode(['error' => 'Job creation failed: ' . $e->getMessage()]);
             }

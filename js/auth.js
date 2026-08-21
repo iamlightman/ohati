@@ -503,7 +503,11 @@ function submitLogin(event) {
             }
             state.user = res.user;
             showPushNotification('Welcome', 'Logged in successfully!');
-            closeModal();
+            if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
+            else {
+                closeModal();
+                if (typeof toggleSidebar === 'function') toggleSidebar(false);
+            }
             updateAppHeader();
             if ((state.user.active_role || state.user.role) === 'vendor' && !state.user.vendor_onboarding_completed) {
                 showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
@@ -1496,7 +1500,8 @@ window.handleMandatoryLoginSubmit = function (e) {
             const token = res.auth_token || res.token;
             if (token) localStorage.setItem('ohati_auth_token', token);
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-            window.unlockMandatoryAuthScreen();
+            if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
+            else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
 
             Promise.allSettled([
@@ -1720,7 +1725,8 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
             const token = res.auth_token || res.token;
             if (token) localStorage.setItem('ohati_auth_token', token);
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-            window.unlockMandatoryAuthScreen();
+            if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
+            else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
 
             Promise.allSettled([

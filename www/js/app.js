@@ -98,7 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // AUTHENTICATED USER: Initialize session & load application state
             state.user = res.user;
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-            if (typeof unlockMandatoryAuthScreen === 'function') {
+            if (typeof window.clearAllAuthOverlays === 'function') {
+                window.clearAllAuthOverlays();
+            } else if (typeof unlockMandatoryAuthScreen === 'function') {
                 unlockMandatoryAuthScreen();
             }
             dismissLoading();

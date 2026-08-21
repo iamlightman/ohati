@@ -574,9 +574,6 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
             <div class="handpicked-card" onclick="${clickAction}">
                 <div class="handpicked-img-wrapper">
                     <img src="${v.img}" alt="${v.name}" class="handpicked-cover">
-                    <button class="handpicked-fav-btn" onclick="toggleHandpickedFavorite('${v.id}', event)">
-                        <i class="${isFav ? 'fa-solid fa-heart active' : 'fa-regular fa-heart'}"></i>
-                    </button>
                     <div class="handpicked-logo-badge ${v.badgeClass || ''}">
                         ${badgeContent}
                     </div>
@@ -672,9 +669,6 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                         <div class="vendor-card-cover">
                             <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" alt="">
                             <div style="position:absolute; top:12px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:5;">
-                                <button class="vendor-card-fav ${v.is_favorite ? 'active' : ''}" onclick="toggleFavoriteHome(${v.id}, event)" style="position:static;">
-                                    <i class="fa-solid fa-heart"></i>
-                                </button>
                                 <button onclick="shareVendorProfile(state.vendors.find(x => x.id === ${v.id}), event)" style="border:none; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); color:#1B2B4B; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:var(--shadow-sm);">
                                     <i class="fa-solid fa-share-nodes"></i>
                                 </button>
@@ -723,9 +717,6 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})" style="flex:0 0 160px; min-height:165px; margin-bottom:8px;">
                         <div class="vendor-card-cover" style="height:90px;">
                             <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" alt="">
-                            <button class="vendor-card-fav ${v.is_favorite ? 'active' : ''}" onclick="toggleFavoriteHome(${v.id}, event)">
-                                <i class="fa-solid fa-heart"></i>
-                            </button>
                         </div>
                         <div class="vendor-card-body" style="padding:6px 8px;">
                             <div class="vendor-card-name" style="font-size:0.75rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.name}</div>
@@ -1045,9 +1036,6 @@ function renderSearchScreen() {
                     <div class="vendor-list-bottom" style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; border-top:1px solid var(--gray-100); padding-top:8px;">
                         <div class="vendor-list-price" style="font-size:0.85rem; font-weight:800; color:var(--primary);">Ask for Price</div>
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <button class="vendor-card-fav ${v.is_favorite ? 'active' : ''}" onclick="toggleFavoriteSearch(${v.id}, event)" title="Save Vendor">
-                                <i class="fa-solid fa-heart"></i>
-                            </button>
                             <span class="btn-view-profile" style="font-size:0.75rem; font-weight:700; color:var(--primary, #1B2B4B); display:flex; align-items:center; gap:4px;">View Profile <i class="fa-solid fa-arrow-right"></i></span>
                         </div>
                     </div>

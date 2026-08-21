@@ -3288,65 +3288,16 @@ function submitSignUp(e) {
 }
 
 function openLoginModal() {
-    const el = document.getElementById('booking-modal');
-    if (!el) return;
-    
-    el.innerHTML = `
-        <div class="modal-sheet anim-fade-in" style="max-width: 400px; padding: 25px;">
-            <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-right-to-bracket" style="color: var(--champagne-gold);"></i> Wedmi Client Access
-            </h3>
-            <p style="font-size: 0.7rem; color: var(--gray-text); margin-bottom: 15px;">Access your planner, negotiations, and payments across devices.</p>
-            
-            <form id="login-submit-form" onsubmit="submitLogin(event)">
-                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
-                    <div class="form-group">
-                        <label class="form-label">Phone Number or Email</label>
-                        <input type="text" class="form-input" id="login-identity" value="0244123456" required placeholder="024 XXX XXXX">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Secret PIN or Password</label>
-                        <input type="password" class="form-input" id="login-password" value="••••••" required placeholder="Enter PIN">
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem;">
-                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                            <input type="checkbox" checked style="accent-color: var(--forest-green);"> Keep me signed in
-                        </label>
-                        <a href="#" onclick="alert('Demo reset code sent!')" style="color: var(--champagne-gold); text-decoration: none; font-weight: 700;">Forgot PIN?</a>
-                    </div>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button type="submit" class="btn btn-primary" style="height: 44px;">Sign In to Account</button>
-                    <button type="button" class="btn btn-outline" onclick="closeBookingModal()" style="height: 44px;">Cancel</button>
-                </div>
-            </form>
-            
-            <div style="text-align: center; margin-top: 15px; font-size: 0.75rem; color: var(--gray-text);">
-                New to Wedmi? <a href="#" onclick="openSignUpModal(); return false;" style="color: var(--forest-green); font-weight: 700; text-decoration: none;">Create an Account</a>
-            </div>
-        </div>
-    `;
-    el.classList.add('active');
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        showMandatoryAuthLockScreen('login');
+    }
 }
 
 function submitLogin(e) {
-    e.preventDefault();
-    const identity = document.getElementById('login-identity').value;
-    
-    state.currentUser = {
-        name: identity.includes('@') ? identity.split('@')[0] : "User " + identity,
-        email: identity.includes('@') ? identity : identity + "@wedmi.com",
-        phone: identity.includes('@') ? "0240000000" : identity
-    };
-    localStorage.setItem('wedmi_user', JSON.stringify(state.currentUser));
-    localStorage.setItem('wedmi_onboarded', 'true');
-    
-    closeBookingModal();
-    updateUserSessionUI();
-    
-    showPushNotification("Welcome back! 👋", `Logged in successfully as ${state.currentUser.name}.`);
-    navigateTo('home');
+    if (e && e.preventDefault) e.preventDefault();
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        showMandatoryAuthLockScreen('login');
+    }
 }
 
 // openWalletModal is now defined in modals.js with role-aware Vendor/Customer views.

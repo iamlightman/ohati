@@ -268,8 +268,15 @@ function handle_payment_action($action, $pdo) {
             ];
 
             foreach ($settings as $k => $v) {
-                $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE val_value = VALUES(val_value)");
-                $stmt->execute([$k, $v]);
+                $chk_p = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = ?");
+                $chk_p->execute([$k]);
+                if ($chk_p->fetchColumn() > 0) {
+                    $stmt = $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = ?");
+                    $stmt->execute([$v, $k]);
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?)");
+                    $stmt->execute([$k, $v]);
+                }
             }
 
             echo json_encode(['success' => true, 'message' => 'Admin payment details updated successfully!']);

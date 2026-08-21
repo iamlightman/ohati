@@ -303,11 +303,11 @@ function secure_save_base64_image($b64_data, $folder = 'receipts', $prefix = 'fi
 
 
 function compressAndResizeImage($source_path, $target_path, $max_width = 1200, $max_height = 1200, $quality = 75) {
-    if (!extension_loaded('gd')) {
+    if (!extension_loaded('gd') || !function_exists('imagecreatefrompng')) {
         return false;
     }
     
-    $info = getimagesize($source_path);
+    $info = @getimagesize($source_path);
     if (!$info) return false;
     
     $mime = $info['mime'];
@@ -329,23 +329,20 @@ function compressAndResizeImage($source_path, $target_path, $max_width = 1200, $
         $new_height = $height;
     }
     
-    // Create image from source
+    // Create image from source safely
+    $image = false;
     switch ($mime) {
         case 'image/jpeg':
-            $image = imagecreatefromjpeg($source_path);
+            $image = function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($source_path) : false;
             break;
         case 'image/png':
-            $image = imagecreatefrompng($source_path);
+            $image = function_exists('imagecreatefrompng') ? @imagecreatefrompng($source_path) : false;
             break;
         case 'image/gif':
-            $image = imagecreatefromgif($source_path);
+            $image = function_exists('imagecreatefromgif') ? @imagecreatefromgif($source_path) : false;
             break;
         case 'image/webp':
-            if (function_exists('imagecreatefromwebp')) {
-                $image = imagecreatefromwebp($source_path);
-            } else {
-                return false;
-            }
+            $image = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($source_path) : false;
             break;
         default:
             return false;
@@ -794,13 +791,11 @@ case 'logout':
     break;
 
 case 'delete_account':
-    $uid = 0;
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
     $input_data = json_decode(file_get_contents('php://input'), true) ?: [];
-    if (isset($_SESSION['user']['id'])) {
-        $uid = intval($_SESSION['user']['id']);
-    } else if (isset($_POST['user_id'])) {
+    if (!$uid && isset($_POST['user_id'])) {
         $uid = intval($_POST['user_id']);
-    } else if (isset($input_data['user_id'])) {
+    } else if (!$uid && isset($input_data['user_id'])) {
         $uid = intval($input_data['user_id']);
     }
 
@@ -1158,8 +1153,8 @@ case 'reset_password':
 
 case 'update_profile':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!isset($_SESSION['user']['id'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in']); exit; }
-    $uid = intval($_SESSION['user']['id']);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error'=>'Not logged in']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     if (!is_array($input)) $input = [];
 
@@ -1977,8 +1972,16 @@ case 'submit_platform_review':
         'date' => date('F d, Y')
     ];
 
-    $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('pending_platform_reviews', ?) ON DUPLICATE KEY UPDATE val_value = ?");
-    $stmt->execute([json_encode($pending), json_encode($pending)]);
+    $val_json = json_encode($pending);
+    $chk_rev = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = 'pending_platform_reviews'");
+    $chk_rev->execute();
+    if ($chk_rev->fetchColumn() > 0) {
+        $stmt = $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = 'pending_platform_reviews'");
+        $stmt->execute([$val_json]);
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('pending_platform_reviews', ?)");
+        $stmt->execute([$val_json]);
+    }
 
     echo json_encode(['success' => true, 'message' => 'Review submitted successfully. It will appear once approved by an administrator.']);
     break;
@@ -2152,21 +2155,31 @@ case 'chat_history':
             $cust_id = intval($_GET['customer_id'] ?? $_GET['vendor_id'] ?? 0);
             if ($vendor_id && $cust_id) {
                 try {
-                    $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'user' AND is_read = 0")->execute([$vendor_id, $cust_id]);
+                    $pdo->prepare("UPDATE messages SET is_read = 1 WHERE (vendor_id = ? OR vendor_id = ?) AND user_id = ? AND sender = 'user' AND is_read = 0")->execute([$vendor_id, $uid, $cust_id]);
                 } catch (Throwable $eUp) {}
                 
-                $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
-                $stmt->execute([$vendor_id, $cust_id]);
+                $stmt = $pdo->prepare("SELECT * FROM messages WHERE (vendor_id = ? OR vendor_id = ?) AND user_id = ? ORDER BY id ASC");
+                $stmt->execute([$vendor_id, $uid, $cust_id]);
                 $msgs = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
             }
         } else {
             if ($vid > 0) {
+                $target_v_id = $vid;
+                $target_v_uid = $vid;
                 try {
-                    $pdo->prepare("UPDATE messages SET is_read = 1 WHERE vendor_id = ? AND user_id = ? AND sender = 'vendor' AND is_read = 0")->execute([$vid, $uid]);
+                    $v_lookup = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? OR user_id = ?");
+                    $v_lookup->execute([$vid, $vid]);
+                    if ($v_row = $v_lookup->fetch(PDO::FETCH_ASSOC)) {
+                        $target_v_id = intval($v_row['id']);
+                        $target_v_uid = intval($v_row['user_id']);
+                    }
+                } catch (Throwable $eV) {}
+                try {
+                    $pdo->prepare("UPDATE messages SET is_read = 1 WHERE (vendor_id = ? OR vendor_id = ?) AND user_id = ? AND sender = 'vendor' AND is_read = 0")->execute([$target_v_id, $target_v_uid, $uid]);
                 } catch (Throwable $eUp2) {}
                 
-                $stmt = $pdo->prepare("SELECT * FROM messages WHERE vendor_id = ? AND user_id = ? ORDER BY id ASC");
-                $stmt->execute([$vid, $uid]);
+                $stmt = $pdo->prepare("SELECT * FROM messages WHERE (vendor_id = ? OR vendor_id = ?) AND user_id = ? ORDER BY id ASC");
+                $stmt->execute([$target_v_id, $target_v_uid, $uid]);
                 $msgs = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
             }
         }
@@ -2193,14 +2206,50 @@ case 'chat':
         $now_stamp = date('Y-m-d H:i:s');
         if ($vendor_id && $cust_id && !empty($message)) {
             $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'vendor',?,?,?)")->execute([$vendor_id,$cust_id,$message,$type,$now_stamp]);
+            $notif_text = $message;
+            if ($type === 'image') $notif_text = "sent you a photo";
+            else if ($type === 'voice') $notif_text = "sent you a voice note";
+            else if (in_array($type, ['pdf', 'video', 'location'])) $notif_text = "sent you an attachment";
+            try {
+                $v_name_stmt = $pdo->prepare("SELECT name FROM vendors WHERE id = ?");
+                $v_name_stmt->execute([$vendor_id]);
+                $v_name = $v_name_stmt->fetchColumn() ?: 'Vendor';
+                add_notification($pdo, $cust_id, $v_name, "$v_name $notif_text");
+            } catch (Throwable $eNotif) {}
             echo json_encode(['success'=>true,'vendor_message'=>['sender'=>'vendor','message'=>$message,'type'=>$type,'created_at'=>$now_stamp]]);
         } else {
             http_response_code(400); echo json_encode(['error'=>'Invalid target customer or vendor profile']);
         }
     } else {
         if ($vid <= 0 || empty($message)) { http_response_code(400); echo json_encode(['error'=>'Message required.']); exit; }
+        
+        $real_v_id = $vid;
+        try {
+            $v_lookup = $pdo->prepare("SELECT id FROM vendors WHERE id = ? OR user_id = ?");
+            $v_lookup->execute([$vid, $vid]);
+            if ($v_res = $v_lookup->fetchColumn()) {
+                $real_v_id = intval($v_res);
+            }
+        } catch (Throwable $eV2) {}
+        
         $now_stamp = date('Y-m-d H:i:s');
-        $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'user',?,?,?)")->execute([$vid,$uid,$message,$type,$now_stamp]);
+        $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'user',?,?,?)")->execute([$real_v_id,$uid,$message,$type,$now_stamp]);
+        $notif_text = $message;
+        if ($type === 'image') $notif_text = "sent you a photo";
+        else if ($type === 'voice') $notif_text = "sent you a voice note";
+        else if (in_array($type, ['pdf', 'video', 'location'])) $notif_text = "sent you an attachment";
+        try {
+            $u_name_stmt = $pdo->prepare("SELECT name FROM users WHERE id = ?");
+            $u_name_stmt->execute([$uid]);
+            $u_name = $u_name_stmt->fetchColumn() ?: 'A user';
+            
+            $v_owner_stmt = $pdo->prepare("SELECT user_id FROM vendors WHERE id = ?");
+            $v_owner_stmt->execute([$real_v_id]);
+            $v_owner_id = intval($v_owner_stmt->fetchColumn() ?: 0);
+            if ($v_owner_id > 0 && $v_owner_id !== $uid) {
+                add_notification($pdo, $v_owner_id, $u_name, "$u_name $notif_text");
+            }
+        } catch (Throwable $eNotif2) {}
         echo json_encode([
             'success' => true,
             'user_message' => ['sender'=>'user','message'=>$message,'type'=>$type,'created_at'=>$now_stamp],
@@ -2562,7 +2611,8 @@ case 'register_vendor':
 
 case 'update_vendor':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $vid = intval($input['id'] ?? 0);
     if ($vid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid vendor ID']); exit; }
@@ -2572,11 +2622,11 @@ case 'update_vendor':
     $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
     $check->execute([$vid]);
     $owner_id = $check->fetchColumn();
-    if (intval($owner_id) === 0 && isset($_SESSION['user']['id']) && intval($_SESSION['user']['id']) > 0) {
-        $pdo->prepare("UPDATE vendors SET user_id = ? WHERE id = ?")->execute([intval($_SESSION['user']['id']), $vid]);
-        $owner_id = $_SESSION['user']['id'];
+    if (intval($owner_id) === 0 && $uid > 0) {
+        $pdo->prepare("UPDATE vendors SET user_id = ? WHERE id = ?")->execute([$uid, $vid]);
+        $owner_id = $uid;
     }
-    if (intval($owner_id) !== intval($_SESSION['user']['id'] ?? 0) && !$is_admin) {
+    if (intval($owner_id) !== $uid && !$is_admin) {
         http_response_code(403); echo json_encode(['error'=>'Unauthorized to update this vendor profile.']); exit;
     }
     
@@ -3400,33 +3450,62 @@ case 'request_premium_upgrade':
     $end_date = date('Y-m-d', strtotime('+365 days'));
     
     // Insert into advertisements table as premium upgrade request
-    $stmt = $pdo->prepare("INSERT INTO advertisements (vendor_id, title, placement, duration_days, price, start_date, end_date, proof_of_payment, status, payment_status) VALUES (?, ?, 'premium_gold', 365, ?, ?, ?, ?, 'pending', 'pending')");
-    $stmt->execute([$vendor['id'], $title, $amount, $start_date, $end_date, $receipt_path ?: $tx_id]);
+    $stmt = $pdo->prepare("INSERT INTO advertisements (vendor_id, title, placement, duration_days, cost, start_date, end_date, receipt_url, status, payment_status) VALUES (?, ?, 'premium_gold', 365, ?, ?, ?, ?, 'pending', 'pending')");
+    
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        try {
+            $stmt->execute([$vendor['id'], $title, $amount, $start_date, $end_date, $receipt_path ?: $tx_id]);
+            break;
+        } catch (PDOException $e) {
+            if ($attempt < 4 && (strpos($e->getMessage(), 'locked') !== false || strpos($e->getMessage(), 'HY000') !== false || $e->getCode() == 5)) {
+                usleep(300000);
+                continue;
+            }
+            throw $e;
+        }
+    }
 
     // 1. Dual Email + SMS Notification to Admin
     $admin_email = defined('SMTP_USER') ? SMTP_USER : 'contact@ohati.com';
     $admin_phone = '0540477911';
     
-    send_dual_notification(
-        $admin_phone,
-        $admin_email,
-        "New Premium Upgrade Payment Receipt",
-        "Vendor '" . $vendor['name'] . "' requested a Premium Gold Badge Upgrade and uploaded a payment receipt (TxID: " . ($tx_id ?: 'Attached') . "). Please log into Admin Console to review."
-    );
+    try {
+        send_dual_notification(
+            $admin_phone,
+            $admin_email,
+            "New Premium Upgrade Payment Receipt",
+            "Vendor '" . $vendor['name'] . "' requested a Premium Gold Badge Upgrade and uploaded a payment receipt (TxID: " . ($tx_id ?: 'Attached') . "). Please log into Admin Console to review."
+        );
+    } catch (Throwable $eAdminNotif) {}
 
     // 2. Dual Email + SMS Notification to Vendor
     $v_phone = $vendor['phone'] ?: ($_SESSION['user']['phone'] ?? '');
     $v_email = $vendor['email'] ?: ($_SESSION['user']['email'] ?? '');
     
-    send_dual_notification(
-        $v_phone,
-        $v_email,
-        "Premium Upgrade Payment Receipt Received",
-        "Hello " . $vendor['name'] . ", your payment receipt for Premium Gold Badge Upgrade has been received by Ohati Admin. Your request is being reviewed."
-    );
+    try {
+        send_dual_notification(
+            $v_phone,
+            $v_email,
+            "Premium Upgrade Payment Receipt Received",
+            "Hello " . $vendor['name'] . ", your payment receipt for Premium Gold Badge Upgrade has been received by Ohati Admin. Your request is being reviewed."
+        );
+    } catch (Throwable $eVendorNotif) {}
 
     // In-app notification
-    $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Premium Request Submitted', 'Your Premium Gold Badge payment receipt is under review by Admin.', 'crown')")->execute([$uid]);
+    try {
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Premium Request Submitted', 'Your Premium Gold Badge payment receipt is under review by Admin.', 'crown')")->execute([$uid]);
+                break;
+            } catch (Throwable $eNotif) {
+                if ($attempt < 2 && strpos($eNotif->getMessage(), 'locked') !== false) {
+                    usleep(300000);
+                    continue;
+                }
+                break;
+            }
+        }
+    } catch (Throwable $eNotifOuter) {}
 
     echo json_encode(['success' => true, 'message' => 'Payment receipt uploaded successfully! Admin will review and activate your Gold Badge.']);
     break;
@@ -3752,7 +3831,7 @@ case 'set_vendor_auto_response':
 // ── REPORT ISSUE ────────────────────────────────────────────────────────
 case 'report_issue':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    $uid = intval($_SESSION['user']['id'] ?? 0);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
     if ($uid <= 0) { http_response_code(401); echo json_encode(['error'=>'Please sign in to submit a report.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $title = clean($input['title'] ?? '');
@@ -3873,8 +3952,21 @@ case 'admin_update_referral_settings':
     $reward_amt = floatval($input['reward_amount'] ?? 10.0);
     $active_state = intval($input['program_active'] ?? 1);
 
-    $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_reward_amount', ?) ON DUPLICATE KEY UPDATE val_value = ?")->execute([$reward_amt, $reward_amt]);
-    $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_program_active', ?) ON DUPLICATE KEY UPDATE val_value = ?")->execute([$active_state, $active_state]);
+    $chk_r1 = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = 'referral_reward_amount'");
+    $chk_r1->execute();
+    if ($chk_r1->fetchColumn() > 0) {
+        $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = 'referral_reward_amount'")->execute([$reward_amt]);
+    } else {
+        $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_reward_amount', ?)")->execute([$reward_amt]);
+    }
+
+    $chk_r2 = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = 'referral_program_active'");
+    $chk_r2->execute();
+    if ($chk_r2->fetchColumn() > 0) {
+        $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = 'referral_program_active'")->execute([$active_state]);
+    } else {
+        $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_program_active', ?)")->execute([$active_state]);
+    }
 
     echo json_encode(['success' => true, 'message' => 'Referral settings updated successfully.']);
     break;

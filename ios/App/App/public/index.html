@@ -53,7 +53,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=2.0.0">
+    <link rel="stylesheet" href="style.css?v=1.1.9">
 
     <!-- Google Knowledge Graph & App Bio Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -162,10 +162,10 @@
                     <i class="fa-solid fa-comment-dots"></i> Messages
                     <span class="nav-badge" id="chat-nav-badge-desktop" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--danger); color:#fff; border-radius:50%; font-size:0.6rem; min-width:14px; height:14px; align-items:center; justify-content:center; font-weight:700;"></span>
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="user-jobs" onclick="navigateTo('user-jobs'); event.preventDefault();">
+                <a href="#" class="desktop-nav-item" data-screen="user-jobs" id="desktop-nav-post-job" onclick="navigateTo('user-jobs'); event.preventDefault();">
                     <i class="fa-solid fa-briefcase"></i> Post Job
                 </a>
-                <a href="#" class="desktop-nav-item" data-screen="vendor-jobs" onclick="navigateTo('vendor-jobs'); event.preventDefault();">
+                <a href="#" class="desktop-nav-item" data-screen="vendor-jobs" id="desktop-nav-find-jobs" onclick="navigateTo('vendor-jobs'); event.preventDefault();">
                     <i class="fa-solid fa-list-check"></i> Find Jobs
                 </a>
                 <a href="#" class="desktop-nav-item" data-screen="bookings" onclick="navigateTo('bookings'); event.preventDefault();">
@@ -304,11 +304,11 @@
                         <span class="sidebar-badge-new">NEW</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openReferAndEarnModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openDiscountsAndOffersModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
                     <a class="sidebar-link" onclick="navigateTo('about'); toggleSidebar(false)"><i class="fa-solid fa-circle-info"></i> About Us</a>
@@ -409,24 +409,24 @@
     </div><!-- /app-container -->
 
     
-    <script src="js/utils.js?v=2.0.0"></script>
-    <script src="js/helpers.js?v=2.0.0"></script>
-    <script src="js/api.js?v=2.0.0"></script>
-    <script src="js/action_lock.js?v=2.0.0"></script>
-    <script src="js/state.js?v=2.0.0"></script>
-    <script src="js/modals.js?v=2.0.0"></script>
-    <script src="js/auth.js?v=2.0.0"></script>
-    <script src="js/booking.js?v=2.0.0"></script>
-    <script src="js/vendor.js?v=2.0.0"></script>
-    <script src="js/chat.js?v=2.0.0"></script>
-    <script src="js/search.js?v=2.0.0"></script>
-    <script src="js/review.js?v=2.0.0"></script>
-    <script src="js/notification.js?v=2.0.0"></script>
-    <script src="js/payment.js?v=2.0.0"></script>
-    <script src="js/screens.js?v=2.0.0"></script>
-    <script src="js/calling.js?v=2.0.0"></script>
-    <script src="js/jobs.js?v=2.0.0"></script>
-    <script src="js/app.js?v=2.0.0"></script>
+    <script src="js/utils.js?v=1.1.9"></script>
+    <script src="js/helpers.js?v=1.1.9"></script>
+    <script src="js/api.js?v=1.1.9"></script>
+    <script src="js/action_lock.js?v=1.1.9"></script>
+    <script src="js/state.js?v=1.1.9"></script>
+    <script src="js/modals.js?v=1.1.9"></script>
+    <script src="js/auth.js?v=1.1.9"></script>
+    <script src="js/booking.js?v=1.1.9"></script>
+    <script src="js/vendor.js?v=1.1.9"></script>
+    <script src="js/chat.js?v=1.1.9"></script>
+    <script src="js/search.js?v=1.1.9"></script>
+    <script src="js/review.js?v=1.1.9"></script>
+    <script src="js/notification.js?v=1.1.9"></script>
+    <script src="js/payment.js?v=1.1.9"></script>
+    <script src="js/screens.js?v=1.1.9"></script>
+    <script src="js/calling.js?v=1.1.9"></script>
+    <script src="js/jobs.js?v=1.1.9"></script>
+    <script src="js/app.js?v=1.1.9"></script>
 
 
     

@@ -11,6 +11,7 @@ if (file_exists(__DIR__ . '/ohati_config.php')) {
  */
 function compress_to_webp($source_file, $destination_webp, $quality = 82, $max_width = 1920, $max_height = 1080) {
     if (!file_exists($source_file)) return false;
+    if (!extension_loaded('gd') || !function_exists('imagecreatefrompng') || !function_exists('imagewebp')) return false;
 
     $info = @getimagesize($source_file);
     if (!$info) return false;
@@ -21,23 +22,23 @@ function compress_to_webp($source_file, $destination_webp, $quality = 82, $max_w
 
     if ($width <= 0 || $height <= 0) return false;
 
-    // Load GD Image Resource
+    // Load GD Image Resource safely
     $image = null;
     switch ($mime) {
         case 'image/jpeg':
-            $image = @imagecreatefromjpeg($source_file);
+            $image = function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($source_file) : false;
             break;
         case 'image/png':
-            $image = @imagecreatefrompng($source_file);
+            $image = function_exists('imagecreatefrompng') ? @imagecreatefrompng($source_file) : false;
             break;
         case 'image/webp':
-            $image = @imagecreatefromwebp($source_file);
+            $image = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($source_file) : false;
             break;
         case 'image/gif':
-            $image = @imagecreatefromgif($source_file);
+            $image = function_exists('imagecreatefromgif') ? @imagecreatefromgif($source_file) : false;
             break;
         case 'image/bmp':
-            $image = @imagecreatefrombmp($source_file);
+            $image = function_exists('imagecreatefrombmp') ? @imagecreatefrombmp($source_file) : false;
             break;
         default:
             return false;

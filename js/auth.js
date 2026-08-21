@@ -388,7 +388,7 @@ function submitRegisterStep2() {
         try {
             const otpRes = await API.sendOTP(target, 'verify', email, phone);
             state.authData.email_sent = otpRes.email_sent;
-        } catch (e) {}
+        } catch (e) { }
 
         state.authMode = 'otp';
         state.authStep = 1;
@@ -530,7 +530,7 @@ function submitLogin(event) {
             }
             throw e;
         }
-    }).catch(() => {});
+    }).catch(() => { });
 }
 
 // Forgot Password
@@ -549,11 +549,11 @@ function submitForgot(event) {
     const btn = event?.target || document.querySelector('button[onclick*="submitForgot"]');
     ActionLock.execute(btn, 'Sending Reset Code...', async () => {
         const res = await API.forgotPassword(target);
-            state.authData.email_sent = res.email_sent;
-            showPushNotification('Code Sent', 'Verification code dispatched to your email & SMS.');
-            state.authMode = 'reset';
-            renderAuthModal();
-        })
+        state.authData.email_sent = res.email_sent;
+        showPushNotification('Code Sent', 'Verification code dispatched to your email & SMS.');
+        state.authMode = 'reset';
+        renderAuthModal();
+    })
         .catch(e => {
             err.textContent = e.message;
             err.style.display = 'block';
@@ -600,14 +600,14 @@ function handleLogout() {
     localStorage.removeItem('ohati_auth_token');
     localStorage.removeItem('ohati_user_session');
     localStorage.removeItem('ohati_user');
-    localStorage.removeItem('wedmi_user');
+    localStorage.removeItem('ohati_user_session');
     sessionStorage.clear();
 
     const doLocalCleanup = () => {
         if (typeof updateAppHeader === 'function') updateAppHeader();
         if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
         if (typeof renderSidebar === 'function') renderSidebar();
-        
+
         // Lock screen to Login overlay
         if (typeof unlockMandatoryAuthScreen === 'function') unlockMandatoryAuthScreen();
         if (typeof showMandatoryAuthLockScreen === 'function') {
@@ -746,10 +746,10 @@ function renderVendorOnboardingStep() {
                     
                     <div id="v-custom-hours-container" style="display:${hoursType === 'custom' ? 'block' : 'none'}; background:var(--gray-50); padding:12px; border-radius:8px; border:1px solid var(--gray-200);">
                         ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                            const isChecked = state.authData.custom_days?.[day]?.active;
-                            const startVal = state.authData.custom_days?.[day]?.start || '08:00';
-                            const endVal = state.authData.custom_days?.[day]?.end || '17:00';
-                            return `
+                const isChecked = state.authData.custom_days?.[day]?.active;
+                const startVal = state.authData.custom_days?.[day]?.start || '08:00';
+                const endVal = state.authData.custom_days?.[day]?.end || '17:00';
+                return `
                                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:0.8rem;">
                                     <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                                         <input type="checkbox" id="v-day-${day}" ${isChecked ? 'checked' : ''} onchange="toggleDayInputs('${day}')">
@@ -763,7 +763,7 @@ function renderVendorOnboardingStep() {
                                     <div id="v-day-${day}-closed" style="display:${isChecked ? 'none' : 'block'}; color:var(--gray-400); font-size:0.75rem;">Closed</div>
                                 </div>
                             `;
-                        }).join('')}
+            }).join('')}
                     </div>
                 </div>
                 <div style="display:flex;gap:10px;" class="mt-12">
@@ -847,7 +847,7 @@ function simulateFileUpload(type) {
     }
 }
 
-window.handleKycFileSelect = function(event, type) {
+window.handleKycFileSelect = function (event, type) {
     const file = event.target.files[0];
     if (!file) return;
     const status = document.getElementById(type === 'id-front' ? 'front-status' : 'selfie-status');
@@ -855,7 +855,7 @@ window.handleKycFileSelect = function(event, type) {
     if (status && hidden) {
         status.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Reading file...`;
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             hidden.value = e.target.result;
             state.authData[type === 'id-front' ? 'id_front' : 'selfie'] = e.target.result;
             status.innerHTML = `<i class="fa-solid fa-circle-check text-success"></i> ${file.name.substring(0, 15)}... loaded!`;
@@ -954,7 +954,7 @@ function saveVendorStep3() {
     renderAuthModal();
 }
 
-window.getLiveLocation = function(event) {
+window.getLiveLocation = function (event) {
     if (event) event.preventDefault();
     if (!navigator.geolocation) {
         showPushNotification('Not Supported', 'Geolocation is not supported by your browser.');
@@ -982,14 +982,14 @@ window.getLiveLocation = function(event) {
     );
 };
 
-window.toggleHoursTypeUI = function(type) {
+window.toggleHoursTypeUI = function (type) {
     const container = document.getElementById('v-custom-hours-container');
     if (container) {
         container.style.display = type === 'custom' ? 'block' : 'none';
     }
 };
 
-window.toggleDayInputs = function(day) {
+window.toggleDayInputs = function (day) {
     const chk = document.getElementById('v-day-' + day);
     const inputs = document.getElementById('v-day-' + day + '-inputs');
     const closed = document.getElementById('v-day-' + day + '-closed');
@@ -1076,14 +1076,14 @@ function saveVendorStep5() {
 }
 
 
-window.closeAccountDeletionModal = function() {
+window.closeAccountDeletionModal = function () {
     const modal = document.getElementById('account-deletion-custom-modal');
     if (modal) modal.remove();
 };
 
-window.showAccountDeletionModal = function() {
+window.showAccountDeletionModal = function () {
     window.closeAccountDeletionModal();
-    
+
     const user = (window.state && window.state.user) ? window.state.user : null;
     const userDisplay = user ? (user.email || user.phone || user.name || 'Your Account') : '';
 
@@ -1091,7 +1091,7 @@ window.showAccountDeletionModal = function() {
     modal.id = 'account-deletion-custom-modal';
     modal.className = 'modal-overlay open';
     modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation:fadeIn 0.25s ease-out;';
-    
+
     modal.innerHTML = `
         <div class="modal-sheet" style="width:100%; max-width:440px; border-radius:28px; padding:28px 24px; text-align:center; background:#0F1923; color:#fff; border:1px solid rgba(239,68,68,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.8); position:relative; animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1);">
             <button onclick="closeAccountDeletionModal()" style="position:absolute; top:18px; right:18px; background:rgba(255,255,255,0.08); border:none; color:#94A3B8; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; transition:all 0.2s;">
@@ -1154,7 +1154,7 @@ window.showAccountDeletionModal = function() {
     }, 100);
 };
 
-window.executeCustomAccountDeletion = function() {
+window.executeCustomAccountDeletion = function () {
     const errorBox = document.getElementById('del-modal-error');
     const btn = document.getElementById('del-modal-submit-btn');
     if (errorBox) errorBox.style.display = 'none';
@@ -1207,14 +1207,14 @@ window.executeCustomAccountDeletion = function() {
     });
 };
 
-window.confirmDeleteAccount = function() {
+window.confirmDeleteAccount = function () {
     window.showAccountDeletionModal();
 };
 
 
 
 
-window.showAccountDeletedSuccessModal = function() {
+window.showAccountDeletedSuccessModal = function () {
     let modal = document.getElementById('account-deleted-pro-modal');
     if (!modal) {
         modal = document.createElement('div');
@@ -1239,14 +1239,14 @@ window.showAccountDeletedSuccessModal = function() {
     }
 };
 
-window.closeAccountDeletedProModal = function() {
+window.closeAccountDeletedProModal = function () {
     const modal = document.getElementById('account-deleted-pro-modal');
     if (modal) modal.remove();
     if (typeof handleLogout === 'function') handleLogout();
     else if (typeof navigateTo === 'function') navigateTo('home');
 };
 
-window.triggerAccountDeletionFlow = function() {
+window.triggerAccountDeletionFlow = function () {
     showConfirmModal({
         title: 'Delete Account?',
         message: 'Are you sure you want to delete your account? This will deactivate your profile and log you out immediately.',
@@ -1268,7 +1268,11 @@ window.triggerAccountDeletionFlow = function() {
     });
 };
 
-window.showMandatoryAuthLockScreen = function(initialMode) {
+window.showMandatoryAuthLockScreen = function (initialMode) {
+    const currentPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+    if (currentPath.includes('login.php') || currentPath.includes('register.php')) {
+        return;
+    }
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -1281,7 +1285,7 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
 
     if (!window._mandatorySignupDraft) window._mandatorySignupDraft = {};
 
-    window.renderMandatoryAuthContent = function(currentMode) {
+    window.renderMandatoryAuthContent = function (currentMode) {
         const mode = currentMode || 'login';
         window._currentAuthLockMode = mode;
         if (overlay) overlay.style.display = 'flex';
@@ -1440,16 +1444,16 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
     window.renderMandatoryAuthContent(initialMode || 'login');
 };
 
-window.unlockMandatoryAuthScreen = function() {
+window.unlockMandatoryAuthScreen = function () {
     window._currentAuthLockMode = null;
     const overlay = document.getElementById('mandatory-auth-lock-overlay');
     if (overlay) {
         overlay.style.display = 'none';
-        try { overlay.remove(); } catch(e) {}
+        try { overlay.remove(); } catch (e) { }
     }
 };
 
-window.handleMandatoryLoginSubmit = function(e) {
+window.handleMandatoryLoginSubmit = function (e) {
     if (e) e.preventDefault();
     const btn = document.getElementById('m-lock-btn');
     const idInput = document.getElementById('m-lock-id');
@@ -1466,11 +1470,11 @@ window.handleMandatoryLoginSubmit = function(e) {
         return;
     }
 
-    if (btn) { 
-        btn.disabled = true; 
+    if (btn) {
+        btn.disabled = true;
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.65';
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Signing in...'; 
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Signing in...';
     }
     if (idInput) idInput.disabled = true;
     if (passInput) passInput.disabled = true;
@@ -1494,7 +1498,7 @@ window.handleMandatoryLoginSubmit = function(e) {
             localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
             window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
-            
+
             Promise.allSettled([
                 API.getCategories(),
                 API.getVendors(),
@@ -1510,9 +1514,9 @@ window.handleMandatoryLoginSubmit = function(e) {
                 state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
                 state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
                 state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
-                
+
                 if (typeof navigateTo === 'function') {
-                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+                    navigateTo('home');
                 }
             });
         } else {
@@ -1538,14 +1542,14 @@ window.handleMandatoryLoginSubmit = function(e) {
     });
 };
 
-window.toggleVendorAuthFields = function(role) {
+window.toggleVendorAuthFields = function (role) {
     const btn = document.getElementById('m-lock-btn');
     if (btn) {
         btn.textContent = (role === 'vendor') ? 'Continue to Vendor Details' : 'Send Verification Code';
     }
 };
 
-window.handleMandatorySignupSubmit = function(e) {
+window.handleMandatorySignupSubmit = function (e) {
     if (e) e.preventDefault();
     const nameInput = document.getElementById('m-lock-name');
     const emailInput = document.getElementById('m-lock-email');
@@ -1619,7 +1623,7 @@ window.handleMandatorySignupSubmit = function(e) {
     });
 };
 
-window.handleMandatoryVendorDetailsSubmit = function(e) {
+window.handleMandatoryVendorDetailsSubmit = function (e) {
     if (e) e.preventDefault();
     const bnameInput = document.getElementById('m-lock-bname');
     const catSelect = document.getElementById('m-lock-category');
@@ -1671,7 +1675,7 @@ window.handleMandatoryVendorDetailsSubmit = function(e) {
     });
 };
 
-window.handleMandatoryOTPVerifySubmit = function(e) {
+window.handleMandatoryOTPVerifySubmit = function (e) {
     if (e) e.preventDefault();
     const otpInput = document.getElementById('m-lock-otp');
     const errBox = document.getElementById('m-lock-error');
@@ -1749,7 +1753,7 @@ window.handleMandatoryOTPVerifySubmit = function(e) {
     });
 };
 
-window.handleResendSignupOTP = function(e) {
+window.handleResendSignupOTP = function (e) {
     if (e) e.preventDefault();
     const errBox = document.getElementById('m-lock-error');
     const draft = window._mandatorySignupDraft || {};

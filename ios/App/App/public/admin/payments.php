@@ -28,8 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'admin_payment_instructions' => trim($_POST['payment_instructions'] ?? '')
         ];
         foreach ($settings as $k => $v) {
-            $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE val_value = VALUES(val_value)");
-            $stmt->execute([$k, $v]);
+            $chk_pm = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = ?");
+            $chk_pm->execute([$k]);
+            if ($chk_pm->fetchColumn() > 0) {
+                $stmt = $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = ?");
+                $stmt->execute([$v, $k]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?)");
+                $stmt->execute([$k, $v]);
+            }
         }
         $message = "Admin payment details updated successfully!";
     } elseif ($action === 'approve_manual_payment') {

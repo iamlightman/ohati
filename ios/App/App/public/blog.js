@@ -17,7 +17,6 @@ window.blogState = {
 function initBlogScreen(params = {}) {
     const container = document.getElementById('screen-blog');
     if (!container) return;
-    container.classList.add('light-theme-forced');
 
     if (params && params.category) {
         window.blogState.currentCategory = params.category;
@@ -269,7 +268,6 @@ function openBlogArticle(idOrSlug) {
 function initBlogDetailScreen(params = {}) {
     const container = document.getElementById('screen-blog-detail');
     if (!container) return;
-    container.classList.add('light-theme-forced');
 
     const targetId = params.id || state.selectedBlogId || 0;
     const targetSlug = params.slug || '';

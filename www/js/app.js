@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIcon = document.getElementById('theme-icon');
     const headerLogo = document.getElementById('header-logo-img');
     
-    if (savedTheme === 'dark') {
+    const initialPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+    const isBlogRoute = initialPath.includes('blog.php');
+
+    if (savedTheme === 'dark' && !isBlogRoute) {
         body.classList.add('dark-theme');
         if (themeIcon) themeIcon.className = 'fa-solid fa-sun';
         if (headerLogo) headerLogo.src = 'img/logo white transparent small.png';
@@ -59,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('ohati_auth_token');
                 localStorage.removeItem('ohati_user_session');
                 localStorage.removeItem('ohati_user');
-                localStorage.removeItem('wedmi_user');
+                localStorage.removeItem('ohati_user_session');
                 dismissLoading();
 
                 if (isPublicGuestPage) {
@@ -239,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('ohati_auth_token');
                 localStorage.removeItem('ohati_user_session');
                 localStorage.removeItem('ohati_user');
-                localStorage.removeItem('wedmi_user');
+                localStorage.removeItem('ohati_user_session');
                 if (typeof showMandatoryAuthLockScreen === 'function') {
                     showMandatoryAuthLockScreen('login');
                 }
@@ -291,7 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const icon = document.getElementById('theme-icon');
             const logo = document.getElementById('header-logo-img');
 
-            if (body.classList.contains('dark-theme')) {
+            const isCurrentlyDark = localStorage.getItem('theme') === 'dark';
+            const isBlogScreen = (state.currentScreen === 'blog' || state.currentScreen === 'blog-detail');
+
+            if (isCurrentlyDark) {
                 body.classList.remove('dark-theme');
                 if (icon) icon.className = 'fa-solid fa-moon';
                 if (state.currentScreen !== 'home') {
@@ -299,10 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 localStorage.setItem('theme', 'light');
             } else {
-                body.classList.add('dark-theme');
-                if (icon) icon.className = 'fa-solid fa-sun';
-                if (logo) logo.src = 'img/logo white transparent small.png';
                 localStorage.setItem('theme', 'dark');
+                if (!isBlogScreen) {
+                    body.classList.add('dark-theme');
+                    if (logo) logo.src = 'img/logo white transparent small.png';
+                }
+                if (icon) icon.className = 'fa-solid fa-sun';
             }
 
             // Sync native mobile status bar color with active theme

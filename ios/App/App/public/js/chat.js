@@ -31,7 +31,9 @@ window.sendTextMessage = function() {
             });
         })
         .catch(err => {
-            showPushNotification('Send Failed', err.message || 'Failed to send message.');
+            if (typeof showPushNotification === 'function') {
+                showPushNotification('Send Failed', err.message || 'Failed to send message.');
+            }
         });
 };
 
@@ -40,77 +42,229 @@ window.triggerChatAttachment = function() {
     if (fileInput) fileInput.click();
 };
 
+// Global pending upload items map for chat retry functionality
+window._pendingChatUploads = window._pendingChatUploads || {};
+
 window.handleChatFileSelected = function(inputEl) {
     if (!inputEl || !inputEl.files || inputEl.files.length === 0 || !state.activeChatVendorId) return;
     const file = inputEl.files[0];
+    inputEl.value = ''; // Reset input for re-selection
     
     // Validate size (20MB limit)
     const max_size = 20 * 1024 * 1024;
     if (file.size > max_size) {
-        showPushNotification("Upload Limit", "File size cannot exceed 20MB.");
-        inputEl.value = '';
+        if (typeof showPushNotification === 'function') {
+            showPushNotification("Upload Limit", "File size cannot exceed 20MB.");
+        }
         return;
     }
 
-    showPushNotification('Uploading Image', 'Sending attachment...');
+    const tempId = 'chat_upload_' + Date.now();
+    const isImage = !!(file.type && file.type.startsWith('image/'));
+    const fileName = file.name || 'Attachment';
 
-    const processUpload = (fileToUpload) => {
+    // Save metadata & file reference in global state
+    window._pendingChatUploads[tempId] = {
+        tempId: tempId,
+        file: file,
+        vendorId: state.activeChatVendorId,
+        isImage: isImage,
+        fileName: fileName,
+        previewSrc: '',
+        status: 'uploading', // 'uploading' | 'failed' | 'done'
+        progress: 0,
+        errorMsg: ''
+    };
+
+    if (isImage) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (window._pendingChatUploads[tempId]) {
+                window._pendingChatUploads[tempId].previewSrc = e.target.result;
+            }
+            window.renderPendingChatBubble(tempId);
+            window.startChatFileUpload(tempId);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        window.renderPendingChatBubble(tempId);
+        window.startChatFileUpload(tempId);
+    }
+};
+
+window.renderPendingChatBubble = function(tempId) {
+    const item = window._pendingChatUploads[tempId];
+    if (!item) return;
+
+    const container = document.getElementById('chat-messages-container');
+    if (!container) return;
+
+    let pendingRow = document.getElementById(tempId);
+    if (!pendingRow) {
+        pendingRow = document.createElement('div');
+        pendingRow.id = tempId;
+        pendingRow.className = 'msg-row outgoing pending-chat-upload';
+        pendingRow.style.cssText = 'display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; width:100%; margin-bottom:10px;';
+        container.appendChild(pendingRow);
+    }
+
+    const isFailed = (item.status === 'failed');
+
+    pendingRow.innerHTML = `
+        <div class="msg-bubble msg-user" style="margin:0; min-width:220px; max-width:290px; position:relative; overflow:hidden; background:rgba(27, 43, 75, 0.95); border:1.5px solid ${isFailed ? '#EF4444' : 'var(--accent, #F2A735)'}; border-radius:14px; padding:10px; box-shadow:0 4px 16px rgba(0,0,0,0.18);">
+            <div class="upload-preview-box" style="position:relative; border-radius:10px; overflow:hidden; margin-bottom:8px; background:#0F1923; min-height:${item.isImage ? '130px' : 'auto'}; display:flex; align-items:center; justify-content:center;">
+                ${item.isImage && item.previewSrc ? `
+                    <img src="${item.previewSrc}" style="width:100%; max-height:180px; object-fit:cover; display:block; filter:${isFailed ? 'brightness(0.5)' : 'brightness(0.85)'};">
+                ` : `
+                    <div style="display:flex; align-items:center; gap:10px; padding:12px; width:100%; background:rgba(255,255,255,0.06); border-radius:8px;">
+                        <i class="fa-solid fa-file-lines" style="font-size:1.8rem; color:${isFailed ? '#EF4444' : 'var(--accent, #F2A735)'};"></i>
+                        <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px; font-size:0.8rem; font-weight:700; color:#fff;">${escapeHtml(item.fileName)}</div>
+                    </div>
+                `}
+                <div id="overlay-${tempId}" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:${isFailed ? 'rgba(15,23,42,0.85)' : 'rgba(0,0,0,0.55)'}; backdrop-filter:blur(3px);">
+                    ${isFailed ? `
+                        <i class="fa-solid fa-circle-xmark" style="font-size:2rem; color:#EF4444; margin-bottom:4px;"></i>
+                        <button onclick="retryChatFileUpload('${tempId}')" style="background:#EF4444; color:#FFF; border:none; padding:7px 16px; border-radius:20px; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(239,68,68,0.4); transition:all 0.2s;">
+                            <i class="fa-solid fa-rotate-right"></i> Retry Upload
+                        </button>
+                    ` : `
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:1.6rem; color:var(--accent, #F2A735); margin-bottom:2px;"></i>
+                        <span id="pct-${tempId}" style="font-size:0.78rem; font-weight:800; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.8);">${item.progress || 0}%</span>
+                    `}
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="width:100%; height:6px; background:rgba(255,255,255,0.18); border-radius:4px; overflow:hidden; margin-bottom:6px;">
+                <div id="bar-${tempId}" style="width:${isFailed ? '100%' : (item.progress || 0) + '%'}; height:100%; background:${isFailed ? '#EF4444' : 'linear-gradient(90deg, var(--accent, #F2A735), #10B981)'}; transition:width 0.15s ease-out;"></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:rgba(255,255,255,0.9);">
+                <span id="status-${tempId}">
+                    ${isFailed ? `
+                        <span style="color:#EF4444; font-weight:800;"><i class="fa-solid fa-circle-exclamation"></i> Upload Failed</span>
+                    ` : `
+                        <i class="fa-solid fa-cloud-arrow-up" style="color:var(--accent, #F2A735);"></i> Uploading ${item.progress || 0}%...
+                    `}
+                </span>
+                <span style="font-size:0.65rem; opacity:0.8;">Sending</span>
+            </div>
+        </div>
+    `;
+
+    container.scrollTop = container.scrollHeight;
+};
+
+window.retryChatFileUpload = function(tempId) {
+    const item = window._pendingChatUploads[tempId];
+    if (!item) return;
+
+    item.status = 'uploading';
+    item.progress = 0;
+    window.renderPendingChatBubble(tempId);
+    window.startChatFileUpload(tempId);
+};
+
+window.startChatFileUpload = function(tempId) {
+    const item = window._pendingChatUploads[tempId];
+    if (!item || !item.file) return;
+
+    const executeXhr = (fileToUpload) => {
         const formData = new FormData();
         formData.append('file', fileToUpload);
         const token = localStorage.getItem('ohati_auth_token');
         if (token) formData.append('auth_token', token);
 
-        const uploadHeaders = {};
-        if (token) {
-            uploadHeaders['Authorization'] = `Bearer ${token}`;
-        }
+        const apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
+        const xhr = new XMLHttpRequest();
 
-        let apiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=upload_chat_file';
-        if (token) {
-            apiUrl += '&auth_token=' + encodeURIComponent(token);
-        }
-
-        fetch(apiUrl, {
-            method: 'POST',
-            credentials: 'include',
-            headers: uploadHeaders,
-            body: formData
-        })
-        .then(r => {
-            if (!r.ok) return r.json().then(errData => { throw new Error(errData.error || `Server error (${r.status})`); });
-            return r.json();
-        })
-        .then(res => {
-            if (res.success) {
-                const fileType = res.type || (fileToUpload.type.startsWith('image/') ? 'image' : 'pdf');
-                return API.sendMessage(state.activeChatVendorId, res.url, fileType);
-            } else {
-                throw new Error(res.error || 'Upload failed');
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.min(99, Math.round((e.loaded / e.total) * 100));
+                item.progress = percent;
+                const bar = document.getElementById(`bar-${tempId}`);
+                const pct = document.getElementById(`pct-${tempId}`);
+                const status = document.getElementById(`status-${tempId}`);
+                if (bar) bar.style.width = percent + '%';
+                if (pct) pct.textContent = percent + '%';
+                if (status) status.innerHTML = `<i class="fa-solid fa-cloud-arrow-up" style="color:var(--accent, #F2A735);"></i> Uploading ${percent}%`;
             }
-        })
-        .then(() => {
-            return API.getChatHistory(state.activeChatVendorId).then(history => {
-                if (typeof updateChatMessages === 'function') updateChatMessages(history);
-            });
-        })
-        .catch(err => {
-            showPushNotification('Upload Error', err.message || 'Could not upload attachment.');
-        })
-        .finally(() => {
-            inputEl.value = '';
-        });
+        };
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                try {
+                    const res = JSON.parse(xhr.responseText);
+                    if (res.success && res.url) {
+                        item.status = 'done';
+                        const bar = document.getElementById(`bar-${tempId}`);
+                        const pct = document.getElementById(`pct-${tempId}`);
+                        if (bar) bar.style.width = '100%';
+                        if (pct) pct.textContent = '100%';
+
+                        const messageType = res.type || (item.isImage ? 'image' : 'pdf');
+
+                        API.sendMessage(item.vendorId, res.url, messageType)
+                            .then(() => {
+                                delete window._pendingChatUploads[tempId];
+                                const pendingEl = document.getElementById(tempId);
+                                if (pendingEl) pendingEl.remove();
+                                API.getChatHistory(item.vendorId).then(history => {
+                                    if (typeof updateChatMessages === 'function') updateChatMessages(history);
+                                });
+                            })
+                            .catch(err => {
+                                markChatUploadFailed(tempId, err.message || 'Failed to send attachment message.');
+                            });
+                    } else {
+                        markChatUploadFailed(tempId, res.error || 'Upload failed');
+                    }
+                } catch(e) {
+                    markChatUploadFailed(tempId, 'Invalid server response');
+                }
+            } else {
+                markChatUploadFailed(tempId, 'Server returned error ' + xhr.status);
+            }
+        };
+
+        xhr.onerror = function() {
+            markChatUploadFailed(tempId, 'Network error during upload');
+        };
+
+        xhr.ontimeout = function() {
+            markChatUploadFailed(tempId, 'Upload timed out');
+        };
+
+        xhr.open('POST', apiUrl, true);
+        if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
+        xhr.withCredentials = true;
+        xhr.send(formData);
     };
 
-    if (window.compressImageFileBeforeUpload && file.type && file.type.startsWith('image/')) {
-        window.compressImageFileBeforeUpload(file, 1600, 1600, 0.8, (compressed) => {
-            processUpload(compressed);
+    if (window.compressImageFileBeforeUpload && item.isImage) {
+        window.compressImageFileBeforeUpload(item.file, 1600, 1600, 0.8, (compressed) => {
+            executeXhr(compressed);
         });
     } else {
-        processUpload(file);
+        executeXhr(item.file);
     }
 };
 
-
+function markChatUploadFailed(tempId, errMsg) {
+    const item = window._pendingChatUploads[tempId];
+    if (item) {
+        item.status = 'failed';
+        item.errorMsg = errMsg;
+    }
+    if (typeof window.renderPendingChatBubble === 'function') {
+        window.renderPendingChatBubble(tempId);
+    }
+    if (typeof showPushNotification === 'function') {
+        showPushNotification('Upload Failed', errMsg || 'File upload failed. Tap Retry to try again.');
+    }
+}
 
 window.getBlockedUsers = function() {
     try {
@@ -118,179 +272,14 @@ window.getBlockedUsers = function() {
     } catch(e) { return []; }
 };
 
-window.openBlockUserModal = function(targetId, targetName, targetAvatar, targetRole) {
-    if (!targetId) return;
-    if (!state.user) {
-        if (typeof openLoginModal === 'function') openLoginModal();
-        return;
-    }
-    
-    const blockedList = window.getBlockedUsers();
-    const isBlocked = blockedList.includes(targetId) || blockedList.includes(Number(targetId));
-    
-    if (isBlocked) {
-        // Unblock Pop Up Modal
-        const html = `
-            <div style="padding:28px 22px; text-align:center;">
-                <div style="width:68px; height:68px; border-radius:50%; background:rgba(16, 185, 129, 0.12); color:#10B981; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 16px; box-shadow:0 6px 18px rgba(16,185,129,0.18);">
-                    <i class="fa-solid fa-user-check"></i>
-                </div>
-                <h3 style="margin:0 0 6px 0; font-size:1.25rem; font-weight:800; color:var(--gray-900,#111827);">Unblock ${targetName || 'User'}?</h3>
-                <p style="margin:0 0 20px 0; font-size:0.83rem; color:var(--gray-500,#6B7280); line-height:1.5;">
-                    Unblocking will allow <strong>${targetName || 'this user'}</strong> to view your profile, send you messages, and appear in your active chats.
-                </p>
-                <div style="display:flex; gap:10px; margin-top:24px;">
-                    <button class="btn btn-outline btn-full" onclick="closeModal()" style="padding:12px; font-weight:700;">Cancel</button>
-                    <button class="btn btn-primary btn-full" id="confirm-unblock-btn" onclick="submitUnblockUserAction(${targetId}, '${(targetName||'').replace(/'/g, "\\'")}')" style="padding:12px; font-weight:700; background:#10B981; border-color:#10B981; color:#fff;">
-                        <i class="fa-solid fa-unlock" style="margin-right:6px;"></i> Unblock User
-                    </button>
-                </div>
-            </div>
-        `;
-        openModal(html);
-        return;
-    }
+window._pendingChatBlock = { vendorId: 0, vendorName: '' };
+window._pendingChatReport = { vendorId: 0, vendorName: '' };
 
-    const avatarUrl = targetAvatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
-    const roleLabel = targetRole || 'Vendor';
-
-    const html = `
-        <div style="padding:24px 20px; text-align:left;">
-            <!-- Header Icon & Title -->
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-                <div style="width:48px; height:48px; border-radius:50%; background:rgba(239, 68, 68, 0.12); color:#EF4444; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
-                    <i class="fa-solid fa-user-slash"></i>
-                </div>
-                <div>
-                    <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--gray-900,#111827);">Block & Report User</h3>
-                    <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--gray-500,#6B7280);">Prevent unwanted messages & submit reports</p>
-                </div>
-            </div>
-
-            <!-- Target User Card -->
-            <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--gray-100,#F8FAFC); border-radius:14px; margin-bottom:18px; border:1px solid var(--gray-200,#E2E8F0);">
-                <img src="${avatarUrl}" style="width:44px; height:44px; border-radius:50%; object-fit:cover;" alt="${targetName || 'User'}">
-                <div style="overflow:hidden;">
-                    <div style="font-weight:800; font-size:0.92rem; color:var(--gray-900,#111827); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">${targetName || 'User'}</div>
-                    <div style="font-size:0.72rem; color:var(--gray-500,#6B7280); font-weight:600;">${roleLabel} Profile</div>
-                </div>
-            </div>
-
-            <!-- Block Reason Selection -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block; font-size:0.78rem; font-weight:700; color:var(--gray-700,#374151); margin-bottom:6px;">Select reason for blocking:</label>
-                <select id="block-reason-select" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--gray-300,#CBD5E1); background:#fff; font-size:0.85rem; color:var(--gray-800,#1E293B); outline:none;" onchange="toggleBlockNotesField(this.value)">
-                    <option value="Inappropriate Messages or Behavior">Inappropriate Messages or Behavior</option>
-                    <option value="Spam or Unsolicited Advertisements">Spam or Unsolicited Advertisements</option>
-                    <option value="Suspected Fraud, Scam or Fake Profile">Suspected Fraud, Scam or Fake Profile</option>
-                    <option value="Harassment or Offensive Language">Harassment or Offensive Language</option>
-                    <option value="No Longer Wish to Communicate">No Longer Wish to Communicate</option>
-                    <option value="Other Reason">Other Reason</option>
-                </select>
-            </div>
-
-            <!-- Additional Notes / Details -->
-            <div id="block-notes-wrap" style="margin-bottom:16px; display:none;">
-                <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--gray-700,#374151); margin-bottom:4px;">Additional Details (Optional):</label>
-                <textarea id="block-reason-notes" rows="2" placeholder="Provide extra details for moderation team..." style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--gray-300,#CBD5E1); font-size:0.82rem; outline:none; box-sizing:border-box; resize:none;"></textarea>
-            </div>
-
-            <!-- Checkbox: Report to Admin -->
-            <label style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--gray-700,#374151); margin-bottom:18px; cursor:pointer; font-weight:600;">
-                <input type="checkbox" id="block-report-checkbox" checked style="accent-color:#EF4444; width:16px; height:16px; cursor:pointer;">
-                <span>Submit a confidential report to Ohati Moderation</span>
-            </label>
-
-            <!-- Warning Notice -->
-            <div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:10px 12px; margin-bottom:20px; font-size:0.74rem; color:var(--gray-700,#374151); line-height:1.4;">
-                <i class="fa-solid fa-shield-halved" style="color:#EF4444; margin-right:6px;"></i>
-                This user will be blocked immediately and hidden from your chat inbox and feeds.
-            </div>
-
-            <!-- Action Buttons -->
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-outline btn-full" onclick="closeModal()" style="padding:12px; font-weight:700;">Cancel</button>
-                <button class="btn btn-primary btn-full" id="confirm-block-btn" onclick="submitBlockUserAction(${targetId}, '${(targetName||'').replace(/'/g, "\\'")}')" style="padding:12px; font-weight:700; background:#EF4444; border-color:#EF4444; color:#fff;">
-                    <i class="fa-solid fa-ban" style="margin-right:6px;"></i> Block User
-                </button>
-            </div>
-        </div>
-    `;
-
-    openModal(html);
-};
-
-window.blockVendorUser = function(vendorId, vendorName, avatar, category) {
-    window.openBlockUserModal(vendorId, vendorName, avatar, category);
-};
-
-window.toggleBlockNotesField = function(val) {
-    const wrap = document.getElementById('block-notes-wrap');
-    if (wrap) wrap.style.display = (val === 'Other Reason') ? 'block' : 'none';
-};
-
-window.submitBlockUserAction = function(targetId, targetName) {
-    const btn = document.getElementById('confirm-block-btn');
-    const reasonSelect = document.getElementById('block-reason-select');
-    const notesInput = document.getElementById('block-reason-notes');
-    const reportCb = document.getElementById('block-report-checkbox');
-
-    const reason = reasonSelect ? reasonSelect.value : 'User Blocked';
-    const notes = notesInput ? notesInput.value.trim() : '';
-    const isReported = reportCb ? reportCb.checked : true;
-
-    ActionLock.execute(btn, 'Blocking...', async () => {
-        // Save locally
-        const blocked = window.getBlockedUsers();
-        if (!blocked.includes(targetId) && !blocked.includes(Number(targetId))) {
-            blocked.push(Number(targetId));
-            localStorage.setItem('ohati_blocked_users', JSON.stringify(blocked));
-        }
-
-        // Notify backend
-        try {
-            if (typeof API !== 'undefined' && API.post) {
-                await API.post('block_user', {
-                    target_id: targetId,
-                    reason: reason,
-                    notes: notes,
-                    report: isReported ? 1 : 0
-                });
-            }
-        } catch(e) {}
-
-        showPushNotification('User Blocked', `${targetName || 'User'} has been blocked successfully.`);
-        closeModal();
-
-        // Refresh active chat/screen
-        if (state.activeChatVendorId == targetId) {
-            if (typeof closeActiveChat === 'function') closeActiveChat();
-        }
-        if (typeof navigateTo === 'function') navigateTo('chat');
-    });
-};
-
-window.submitUnblockUserAction = function(targetId, targetName) {
-    const btn = document.getElementById('confirm-unblock-btn');
-
-    ActionLock.execute(btn, 'Unblocking...', async () => {
-        let blocked = window.getBlockedUsers();
-        blocked = blocked.filter(id => Number(id) !== Number(targetId));
-        localStorage.setItem('ohati_blocked_users', JSON.stringify(blocked));
-
-        try {
-            if (typeof API !== 'undefined' && API.post) {
-                await API.post('unblock_user', { target_id: targetId });
-            }
-        } catch(e) {}
-
-        showPushNotification('User Unblocked', `${targetName || 'User'} has been unblocked.`);
-        closeModal();
-
-        if (typeof navigateTo === 'function') navigateTo('chat');
-    });
-};
-
-window.reportVendorContent = function(vendorId, vendorName) {
-    window.openBlockUserModal(vendorId, vendorName);
-};
+window.blockVendorUser = function(vendorId, vendorName) {};
+function openChatBlockModal(vendorName) {}
+function closeChatBlockModal() {}
+function executeChatBlockUser() {}
+window.reportVendorContent = function(vendorId, vendorName) {};
+function openChatReportModal(vendorName) {}
+function closeChatReportModal() {}
+function submitChatUserReport() {}

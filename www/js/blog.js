@@ -17,6 +17,7 @@ window.blogState = {
 function initBlogScreen(params = {}) {
     const container = document.getElementById('screen-blog');
     if (!container) return;
+    container.classList.add('light-theme-forced');
 
     if (params && params.category) {
         window.blogState.currentCategory = params.category;
@@ -122,7 +123,7 @@ function renderBlogFeedSections() {
         html += `
             <div class="blog-hero-card" onclick="openBlogArticle(${heroPost.id})">
                 <div class="blog-hero-media">
-                    <img src="${heroPost.cover_image || window.DEFAULT_BUSINESS_COVER}" alt="${escapeHtml(heroPost.title)}" class="blog-hero-img" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
+                    <img src="${heroPost.cover_image || window.DEFAULT_BUSINESS_COVER}" alt="${escapeHtml(heroPost.title)} - Ohati Event Guide" title="${escapeHtml(heroPost.title)}" class="blog-hero-img" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
                     <span class="blog-hero-badge"><i class="fa-solid fa-star"></i> FEATURED GUIDE</span>
                 </div>
                 <div class="blog-hero-content">
@@ -135,7 +136,7 @@ function renderBlogFeedSections() {
                     <p class="blog-hero-excerpt">${escapeHtml(heroPost.subheadline || '')}</p>
                     <div class="blog-hero-footer">
                         <div class="blog-author-info">
-                            <img src="${heroPost.author_avatar || window.DEFAULT_USER_AVATAR}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                            <img src="${heroPost.author_avatar || window.DEFAULT_USER_AVATAR}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
                             <span>${escapeHtml(heroPost.author_name || 'Ohati Editorial')}</span>
                         </div>
                         <div class="blog-stats-group">
@@ -169,7 +170,7 @@ function renderBlogFeedSections() {
         html += `
             <div class="blog-card" onclick="openBlogArticle(${post.id})">
                 <div class="blog-card-thumb-box">
-                    <img src="${post.cover_image || window.DEFAULT_BUSINESS_COVER}" alt="${escapeHtml(post.title)}" class="blog-card-thumb" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
+                    <img src="${post.cover_image || window.DEFAULT_BUSINESS_COVER}" alt="${escapeHtml(post.title)}" title="${escapeHtml(post.title)}" class="blog-card-thumb" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
                     <span class="blog-card-cat">${escapeHtml(post.category)}</span>
                     ${post.video_url ? '<span class="blog-card-video-icon"><i class="fa-solid fa-play"></i></span>' : ''}
                 </div>
@@ -268,6 +269,7 @@ function openBlogArticle(idOrSlug) {
 function initBlogDetailScreen(params = {}) {
     const container = document.getElementById('screen-blog-detail');
     if (!container) return;
+    container.classList.add('light-theme-forced');
 
     const targetId = params.id || state.selectedBlogId || 0;
     const targetSlug = params.slug || '';
@@ -537,6 +539,9 @@ function renderBlogArticleDetails(post, comments, related) {
                                                     <button class="comment-action-btn ${r.has_liked ? 'liked' : ''}" id="comment-like-btn-${r.id}" onclick="toggleCommentLike(${r.id})">
                                                         <i class="${r.has_liked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                                                         <span id="comment-like-count-${r.id}">${formatCompactNumber(r.likes_count)}</span>
+                                                    </button>
+                                                    <button class="comment-action-btn report-btn" onclick="showReportCommentModal(${r.id}, '${escapeHtml(r.author_name).replace(/'/g, "\\'")}')" title="Report Reply" style="margin-left:auto; color:var(--gray-400); font-size:0.75rem;">
+                                                        <i class="fa-regular fa-flag"></i> Report
                                                     </button>
                                                 </div>
                                             </div>

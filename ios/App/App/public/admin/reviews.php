@@ -19,8 +19,15 @@ function getSetting($key, $default = '') {
 function setSetting($key, $value) {
     global $pdo;
     try {
-        $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE val_value = ?");
-        $stmt->execute([$key, $value, $value]);
+        $chk = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = ?");
+        $chk->execute([$key]);
+        if ($chk->fetchColumn() > 0) {
+            $stmt = $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = ?");
+            $stmt->execute([$value, $key]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?)");
+            $stmt->execute([$key, $value]);
+        }
     } catch (Exception $e) {}
 }
 

@@ -68,7 +68,7 @@ function handle_job_action($action, $pdo) {
     $data = is_array($raw_json) ? $raw_json : $_POST;
 
     // Helper: Current logged-in user
-    $user_id = $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? $data['user_id'] ?? 0;
+    $user_id = $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? ($GLOBALS['token_uid'] ?? 0) ?: ($data['user_id'] ?? 0);
     $vendor_id = $_SESSION['vendor_id'] ?? $_SESSION['vendor']['id'] ?? $data['vendor_id'] ?? 0;
 
     switch ($action) {

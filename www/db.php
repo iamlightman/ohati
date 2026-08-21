@@ -46,10 +46,12 @@ if (!$pdo) {
         $db_path = __DIR__ . '/ohati.db';
         $pdo = new PDO("sqlite:$db_path", null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_TIMEOUT => 30
         ]);
         $pdo->exec("PRAGMA journal_mode=WAL");
-        $pdo->exec("PRAGMA busy_timeout=10000");
+        $pdo->exec("PRAGMA busy_timeout=30000");
+        $pdo->exec("PRAGMA synchronous=NORMAL");
         $db_type = 'sqlite';
     } catch (PDOException $e) {
         die(json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]));
@@ -851,7 +853,11 @@ try {
         'admin_payment_instructions' => 'Please transfer the ad campaign fee to MTN MoMo (0540477911) or Ecobank Ghana (1441002939201). Upload your receipt screenshot and enter your transaction ID below.'
     ];
     foreach ($defaults as $k => $v) {
-        $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE val_value = val_value")->execute([$k, $v]);
+        $chk_def = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = ?");
+        $chk_def->execute([$k]);
+        if ($chk_def->fetchColumn() == 0) {
+            $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?)")->execute([$k, $v]);
+        }
     }
 } catch (Exception $e) {}
 

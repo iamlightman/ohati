@@ -1,4 +1,4 @@
-// components.js - Wedmi App Frontend Controller & Components
+// components.js - Ohati App Frontend Controller & Components
 
 const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
 
@@ -41,8 +41,8 @@ const state = {
         search: ''
     },
     globalReviews: [
-        { id: 1, name: "Abena Boateng", rating: 5, comment: "Wedmi made finding my wedding decorator so simple. Royal Gold & Ivory theme was executed to perfection!", views: 476000, likes: 287000, liked: false, avatar: DEFAULT_USER_AVATAR },
-        { id: 2, name: "Kwame Mensah", rating: 5, comment: "Exceptional photography choices. We booked Wedmi's verified photographers and our wedding album is absolute gold!", views: 421000, likes: 254000, liked: false, avatar: DEFAULT_USER_AVATAR },
+        { id: 1, name: "Abena Boateng", rating: 5, comment: "Ohati made finding my event decorator so simple. Royal Gold & Ivory theme was executed to perfection!", views: 476000, likes: 287000, liked: false, avatar: DEFAULT_USER_AVATAR },
+        { id: 2, name: "Kwame Mensah", rating: 5, comment: "Exceptional photography choices. We booked Ohati's verified photographers and our wedding album is absolute gold!", views: 421000, likes: 254000, liked: false, avatar: DEFAULT_USER_AVATAR },
         { id: 3, name: "Adjoa Sarfo", rating: 4, comment: "Great customer support and easy booking. Highly recommend the budget planning tools for keeping us on track.", views: 389000, likes: 212000, liked: false, avatar: DEFAULT_USER_AVATAR },
         { id: 4, name: "Yaw Osei", rating: 5, comment: "I got the best catering deal through this platform. The verified badges really gave us peace of mind.", views: 453000, likes: 271000, liked: false, avatar: DEFAULT_USER_AVATAR },
         { id: 5, name: "Kofi Boadu", rating: 5, comment: "Smooth communication with DJs and MCs. Booking traditional marriage services was extremely seamless.", views: 312000, likes: 184000, liked: false, avatar: DEFAULT_USER_AVATAR }
@@ -61,14 +61,14 @@ async function initApp() {
         initPushNotificationSwipes();
         
         // Load current user session from localStorage (instant, no network)
-        state.currentUser = JSON.parse(localStorage.getItem('wedmi_user') || 'null');
+        state.currentUser = JSON.parse(localStorage.getItem('ohati_user_session') || 'null');
         
         // Keyboard viewport constraint optimizer using visualViewport API
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
                 const viewport = document.getElementById('app-viewport');
                 const chatMsgArea = document.getElementById('chat-msg-area');
-                const appFrame = document.getElementById('wedmi-app-frame');
+                const appFrame = document.getElementById('ohati-app-frame');
                 
                 if (state.currentScreen === 'chat' && viewport) {
                     const vvHeight = window.visualViewport.height;
@@ -106,7 +106,7 @@ async function initApp() {
         updateUserSessionUI();
 
         // Fade out splash loading screen and animate topbar / content transition
-        const appFrame = document.getElementById('wedmi-app-frame');
+        const appFrame = document.getElementById('ohati-app-frame');
         const loadingScreen = document.getElementById('screen-loading');
         if (loadingScreen) {
             loadingScreen.classList.add('fade-out');
@@ -152,7 +152,7 @@ async function fetchEventDetails() {
 
 // Setup Theme Toggle
 function setupTheme() {
-    const theme = localStorage.getItem('wedmi_theme') || 'light';
+    const theme = localStorage.getItem('theme') || 'light';
     const icon = document.querySelector('#theme-toggle-btn i');
     
     if (theme === 'dark') {
@@ -167,14 +167,14 @@ function setupTheme() {
         document.body.classList.toggle('dark-theme');
         const activeIcon = document.querySelector('#theme-toggle-btn i');
         if (document.body.classList.contains('dark-theme')) {
-            localStorage.setItem('wedmi_theme', 'dark');
+            localStorage.setItem('theme', 'dark');
             if (activeIcon) {
                 activeIcon.classList.remove('fa-moon');
                 activeIcon.classList.add('fa-sun');
             }
             showPushNotification("Dark Mode Enabled", "Enjoy a premium, battery-saving dark aesthetic.");
         } else {
-            localStorage.setItem('wedmi_theme', 'light');
+            localStorage.setItem('theme', 'light');
             if (activeIcon) {
                 activeIcon.classList.remove('fa-sun');
                 activeIcon.classList.add('fa-moon');
@@ -346,7 +346,7 @@ async function fetchTrackerStats() {
 
 // 5. Navigation Router
 function navigateTo(screenName, keepHistory = true) {
-    const appFrame = document.getElementById('wedmi-app-frame');
+    const appFrame = document.getElementById('ohati-app-frame');
     if (appFrame && (screenName !== 'chat' || !state.activeChatVendorId)) {
         appFrame.style.height = "";
     }
@@ -445,7 +445,7 @@ function renderOnboarding() {
             <div class="onboarding-logo-icon">
                 <i class="fa-solid fa-heart-crack"></i>
             </div>
-            <h1 style="color: var(--warm-ivory); font-size: 2.5rem; letter-spacing: 3px;">WEDMI</h1>
+            <h1 style="color: var(--warm-ivory); font-size: 2.5rem; letter-spacing: 3px;">OHATI</h1>
             <p style="color: var(--sage-green); font-size: 0.85rem; letter-spacing: 2px;">FIND. COMPARE. BOOK.</p>
         </div>
         
@@ -477,7 +477,7 @@ function renderOnboarding() {
     });
     
     document.getElementById('onboard-guest-btn').addEventListener('click', () => {
-        localStorage.setItem('wedmi_onboarded', 'true');
+        localStorage.setItem('ohati_onboarded', 'true');
         navigateTo('home');
     });
 }
@@ -2632,7 +2632,7 @@ async function renderChatScreen() {
         "Let me know if you would like me to draft a custom contract options file for you! 📝",
         "Hello! I am checking my calendar slot. Are we looking at a morning or afternoon start time? ☀️",
         "Don't forget to add our booking costs into your Smart Budget planner so we keep you on track! 💰",
-        "Wedmi tells me you completed another planning milestone! Keep up the good momentum! 🎉"
+        "Ohati tells me you completed another planning milestone! Keep up the good momentum! 🎉"
     ];
     
     state.chatInterval = setInterval(async () => {
@@ -3034,7 +3034,7 @@ function openNotificationsModal() {
                 
                 <div style="padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.02); border-left: 4px solid var(--sage-green); font-size: 0.75rem;">
                     <div style="font-weight: 700; color: var(--forest-green); display: flex; justify-content: space-between;">
-                        <span>Welcome to Wedmi!</span>
+                        <span>Welcome to Ohati!</span>
                         <span style="font-size: 0.65rem; color: var(--gray-text);">${formatRelativeTime(new Date(Date.now() - 7200000))}</span>
                     </div>
                     <div style="margin-top: 4px; color: var(--gray-text);">Your smart event consultant setup guide is ready. Tap "Plan My Event" to get started!</div>
@@ -3177,7 +3177,7 @@ function openProfileModal() {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Contact Email</label>
-                        <input type="email" class="form-input" id="profile-email" value="${clientEmail}" required placeholder="client-session@wedmi.com">
+                        <input type="email" class="form-input" id="profile-email" value="${clientEmail}" required placeholder="client-session@ohati.com">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Event Type</label>
@@ -3223,7 +3223,7 @@ function saveProfileSettings(e) {
     state.currentUser.name = name;
     state.currentUser.email = email;
     state.currentUser.avatar = avatar;
-    localStorage.setItem('wedmi_user', JSON.stringify(state.currentUser));
+    localStorage.setItem('ohati_user_session', JSON.stringify(state.currentUser));
     
     if (state.event) {
         state.event.theme = theme;
@@ -3242,7 +3242,7 @@ function openSignUpModal() {
     el.innerHTML = `
         <div class="modal-sheet anim-fade-in" style="max-width: 400px; padding: 25px;">
             <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-user-plus" style="color: var(--champagne-gold);"></i> Create Wedmi Account
+                <i class="fa-solid fa-user-plus" style="color: var(--champagne-gold);"></i> Create Ohati Account
             </h3>
             <p style="font-size: 0.7rem; color: var(--gray-text); margin-bottom: 15px;">Sign up to book vendors, track your planning budget, and milestones.</p>
             
@@ -3287,76 +3287,27 @@ function submitSignUp(e) {
     const phone = document.getElementById('signup-phone').value;
     
     state.currentUser = { name, email, phone };
-    localStorage.setItem('wedmi_user', JSON.stringify(state.currentUser));
-    localStorage.setItem('wedmi_onboarded', 'true');
+    localStorage.setItem('ohati_user_session', JSON.stringify(state.currentUser));
+    localStorage.setItem('ohati_onboarded', 'true');
     
     closeBookingModal();
     updateUserSessionUI();
     
-    showPushNotification("Account Created! 🎉", `Welcome to Wedmi, ${name}!`);
+    showPushNotification("Account Created! 🎉", `Welcome to Ohati, ${name}!`);
     navigateTo('home');
 }
 
 function openLoginModal() {
-    const el = document.getElementById('booking-modal');
-    if (!el) return;
-    
-    el.innerHTML = `
-        <div class="modal-sheet anim-fade-in" style="max-width: 400px; padding: 25px;">
-            <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-right-to-bracket" style="color: var(--champagne-gold);"></i> Wedmi Client Access
-            </h3>
-            <p style="font-size: 0.7rem; color: var(--gray-text); margin-bottom: 15px;">Access your planner, negotiations, and payments across devices.</p>
-            
-            <form id="login-submit-form" onsubmit="submitLogin(event)">
-                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
-                    <div class="form-group">
-                        <label class="form-label">Phone Number or Email</label>
-                        <input type="text" class="form-input" id="login-identity" value="0244123456" required placeholder="024 XXX XXXX">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Secret PIN or Password</label>
-                        <input type="password" class="form-input" id="login-password" value="••••••" required placeholder="Enter PIN">
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem;">
-                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                            <input type="checkbox" checked style="accent-color: var(--forest-green);"> Keep me signed in
-                        </label>
-                        <a href="#" onclick="alert('Demo reset code sent!')" style="color: var(--champagne-gold); text-decoration: none; font-weight: 700;">Forgot PIN?</a>
-                    </div>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button type="submit" class="btn btn-primary" style="height: 44px;">Sign In to Account</button>
-                    <button type="button" class="btn btn-outline" onclick="closeBookingModal()" style="height: 44px;">Cancel</button>
-                </div>
-            </form>
-            
-            <div style="text-align: center; margin-top: 15px; font-size: 0.75rem; color: var(--gray-text);">
-                New to Wedmi? <a href="#" onclick="openSignUpModal(); return false;" style="color: var(--forest-green); font-weight: 700; text-decoration: none;">Create an Account</a>
-            </div>
-        </div>
-    `;
-    el.classList.add('active');
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        showMandatoryAuthLockScreen('login');
+    }
 }
 
 function submitLogin(e) {
-    e.preventDefault();
-    const identity = document.getElementById('login-identity').value;
-    
-    state.currentUser = {
-        name: identity.includes('@') ? identity.split('@')[0] : "User " + identity,
-        email: identity.includes('@') ? identity : identity + "@wedmi.com",
-        phone: identity.includes('@') ? "0240000000" : identity
-    };
-    localStorage.setItem('wedmi_user', JSON.stringify(state.currentUser));
-    localStorage.setItem('wedmi_onboarded', 'true');
-    
-    closeBookingModal();
-    updateUserSessionUI();
-    
-    showPushNotification("Welcome back! 👋", `Logged in successfully as ${state.currentUser.name}.`);
-    navigateTo('home');
+    if (e && e.preventDefault) e.preventDefault();
+    if (typeof showMandatoryAuthLockScreen === 'function') {
+        showMandatoryAuthLockScreen('login');
+    }
 }
 
 // openWalletModal is now defined in modals.js with role-aware Vendor/Customer views.
@@ -3451,7 +3402,7 @@ window.openPlatformReviewModal = function() {
             <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-pen-to-square" style="color: var(--champagne-gold);"></i> Platform Experience Review
             </h3>
-            <p style="font-size: 0.72rem; color: var(--gray-text); margin-bottom: 15px;">Tell us about your experience planning with Wedmi.</p>
+            <p style="font-size: 0.72rem; color: var(--gray-text); margin-bottom: 15px;">Tell us about your experience planning with Ohati.</p>
             
             <form id="platform-review-form" onsubmit="submitPlatformReview(event)">
                 <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
@@ -3508,7 +3459,7 @@ window.submitPlatformReview = function(e) {
     state.globalReviews.unshift(newRev);
     closeBookingModal();
     renderHomeScreen();
-    showPushNotification("Review Submitted! 🎉", "Thank you for sharing your experience on Wedmi.");
+    showPushNotification("Review Submitted! 🎉", "Thank you for sharing your experience on Ohati.");
 };
 
 window.openAllReviewsModal = function() {
@@ -3642,7 +3593,7 @@ window.submitConciergeRequest = function(e) {
     const date = document.getElementById('concierge-date').value;
     const reqs = document.getElementById('concierge-requirements').value;
     
-    const requests = JSON.parse(localStorage.getItem('wedmi_concierge_requests') || '[]');
+    const requests = JSON.parse(localStorage.getItem('ohati_concierge_requests') || '[]');
     requests.push({
         id: Date.now(),
         name,
@@ -3655,7 +3606,7 @@ window.submitConciergeRequest = function(e) {
         reqs,
         timestamp: new Date().toISOString()
     });
-    localStorage.setItem('wedmi_concierge_requests', JSON.stringify(requests));
+    localStorage.setItem('ohati_concierge_requests', JSON.stringify(requests));
     
     closeBookingModal();
     showPushNotification("Request Received! 👑", "Our Lead Concierge Planner will contact you shortly.");

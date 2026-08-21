@@ -4,15 +4,108 @@ session_start();
 if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
 }
+
+// ── SERVER-SIDE SEO & DYNAMIC METADATA RESOLUTION ─────────────────────
+require_once __DIR__ . '/db.php';
+
+$seo_title = "Ohati — Find. Compare. Book. Celebrate.";
+$seo_desc = "Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.";
+$seo_image = "https://ohati.com/img/app_icon.png";
+$seo_url = "https://ohati.com";
+$seo_type = "website";
+$seo_json_ld = null;
+
+$requested_vendor_id = intval($_GET['id'] ?? $_GET['vendor_id'] ?? $_GET['vid'] ?? 0);
+$requested_blog_id = intval($_GET['blog_id'] ?? $_GET['post_id'] ?? 0);
+
+if ($requested_vendor_id > 0) {
+    try {
+        $v_stmt = $pdo->prepare("SELECT id, name, category, city, location, description, rating, reviews_count, logo, cover_photo, phone, email, website FROM vendors WHERE id = ?");
+        $v_stmt->execute([$requested_vendor_id]);
+        $v_data = $v_stmt->fetch(PDO::FETCH_ASSOC);
+        if ($v_data) {
+            $v_name = htmlspecialchars($v_data['name']);
+            $v_cat = htmlspecialchars($v_data['category']);
+            $v_city = htmlspecialchars($v_data['city'] ?: ($v_data['location'] ?: 'Ghana'));
+            $v_desc = htmlspecialchars(substr(strip_tags($v_data['description'] ?: "Book $v_name for $v_cat in $v_city, Ghana on Ohati."), 0, 160));
+            
+            $seo_title = "$v_name — $v_cat in $v_city, Ghana | Ohati";
+            $seo_desc = $v_desc;
+            $seo_image = $v_data['cover_photo'] ?: ($v_data['logo'] ?: "https://ohati.com/img/app_icon.png");
+            if (strpos($seo_image, 'http') !== 0) $seo_image = "https://ohati.com/" . ltrim($seo_image, '/');
+            $seo_url = "https://ohati.com/detail.php?id=" . $v_data['id'];
+            $seo_type = "profile";
+
+            $seo_json_ld = [
+                "@context" => "https://schema.org",
+                "@type" => "LocalBusiness",
+                "name" => $v_data['name'],
+                "category" => $v_data['category'],
+                "image" => $seo_image,
+                "telephone" => $v_data['phone'] ?: '',
+                "email" => $v_data['email'] ?: '',
+                "url" => $seo_url,
+                "address" => [
+                    "@type" => "PostalAddress",
+                    "addressLocality" => $v_data['city'] ?: 'Accra',
+                    "addressCountry" => "GH"
+                ],
+                "aggregateRating" => [
+                    "@type" => "AggregateRating",
+                    "ratingValue" => number_format(floatval($v_data['rating'] ?: 5.0), 1),
+                    "reviewCount" => intval($v_data['reviews_count'] ?: 1)
+                ]
+            ];
+        }
+    } catch (Throwable $eSeoV) {}
+} elseif ($requested_blog_id > 0) {
+    try {
+        $b_stmt = $pdo->prepare("SELECT id, title, excerpt, content, cover_image, category, author_name, created_at FROM blog_posts WHERE id = ?");
+        $b_stmt->execute([$requested_blog_id]);
+        $b_data = $b_stmt->fetch(PDO::FETCH_ASSOC);
+        if ($b_data) {
+            $b_title = htmlspecialchars($b_data['title']);
+            $b_desc = htmlspecialchars(substr(strip_tags($b_data['excerpt'] ?: $b_data['content']), 0, 160));
+            
+            $seo_title = "$b_title | Ohati Event Blog";
+            $seo_desc = $b_desc;
+            $seo_image = $b_data['cover_image'] ?: "https://ohati.com/img/app_icon.png";
+            if (strpos($seo_image, 'http') !== 0) $seo_image = "https://ohati.com/" . ltrim($seo_image, '/');
+            $seo_url = "https://ohati.com/blog.php?id=" . $b_data['id'];
+            $seo_type = "article";
+
+            $seo_json_ld = [
+                "@context" => "https://schema.org",
+                "@type" => "BlogPosting",
+                "headline" => $b_data['title'],
+                "description" => $b_desc,
+                "image" => $seo_image,
+                "author" => [
+                    "@type" => "Person",
+                    "name" => $b_data['author_name'] ?: 'Ohati Team'
+                ],
+                "publisher" => [
+                    "@type" => "Organization",
+                    "name" => "Ohati",
+                    "logo" => [
+                        "@type" => "ImageObject",
+                        "url" => "https://ohati.com/img/app_icon.png"
+                    ]
+                ],
+                "datePublished" => date('c', strtotime($b_data['created_at'] ?: 'now'))
+            ];
+        }
+    } catch (Throwable $eSeoB) {}
+}
 ?>
 
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ohati — Find. Compare. Book. Celebrate.</title>
+    <title><?= $seo_title ?></title>
     <meta name="csrf-token" content="">
-    <meta name="description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
+    <meta name="description" content="<?= $seo_desc ?>">
     <meta name="theme-color" content="#1B2B4B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,28 +114,33 @@ if (empty($_SESSION['csrf'])) {
     <link rel="apple-touch-icon" href="img/app_icon.png">
 
     <!-- Canonical URL -->
-    <link rel="canonical" href="https://ohati.com">
+    <link rel="canonical" href="<?= $seo_url ?>">
 
     <!-- Android App Deep Indexing & Google Play Link Tags -->
     <link rel="alternate" href="android-app://com.ohati.app/https/ohati.com/" />
     <meta property="al:android:url" content="android-app://com.ohati.app/https/ohati.com/">
     <meta property="al:android:package" content="com.ohati.app">
     <meta property="al:android:app_name" content="Ohati">
-    <meta property="al:web:url" content="https://ohati.com">
+    <meta property="al:web:url" content="<?= $seo_url ?>">
     <meta name="twitter:app:name:googleplay" content="Ohati">
     <meta name="twitter:app:id:googleplay" content="com.ohati.app">
     <meta name="twitter:app:url:googleplay" content="https://play.google.com/store/apps/details?id=com.ohati.app">
 
     <!-- SEO & Link Preview Meta Tags (Open Graph / Twitter) -->
-    <meta property="og:title" content="Ohati — Find. Compare. Book. Celebrate.">
-    <meta property="og:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
-    <meta property="og:image" content="https://ohati.com/img/app_icon.png">
-    <meta property="og:url" content="https://ohati.com">
-    <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= $seo_title ?>">
+    <meta property="og:description" content="<?= $seo_desc ?>">
+    <meta property="og:image" content="<?= $seo_image ?>">
+    <meta property="og:url" content="<?= $seo_url ?>">
+    <meta property="og:type" content="<?= $seo_type ?>">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Ohati — Find. Compare. Book. Celebrate.">
-    <meta name="twitter:description" content="Ohati is Ghana's trusted event vendor marketplace. Discover and secure top photographers, makeup artists, decorators, caterers, and DJs for your wedding, birthday, or corporate event with secure direct payments.">
-    <meta name="twitter:image" content="https://ohati.com/img/app_icon.png">
+    <meta name="twitter:title" content="<?= $seo_title ?>">
+    <meta name="twitter:description" content="<?= $seo_desc ?>">
+    <meta name="twitter:image" content="<?= $seo_image ?>">
+    <?php if (!empty($seo_json_ld)): ?>
+    <script type="application/ld+json">
+    <?= json_encode($seo_json_ld, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) ?>
+    </script>
+    <?php endif; ?>
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -316,11 +414,11 @@ if (empty($_SESSION['csrf'])) {
                         <span class="sidebar-badge-new">NEW</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openReferAndEarnModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a class="sidebar-link" onclick="openDiscountsAndOffersModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
                     <a class="sidebar-link" onclick="navigateTo('about'); toggleSidebar(false)"><i class="fa-solid fa-circle-info"></i> About Us</a>

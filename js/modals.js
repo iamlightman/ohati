@@ -63,7 +63,7 @@ function showPushNotification(title, desc, type = 'info') {
         try {
             if (type === 'error') navigator.vibrate([300, 100, 300]);
             else navigator.vibrate([150, 80, 150]);
-        } catch (e) {}
+        } catch (e) { }
     }
 
     if (notifTimeout) clearTimeout(notifTimeout);
@@ -71,13 +71,13 @@ function showPushNotification(title, desc, type = 'info') {
     notifTimeout = setTimeout(() => dismissPushNotification(), 5000);
 }
 
-window.requestDeviceNotificationPermission = function() {
+window.requestDeviceNotificationPermission = function () {
     if (typeof Notification !== 'undefined' && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
         try {
             Notification.requestPermission().then(permission => {
                 console.log('Notification permission:', permission);
             });
-        } catch (e) {}
+        } catch (e) { }
     }
 };
 
@@ -96,12 +96,25 @@ function dismissPushNotification() {
 // ── Sidebar ────────────────────────────────────────────────────────────
 function toggleSidebar(open) {
     try {
-        const overlay = document.getElementById('sidebar-overlay') || document.getElementById('app-sidebar-overlay');
-        if (!overlay) return;
-        const shouldOpen = (open === undefined) ? (!overlay.classList.contains('open') && !overlay.classList.contains('active')) : !!open;
+        const overlays = [document.getElementById('sidebar-overlay'), document.getElementById('app-sidebar-overlay')].filter(Boolean);
+        if (overlays.length === 0) return;
+
+        const mainOverlay = overlays[0];
+        const shouldOpen = (open === undefined) ? (!mainOverlay.classList.contains('open') && !mainOverlay.classList.contains('active')) : !!open;
+
+        overlays.forEach(overlay => {
+            if (shouldOpen) {
+                overlay.classList.add('open', 'active');
+                overlay.style.visibility = 'visible';
+                overlay.style.pointerEvents = 'auto';
+            } else {
+                overlay.classList.remove('open', 'active');
+                overlay.style.visibility = '';
+                overlay.style.pointerEvents = '';
+            }
+        });
+
         if (shouldOpen) {
-            overlay.classList.add('open');
-            overlay.classList.add('active');
             try {
                 if (typeof updateSidebarUI === 'function') updateSidebarUI();
                 if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
@@ -116,9 +129,6 @@ function toggleSidebar(open) {
             } catch (uiErr) {
                 console.warn('Sidebar UI update warning:', uiErr);
             }
-        } else {
-            overlay.classList.remove('open');
-            overlay.classList.remove('active');
         }
     } catch (err) {
         console.error('Error toggling sidebar:', err);
@@ -449,7 +459,7 @@ function openModal(contentHTML) {
 function closeModal() {
     const overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.classList.remove('open');
-    
+
     // Check if any other modal is open before unlocking body scroll
     const hasOtherModals = document.querySelector('.blog-modal-backdrop:not([style*="none"]), .ohati-confirm-modal-overlay, .welcome-popup-overlay.open');
     if (!hasOtherModals) {
@@ -654,25 +664,18 @@ function closeWelcomePopup(event) {
     }
 }
 
-window.openAppDownloadUrl = function(platform) {
-    API.get('get_app_download_urls').then(res => {
-        if (res.success) {
-            const url = (platform === 'ios' || platform === 'App Store') ? res.ios_download_url : res.android_download_url;
-            if (url) {
-                window.open(url, '_blank');
-                return;
-            }
-        }
-        window.open('https://play.google.com/store/apps/details?id=com.ohati.app', '_blank');
-    }).catch(() => {
-        window.open('https://play.google.com/store/apps/details?id=com.ohati.app', '_blank');
-    });
+window.openAppDownloadUrl = function (platform) {
+    if (typeof showPushNotification === 'function') {
+        showPushNotification('App Coming Soon 🚀', 'The official Ohati Mobile App for Android & iOS is coming soon to the App Store & Google Play Store!');
+    } else {
+        alert('The official Ohati Mobile App for Android & iOS is coming soon!');
+    }
 };
 window.showBadgeMessage = window.openAppDownloadUrl;
 
 function openAllCategoriesModal() {
     const categories = state.categories || [];
-    
+
     let modalHTML = `
         <div class="auth-modal-header" style="position:relative; padding-bottom:12px;">
             <h2 class="auth-modal-title" style="font-size:1.15rem; font-family:'Fraunces', serif;">All Categories</h2>
@@ -695,7 +698,7 @@ function openAllCategoriesModal() {
             `).join('')}
         </div>
     `;
-    
+
     openModal(modalHTML);
 }
 
@@ -712,12 +715,12 @@ function filterCategoriesInModal() {
     });
 }
 
-window.dismissVendorPromoPopupToday = function() {
+window.dismissVendorPromoPopupToday = function () {
     localStorage.setItem('ohati_vendor_promo_dismissed', Date.now().toString());
     closeModal();
 };
 
-window.dismissSponsoredPopupToday = function() {
+window.dismissSponsoredPopupToday = function () {
     localStorage.setItem('ohati_sponsored_dismissed', Date.now().toString());
     closeModal();
 };
@@ -772,7 +775,7 @@ function checkAndShowGeneralSponsoredPopup() {
     // Fetch active, admin-approved pop-up ads specifically for home_popup placement
     API.get('get_advertisements', { placement: 'home_popup' }).then(ads => {
         if (!ads || !Array.isArray(ads) || ads.length === 0) return;
-        
+
         // Pick top active approved popup ad
         const ad = ads[0];
         if (!ad || ad.status !== 'active' || ad.payment_status !== 'paid') return;
@@ -813,27 +816,17 @@ function checkAndShowGeneralSponsoredPopup() {
     });
 }
 
-function showComingSoonReferral() {
-    const html = `
-        <div class="auth-modal-header">
-            <h2 class="auth-modal-title">Coming soon on App</h2>
-            <p class="auth-modal-subtitle">Exciting rewards are on the way!</p>
+function showComingSoonReferral(title = 'Refer & Earn') {
+    openModal(`
+        <div style="text-align:center; padding:28px 20px;">
+            <div style="width:64px; height:64px; background:rgba(242, 167, 83, 0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem;">
+                <i class="fa-solid fa-gift"></i>
+            </div>
+            <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">${title}</h3>
+            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
+            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
         </div>
-        <div style="padding:16px 0; text-align:center;">
-            <i class="fa-solid fa-gift" style="font-size:3rem; color:var(--accent); margin-bottom:16px;"></i>
-            <p style="font-size:0.9rem; color:var(--gray-700); line-height:1.5; margin-bottom:12px;">
-                <strong>First 200 vendors</strong> get <span style="color:var(--primary); font-weight:700;">100 Cedis</span> sign up bonus.
-            </p>
-            <p style="font-size:0.9rem; color:var(--gray-700); line-height:1.5; margin-bottom:12px;">
-                <strong>First 200 customers</strong> get <span style="color:var(--primary); font-weight:700;">50 Cedis</span> discount.
-            </p>
-            <p style="font-size:0.9rem; color:var(--gray-700); line-height:1.5; margin-bottom:16px;">
-                A transactional referral gets <span style="color:var(--primary); font-weight:700;">50 Cedis</span> too if they refer someone.
-            </p>
-            <button class="btn btn-primary btn-full" onclick="closeModal()">Got it!</button>
-        </div>
-    `;
-    openModal(html);
+    `);
 }
 
 function openAllPlatformReviewsModal() {
@@ -901,7 +894,7 @@ function openPlatformReviewModal() {
     setTimeout(() => setSelectRating(5), 10);
 }
 
-window.setSelectRating = function(rating) {
+window.setSelectRating = function (rating) {
     document.getElementById('review-rating-val').value = rating;
     const stars = document.querySelectorAll('.star-select');
     stars.forEach(star => {
@@ -914,7 +907,7 @@ window.setSelectRating = function(rating) {
     });
 };
 
-window.submitPlatformReviewForm = function(event) {
+window.submitPlatformReviewForm = function (event) {
     event.preventDefault();
     const name = document.getElementById('review-user-name').value.trim();
     const rating = parseInt(document.getElementById('review-rating-val').value);
@@ -942,7 +935,7 @@ function showVideoCallComingSoon() {
 }
 
 // ── BLOCK & REPORT USER MODALS ──────────────────────────────────────────
-window.showBlockUserModal = function(targetUserId, targetName = 'User') {
+window.showBlockUserModal = function (targetUserId, targetName = 'User') {
     const cleanName = escapeHTML(targetName);
     const html = `
         <div class="auth-modal-header" style="text-align:center;">
@@ -971,7 +964,7 @@ window.showBlockUserModal = function(targetUserId, targetName = 'User') {
     openModal(html);
 };
 
-window.submitBlockUserAction = function(targetUserId) {
+window.submitBlockUserAction = function (targetUserId) {
     const reasonSelect = document.getElementById('block-reason-select');
     const reason = reasonSelect ? reasonSelect.value : 'User Blocked';
     API.blockUser(targetUserId, reason).then(res => {
@@ -983,7 +976,7 @@ window.submitBlockUserAction = function(targetUserId) {
     });
 };
 
-window.showReportUserModal = function(targetUserId, targetName = 'User') {
+window.showReportUserModal = function (targetUserId, targetName = 'User') {
     const cleanName = escapeHTML(targetName);
     const html = `
         <div class="auth-modal-header" style="text-align:center;">
@@ -1028,7 +1021,7 @@ window.showReportUserModal = function(targetUserId, targetName = 'User') {
     openModal(html);
 };
 
-window.updateReportChipUI = function(radioEl) {
+window.updateReportChipUI = function (radioEl) {
     const parentForm = radioEl.closest('form');
     if (!parentForm) return;
     const chips = parentForm.querySelectorAll('.chip-badge');
@@ -1045,7 +1038,7 @@ window.updateReportChipUI = function(radioEl) {
     }
 };
 
-window.submitReportUserAction = function(event, targetUserId) {
+window.submitReportUserAction = function (event, targetUserId) {
     event.preventDefault();
     const selectedRadio = document.querySelector('input[name="report_reason"]:checked');
     const reason = selectedRadio ? selectedRadio.value : 'Inappropriate Behavior';
@@ -1060,7 +1053,7 @@ window.submitReportUserAction = function(event, targetUserId) {
     });
 };
 
-window.showReportCommentModal = function(commentId, authorName = 'Comment') {
+window.showReportCommentModal = function (commentId, authorName = 'Comment') {
     const cleanAuthor = escapeHTML(authorName);
     const html = `
         <div class="auth-modal-header" style="text-align:center;">
@@ -1101,7 +1094,7 @@ window.showReportCommentModal = function(commentId, authorName = 'Comment') {
     openModal(html);
 };
 
-window.submitReportCommentAction = function(event, commentId) {
+window.submitReportCommentAction = function (event, commentId) {
     event.preventDefault();
     const selectedRadio = document.querySelector('input[name="comment_report_reason"]:checked');
     const reason = selectedRadio ? selectedRadio.value : 'Inappropriate Content';

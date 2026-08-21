@@ -2,11 +2,7 @@
 // login.php - Ohati Standalone Login Page
 session_start();
 if (isset($_SESSION['user'])) {
-    if ($_SESSION['user']['role'] === 'vendor') {
-        header('Location: vendor-dash.php');
-    } else {
-        header('Location: index.php');
-    }
+    header('Location: index.php');
     exit;
 }
 ?>
@@ -93,20 +89,8 @@ if (isset($_SESSION['user'])) {
 
             API.login({ identifier, password })
                 .then(res => {
-                    if (res.auth_token) {
-                        localStorage.setItem('ohati_auth_token', res.auth_token);
-                    }
-                    if (res.user) {
-                        localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
-                    }
-                    if (res.user && res.user.role === 'admin') {
+                    if (res.user.role === 'admin') {
                         window.location.href = 'admin/index.php';
-                    } else if (res.user && (res.user.role === 'vendor' || res.user.active_role === 'vendor')) {
-                        if (res.user.vendor_onboarding_completed) {
-                            window.location.href = 'vendor-dash.php';
-                        } else {
-                            window.location.href = 'vendor-register.php';
-                        }
                     } else {
                         window.location.href = 'index.php';
                     }

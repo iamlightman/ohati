@@ -117,6 +117,15 @@ function navigateTo(screenId, params = {}, options = {}) {
 
     if (state.currentScreen === screenId && !paramsChanged && !force) return;
 
+    // Dismiss any open sidebar or modals on navigation to prevent frozen overlay backdrops
+    if (typeof toggleSidebar === 'function') toggleSidebar(false);
+    if (typeof closeModal === 'function') closeModal();
+    if (typeof closeBookingModal === 'function') closeBookingModal();
+    if (state.chatInterval) {
+        clearInterval(state.chatInterval);
+        state.chatInterval = null;
+    }
+
     // Apply structured parameters to state
     if (params && typeof params === 'object') {
         if (params.id !== undefined && params.id !== null) {
@@ -195,6 +204,16 @@ function navigateTo(screenId, params = {}, options = {}) {
     if (!isSPA) {
         window.location.href = pageName;
         return;
+    }
+
+    // BLOG EXCLUSIVE LIGHT MODE LOCK: Remove dark-theme when on blog screens
+    if (screenId === 'blog' || screenId === 'blog-detail') {
+        document.body.classList.remove('dark-theme');
+    } else {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
     }
 
     const appContainer = document.getElementById('ohati-app');
@@ -1144,7 +1163,7 @@ function initDetailScreen() {
 
         let html = `
             <div class="detail-hero">
-                <img class="detail-cover" src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800'}" alt="">
+                <img class="detail-cover" src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800'}" alt="${escapeHtml(v.name)} - ${escapeHtml(v.category)} in ${escapeHtml(v.city || 'Ghana')}" title="${escapeHtml(v.name)}">
                 <div class="detail-hero-overlay"></div>
                 <button class="detail-back-btn" onclick="navigateBack()"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="detail-actions-top">
@@ -1162,7 +1181,7 @@ function initDetailScreen() {
                     </button>
                 </div>
                 <div class="detail-vendor-identity">
-                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
+                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="${escapeHtml(v.name)} Logo - ${escapeHtml(v.category)}" title="${escapeHtml(v.name)}">
                     <div class="detail-vendor-name" style="display:flex; align-items:center; gap:6px;">
                         <span>${v.name}</span>
                         ${v.verification_badge === 'gold' ? `<i class="fa-solid fa-circle-check" style="color:#FFD700;" title="Gold Verified"></i>` : ''}
@@ -1210,17 +1229,14 @@ function initDetailScreen() {
                 <div id="detail-tab-content" style="margin-bottom:20px;"></div>
 
                 <div class="detail-cta">
-                    <button class="btn btn-outline" onclick="startVendorChat(${v.user_id || v.id})"><i class="fa-solid fa-comments"></i> Chat</button>
+                    <button class="btn btn-outline" onclick="startVendorChat(${v.id || v.vendor_id})"><i class="fa-solid fa-comments"></i> Chat</button>
                     <button class="btn btn-primary" onclick="openBookingRequestModal(${v.id})"><i class="fa-solid fa-calendar-check"></i> Book Now</button>
                 </div>
 
-                <!-- Discovery Carousels Wrapper -->
-                <div id="detail-recommendations-wrapper" style="margin-bottom:24px; padding:0;"></div>
             </div>
         `;
         screen.innerHTML = html;
         renderDetailTabContent(v);
-        renderProfileRecommendations(v);
     }).catch(err => {
         screen.innerHTML = `
             <div style="padding:50px 20px; text-align:center; max-width:480px; margin:0 auto;">
@@ -2190,6 +2206,19 @@ function updateChatMessages(history) {
 
     if (container.innerHTML !== newHTML) {
         container.innerHTML = newHTML;
+
+        // Re-append active/failed pending chat upload bubbles so polling doesn't erase them
+        if (window._pendingChatUploads) {
+            Object.keys(window._pendingChatUploads).forEach(tempId => {
+                const item = window._pendingChatUploads[tempId];
+                if (item && item.vendorId == state.activeChatVendorId && (item.status === 'uploading' || item.status === 'failed')) {
+                    if (typeof window.renderPendingChatBubble === 'function') {
+                        window.renderPendingChatBubble(tempId);
+                    }
+                }
+            });
+        }
+
         scrollToBottom('chat-messages-container');
     }
 }
@@ -2218,7 +2247,7 @@ function sendChatMessage() {
 }
 
 function triggerChatAttachment() {
-    if (typeof window.triggerChatAttachment === 'function') {
+    if (typeof window.triggerChatAttachment === 'function' && window.triggerChatAttachment !== triggerChatAttachment) {
         window.triggerChatAttachment();
     } else {
         document.getElementById('chat-file-input')?.click();
@@ -2226,7 +2255,7 @@ function triggerChatAttachment() {
 }
 
 function handleChatFileSelected(input) {
-    if (typeof window.handleChatFileSelected === 'function') {
+    if (typeof window.handleChatFileSelected === 'function' && window.handleChatFileSelected !== handleChatFileSelected) {
         window.handleChatFileSelected(input);
     }
 }
@@ -4495,285 +4524,40 @@ window.openAppExclusiveModal = function(featureTitle = "App Exclusive Feature", 
 };
 
 function openReferAndEarnModal() {
-    if (!isNativeMobileApp()) {
-        openAppExclusiveModal(
-            "Refer & Earn Rewards",
-            "Refer & Earn is exclusively available on the Ohati Mobile App! Earn instant cash bonuses in GHS for every friend or vendor you invite."
-        );
-        return;
-    }
-
-    if (!state.user) {
-        openLoginModal();
-        return;
-    }
-    
-    openModal(`<div class="text-center p-20"><div class="spinner"></div><p style="font-size:0.8rem; margin-top:10px;">Loading Refer & Earn dashboard...</p></div>`);
-
-    API.get('get_referral_info').then(data => {
-        if (!data.success) {
-            showPushNotification('Error', data.error || 'Failed to load referral details.');
-            closeModal();
-            return;
-        }
-
-        const link = data.referral_link;
-        const code = data.referral_code;
-        const reward = parseFloat(data.reward_per_referral || 10.0);
-        const balance = parseFloat(data.referral_balance || 0.0);
-        const total = data.total_referrals || 0;
-
-        const shareMessage = encodeURIComponent(
-            `Hey! Check out Ohati — Ghana's top platform to find, compare & book event photographers, caterers, DJs & decorators! Sign up using my link: ${link}`
-        );
-
-        const html = `
-            <div class="auth-modal-header" style="text-align:center; padding-bottom:12px; border-bottom:1px solid var(--gray-200);">
-                <div style="width:54px; height:54px; background:rgba(var(--accent-rgb),0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:1.6rem;">
-                    <i class="fa-solid fa-gift"></i>
-                </div>
-                <h2 class="auth-modal-title" style="font-size:1.3rem;">Refer & Earn Rewards</h2>
-                <p class="auth-modal-subtitle" style="font-size:0.8rem;">Invite friends to Ohati and earn <strong>GH₵ ${reward.toFixed(2)}</strong> for every friend who joins!</p>
+    openModal(`
+        <div style="text-align:center; padding:28px 20px;">
+            <div style="width:64px; height:64px; background:rgba(242, 167, 83, 0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem;">
+                <i class="fa-solid fa-gift"></i>
             </div>
-
-            <!-- Stats Banner Grid -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0;">
-                <div class="card" style="padding:12px; text-align:center; background:var(--gray-100); border-radius:12px;">
-                    <div style="font-size:0.7rem; color:var(--gray-500); font-weight:700; text-transform:uppercase;">Friends Referred</div>
-                    <div style="font-size:1.4rem; font-weight:800; color:var(--primary);">${total}</div>
-                </div>
-                <div class="card" style="padding:12px; text-align:center; background:rgba(var(--accent-rgb),0.08); border-radius:12px; border:1px solid rgba(var(--accent-rgb),0.2);">
-                    <div style="font-size:0.7rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;">Earned Balance</div>
-                    <div style="font-size:1.4rem; font-weight:800; color:var(--success);">GH₵ ${balance.toFixed(2)}</div>
-                </div>
-            </div>
-
-            <!-- Unique Referral Link Box -->
-            <div style="margin-bottom:16px;">
-                <label style="font-size:0.72rem; font-weight:700; color:var(--gray-600); display:block; margin-bottom:4px;">YOUR UNIQUE REFERRAL LINK:</label>
-                <div style="display:flex; gap:6px;">
-                    <input type="text" readonly class="form-input" id="user-ref-link-input" value="${link}" style="font-size:0.75rem; background:#fff; height:38px; border-radius:8px;">
-                    <button class="btn btn-primary btn-sm" onclick="copyReferralLink('${link}')" style="height:38px; padding:0 14px; white-space:nowrap; font-weight:700;"><i class="fa-solid fa-copy"></i> Copy</button>
-                </div>
-            </div>
-
-            <!-- Share Buttons Row -->
-            <div style="display:flex; gap:8px; margin-bottom:16px;">
-                <a href="https://wa.me/?text=${shareMessage}" target="_blank" class="btn btn-full" style="background:#25D366; color:#fff; font-weight:700; font-size:0.8rem; height:38px; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:8px; text-decoration:none;">
-                    <i class="fa-brands fa-whatsapp" style="font-size:1rem;"></i> Share via WhatsApp
-                </a>
-                <button class="btn btn-outline btn-full" onclick="shareReferralLinkNative('${link}')" style="height:38px; font-size:0.8rem; font-weight:700;">
-                    <i class="fa-solid fa-share-nodes"></i> Share Link
-                </button>
-            </div>
-
-            <!-- Referred Friends History -->
-            <div style="border-top:1px solid var(--gray-200); padding-top:12px;">
-                <div style="font-size:0.72rem; font-weight:700; color:var(--gray-600); margin-bottom:8px; text-transform:uppercase;">Referred Friends History (${data.referrals ? data.referrals.length : 0})</div>
-                <div style="max-height:140px; overflow-y:auto;">
-                    ${data.referrals && data.referrals.length > 0 ? data.referrals.map(r => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--gray-100); font-size:0.78rem;">
-                            <div>
-                                <strong style="color:var(--gray-800); display:block;">${r.referred_name}</strong>
-                                <span style="font-size:0.65rem; color:var(--gray-500);">${formatFriendlyDate(r.joined_at)}</span>
-                            </div>
-                            <span class="badge badge-success" style="font-size:0.68rem;">+GH₵ ${parseFloat(r.reward_amount).toFixed(2)}</span>
-                        </div>
-                    `).join('') : '<div class="text-center text-muted text-sm p-12">No friends referred yet. Share your link above to start earning!</div>'}
-                </div>
-            </div>
-
-            <button class="btn btn-ghost btn-full mt-12" onclick="closeModal()" style="height:34px; font-size:0.78rem;">Close</button>
-        `;
-        openModal(html);
-    }).catch(err => {
-        showPushNotification('Error', 'Could not load referral dashboard.');
-        closeModal();
-    });
+            <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">Refer & Earn</h3>
+            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
+            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
+        </div>
+    `);
 }
 
 function copyReferralLink(link) {
-    navigator.clipboard.writeText(link).then(() => {
-        showPushNotification('Link Copied!', 'Your unique referral link has been copied to clipboard.');
-    }).catch(() => {
-        const inp = document.getElementById('user-ref-link-input');
-        if (inp) {
-            inp.select();
-            document.execCommand('copy');
-            showPushNotification('Link Copied!', 'Your unique referral link has been copied to clipboard.');
-        }
-    });
+    showPushNotification('Refer & Earn', 'Refer & Earn rewards coming soon!');
 }
 
 function shareReferralLinkNative(link) {
-    if (navigator.share) {
-        navigator.share({
-            title: 'Join Ohati — Earn Rewards on Event Vendor Bookings!',
-            text: 'Discover, compare & book top event vendors in Ghana. Sign up with my link to earn rewards!',
-            url: link
-        }).catch(err => console.log('Native share closed:', err));
-    } else {
-        copyReferralLink(link);
-    }
+    copyReferralLink(link);
 }
 
 window.openDiscountsAndOffersModal = function() {
-    if (!isNativeMobileApp()) {
-        openAppExclusiveModal(
-            "Discounts & Special Offers",
-            "Custom discount requests and exclusive vendor package offers are available only on the Ohati Mobile App!"
-        );
-        return;
-    }
-
-    if (!state.user) {
-        openLoginModal();
-        return;
-    }
-
-    openModal(`<div class="text-center p-20"><div class="spinner"></div><p style="font-size:0.8rem; margin-top:10px;">Loading Discounts & Offers...</p></div>`);
-
-    Promise.all([
-        API.get('get_active_discounts').catch(() => ({ discounts: [] })),
-        API.get('get_user_discount_requests').catch(() => ({ requests: [] }))
-    ]).then(([discRes, reqRes]) => {
-        const discounts = discRes.discounts || [];
-        const requests = reqRes.requests || [];
-
-        const html = `
-            <div class="auth-modal-header" style="text-align:center; padding-bottom:12px; border-bottom:1px solid var(--gray-200);">
-                <div style="width:54px; height:54px; background:rgba(16,185,129,0.12); color:#10B981; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:1.6rem;">
-                    <i class="fa-solid fa-percent"></i>
-                </div>
-                <h2 class="auth-modal-title" style="font-size:1.25rem;">Discounts & Special Offers</h2>
-                <p class="auth-modal-subtitle" style="font-size:0.78rem;">Claim active promotional vouchers or request custom package discounts from vendors.</p>
+    openModal(`
+        <div style="text-align:center; padding:28px 20px;">
+            <div style="width:64px; height:64px; background:rgba(242, 167, 83, 0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem;">
+                <i class="fa-solid fa-tags"></i>
             </div>
-
-            <div style="margin:16px 0;">
-                <button class="btn btn-primary btn-full" onclick="openDiscountRequestModal()" style="font-weight:700; height:42px;">
-                    <i class="fa-solid fa-paper-plane"></i> Send Custom Discount Request
-                </button>
-            </div>
-
-            <div style="display:flex; gap:8px; margin-bottom:14px; border-bottom:1px solid var(--gray-200); padding-bottom:8px;">
-                <button class="btn btn-xs btn-primary" id="btn-disc-coupons" onclick="switchDiscountTab('coupons')">Available Coupons</button>
-                <button class="btn btn-xs btn-outline" id="btn-disc-requests" onclick="switchDiscountTab('requests')">My Requested Discounts (${requests.length})</button>
-            </div>
-
-            <div id="disc-tab-coupons">
-                ${discounts.length > 0 ? discounts.map(d => `
-                    <div class="card p-12 mb-12" style="border:1px dashed #10B981; background:rgba(16,185,129,0.04); border-radius:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <strong style="color:var(--primary); font-size:0.9rem;">${d.code}</strong>
-                                <div style="font-size:0.72rem; color:var(--gray-600); margin-top:2px;">${d.discount_type === 'percentage' ? d.discount_value + '% OFF' : 'GH₵ ' + d.discount_value + ' OFF'}</div>
-                            </div>
-                            <button class="btn btn-xs btn-outline" onclick="copyReferralLink('${d.code}')"><i class="fa-solid fa-copy"></i> Copy Code</button>
-                        </div>
-                    </div>
-                `).join('') : '<p class="text-center text-sm text-muted">No public promo codes available right now. Send a custom discount request to your favorite vendor!</p>'}
-            </div>
-
-            <div id="disc-tab-requests" style="display:none;">
-                ${requests.length > 0 ? requests.map(r => `
-                    <div class="card p-12 mb-12" style="border-radius:10px; border:1px solid var(--gray-200);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <strong style="color:var(--primary); font-size:0.85rem;">${r.vendor_name}</strong>
-                            <span class="badge ${r.status === 'approved' ? 'badge-success' : (r.status === 'countered' ? 'badge-warning' : (r.status === 'declined' ? 'badge-danger' : 'badge-neutral'))}">
-                                ${r.status.toUpperCase()}
-                            </span>
-                        </div>
-                        <div style="font-size:0.75rem; color:var(--gray-600);">Event: ${r.event_type} | Offered: GH₵ ${r.target_price}</div>
-                        ${r.coupon_code ? `<div style="margin-top:6px; background:#ECFDF5; padding:6px; border-radius:6px; font-weight:700; color:#065F46; font-size:0.78rem;">Coupon: ${r.coupon_code}</div>` : ''}
-                        ${r.counter_price > 0 ? `<div style="margin-top:6px; background:#FFFBEB; padding:6px; border-radius:6px; font-weight:700; color:#92400E; font-size:0.78rem;">Vendor Counter Offer: GH₵ ${r.counter_price}</div>` : ''}
-                    </div>
-                `).join('') : '<p class="text-center text-sm text-muted">You have not sent any discount requests yet.</p>'}
-            </div>
-        `;
-        openModal(html);
-    });
-};
-
-window.switchDiscountTab = function(tab) {
-    const cTab = document.getElementById('disc-tab-coupons');
-    const rTab = document.getElementById('disc-tab-requests');
-    const cBtn = document.getElementById('btn-disc-coupons');
-    const rBtn = document.getElementById('btn-disc-requests');
-
-    if (tab === 'coupons') {
-        if (cTab) cTab.style.display = 'block';
-        if (rTab) rTab.style.display = 'none';
-        if (cBtn) { cBtn.className = 'btn btn-xs btn-primary'; }
-        if (rBtn) { rBtn.className = 'btn btn-xs btn-outline'; }
-    } else {
-        if (cTab) cTab.style.display = 'none';
-        if (rTab) rTab.style.display = 'block';
-        if (cBtn) { cBtn.className = 'btn btn-xs btn-outline'; }
-        if (rBtn) { rBtn.className = 'btn btn-xs btn-primary'; }
-    }
-};
-
-window.openDiscountRequestModal = function(vendorId = 0, vendorName = '') {
-    if (!isNativeMobileApp()) {
-        openAppExclusiveModal(
-            "Discounts & Special Offers",
-            "Custom discount requests and exclusive vendor package offers are available only on the Ohati Mobile App!"
-        );
-        return;
-    }
-
-    if (!state.user) {
-        openLoginModal();
-        return;
-    }
-
-    let vendorsOptionHTML = '<option value="">-- Select Vendor --</option>';
-    if (state.vendors && state.vendors.length > 0) {
-        vendorsOptionHTML += state.vendors.map(v => `<option value="${v.id}" ${v.id == vendorId ? 'selected' : ''}>${v.name} (${v.category || 'Vendor'})</option>`).join('');
-    }
-
-    const html = `
-        <div class="auth-modal-header" style="text-align:center; padding-bottom:10px; border-bottom:1px solid var(--gray-200);">
-            <h3 class="auth-modal-title" style="font-size:1.15rem;">Request Custom Discount / Offer</h3>
-            <p class="auth-modal-subtitle" style="font-size:0.75rem;">Propose your target price to the vendor for your upcoming event.</p>
+            <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">Discounts & Offers</h3>
+            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
+            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
         </div>
-
-        <div style="padding-top:14px;">
-            <div class="form-group mb-12">
-                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Select Vendor</label>
-                <select class="form-input" id="dr-vendor-id" style="font-size:0.8rem;">
-                    ${vendorsOptionHTML}
-                </select>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;" class="mb-12">
-                <div>
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Event Type</label>
-                    <input type="text" class="form-input" id="dr-event-type" placeholder="e.g. Wedding, Birthday" style="font-size:0.8rem;">
-                </div>
-                <div>
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Event Date</label>
-                    <input type="date" class="form-input" id="dr-event-date" style="font-size:0.8rem;">
-                </div>
-            </div>
-
-            <div class="form-group mb-12">
-                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Target Offered Price (GH₵)</label>
-                <input type="number" min="1" step="10" class="form-input" id="dr-target-price" placeholder="e.g. 500" style="font-size:0.85rem; font-weight:700;">
-            </div>
-
-            <div class="form-group mb-16">
-                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Optional Message / Special Notes</label>
-                <textarea class="form-input" id="dr-notes" rows="2" placeholder="e.g. Booking for 2 days in Kumasi..." style="font-size:0.78rem;"></textarea>
-            </div>
-
-            <button class="btn btn-primary btn-full" id="btn-submit-discount-req" onclick="submitDiscountRequest(event)" style="font-weight:700;">
-                <i class="fa-solid fa-paper-plane"></i> Send Discount Request
-            </button>
-        </div>
-    `;
-    openModal(html);
+    `);
 };
+window.openDiscountOffersModal = window.openDiscountsAndOffersModal;
+window.openDiscountRequestModal = window.openDiscountsAndOffersModal;
 
 window.submitDiscountRequest = function(event) {
     const vid = document.getElementById('dr-vendor-id')?.value;
@@ -4921,7 +4705,7 @@ function renderVendorDashScreen(user) {
         </div>
 
         <!-- REAL-TIME ANALYTICS EXECUTIVE DASHBOARD CARD -->
-        <div class="p-section" style="padding-top:16px; padding-bottom:0;">
+        <div class="p-section analytics-section-container" style="padding-top:16px; padding-bottom:0;">
             <div class="card analytics-executive-card">
                 <!-- Header & Live Pulse Badge -->
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--gray-200); padding-bottom:14px;">
@@ -5036,27 +4820,55 @@ function renderVendorDashScreen(user) {
                     </div>
                 </div>
 
-                <!-- Visual Daily Distribution Sparkline Bar Chart -->
-                <div style="margin-top:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-size:0.68rem; font-weight:700; color:var(--gray-600, #64748B); text-transform:uppercase;">Daily Traffic Volume Sparkline</span>
-                        <span style="font-size:0.65rem; color:var(--gray-500);">Peak: Sat & Sun</span>
+                <!-- Executive Smooth Wave Trend Curve Chart -->
+                <div style="margin-top:20px; background:var(--gray-50, #F8FAFC); padding:16px; border-radius:14px; border:1px solid var(--gray-200, #E2E8F0);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:0.75rem; font-weight:800; color:var(--primary, #1B2B4B); text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-chart-area" style="color:var(--accent, #F2A735);"></i> Interactive Engagement Wave Trend
+                        </span>
+                        <span style="font-size:0.68rem; color:var(--gray-600); font-weight:700;">Peak Volume: <strong style="color:var(--accent,#F2A735);">Weekend Peak</strong></span>
                     </div>
-                    <div class="analytics-chart-container" id="analytics-mini-chart">
-                        <div class="analytics-chart-bar" style="height:35%;" title="Mon: 35%"></div>
-                        <div class="analytics-chart-bar" style="height:48%;" title="Tue: 48%"></div>
-                        <div class="analytics-chart-bar" style="height:62%;" title="Wed: 62%"></div>
-                        <div class="analytics-chart-bar" style="height:55%;" title="Thu: 55%"></div>
-                        <div class="analytics-chart-bar" style="height:75%;" title="Fri: 75%"></div>
-                        <div class="analytics-chart-bar" style="height:95%;" title="Sat: 95%"></div>
-                        <div class="analytics-chart-bar" style="height:82%;" title="Sun: 82%"></div>
+
+                    <div style="position:relative; width:100%; height:120px; overflow:hidden;">
+                        <svg viewBox="0 0 460 110" preserveAspectRatio="none" style="width:100%; height:100%; overflow:visible;">
+                            <defs>
+                                <linearGradient id="analyticsWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#F2A735" stop-opacity="0.4" />
+                                    <stop offset="100%" stop-color="#F2A735" stop-opacity="0.0" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Background Grid Lines -->
+                            <line x1="10" y1="25" x2="450" y2="25" stroke="var(--gray-200, rgba(0,0,0,0.06))" stroke-dasharray="4,4" />
+                            <line x1="10" y1="60" x2="450" y2="60" stroke="var(--gray-200, rgba(0,0,0,0.06))" stroke-dasharray="4,4" />
+                            <line x1="10" y1="95" x2="450" y2="95" stroke="var(--gray-200, rgba(0,0,0,0.06))" stroke-dasharray="4,4" />
+
+                            <!-- Gradient Fill Area -->
+                            <path id="analytics-trend-area" d="M 20,60 L 90,48 L 160,35 L 230,42 L 300,25 L 370,12 L 440,20 L 440,105 L 20,105 Z" fill="url(#analyticsWaveGrad)" />
+
+                            <!-- Smooth Trend Line -->
+                            <path id="analytics-trend-path" d="M 20,60 L 90,48 L 160,35 L 230,42 L 300,25 L 370,12 L 440,20" fill="none" stroke="#F2A735" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+                            <!-- Interactive Data Nodes -->
+                            <circle class="analytics-chart-node" cx="20" cy="60" r="4.5" fill="#F2A735" stroke="#FFFFFF" stroke-width="2"><title>Mon</title></circle>
+                            <circle class="analytics-chart-node" cx="90" cy="48" r="4.5" fill="#F2A735" stroke="#FFFFFF" stroke-width="2"><title>Tue</title></circle>
+                            <circle class="analytics-chart-node" cx="160" cy="35" r="4.5" fill="#F2A735" stroke="#FFFFFF" stroke-width="2"><title>Wed</title></circle>
+                            <circle class="analytics-chart-node" cx="230" cy="42" r="4.5" fill="#F2A735" stroke="#FFFFFF" stroke-width="2"><title>Thu</title></circle>
+                            <circle class="analytics-chart-node" cx="300" cy="25" r="4.5" fill="#F2A735" stroke="#FFFFFF" stroke-width="2"><title>Fri</title></circle>
+                            <circle class="analytics-chart-node" cx="370" cy="12" r="5.5" fill="#10B981" stroke="#FFFFFF" stroke-width="2"><title>Sat (Peak)</title></circle>
+                            <circle class="analytics-chart-node" cx="440" cy="20" r="4.5" fill="#F2A735" stroke="#FFFFFF" stroke-width="2"><title>Sun</title></circle>
+                        </svg>
+                    </div>
+
+                    <!-- Day Labels X-Axis -->
+                    <div style="display:flex; justify-content:space-between; margin-top:8px; padding:0 10px; font-size:0.68rem; font-weight:700; color:var(--gray-600);">
+                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span style="color:#10B981;">Sat</span><span>Sun</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- PREMIUM MEMBERSHIP CARD -->
-        <div class="p-section" style="padding-top:12px;">
+        <div class="p-section membership-section-container" style="padding-top:12px;">
             ${premiumBadge}
         </div>
 
@@ -5228,13 +5040,16 @@ window.loadVendorRealtimeAnalytics = function(opts = {}) {
             periodName = 'This Year';
             break;
         case 'custom':
-            const start = opts.startDate ? new Date(opts.startDate) : new Date();
-            const end = opts.endDate ? new Date(opts.endDate) : new Date();
-            const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+            const startStr = opts.startDate || opts.start_date;
+            const endStr = opts.endDate || opts.end_date;
+            const start = startStr ? new Date(startStr) : new Date();
+            const end = endStr ? new Date(endStr) : new Date();
+            const diffMs = Math.max(0, end - start);
+            const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
             viewMultiplier = Math.max(0.1, (days / 30));
             bookingMultiplier = Math.max(0.1, (days / 30));
             trendText = `${days} Days Range`;
-            periodName = `Custom Range (${days} Days)`;
+            periodName = `Custom (${startStr || ''} to ${endStr || ''})`;
             break;
     }
 
@@ -5270,6 +5085,60 @@ window.loadVendorRealtimeAnalytics = function(opts = {}) {
             const clampedH = Math.min(100, Math.max(15, heights[idx]));
             bar.style.height = `${clampedH}%`;
         });
+    }
+
+    // Attempt live API query if authenticated vendor
+    if (typeof API !== 'undefined' && API.get && window.state && window.state.user) {
+        const startDate = opts.startDate || opts.start_date || '';
+        const endDate = opts.endDate || opts.end_date || '';
+        const queryParams = new URLSearchParams({ period, start_date: startDate, end_date: endDate }).toString();
+        API.get(`get_vendor_analytics?${queryParams}`).then(res => {
+            if (res && !res.error) {
+                if (viewsEl && res.views_count !== undefined) viewsEl.textContent = Number(res.views_count).toLocaleString();
+                if (bookingsEl && res.bookings_count !== undefined) bookingsEl.textContent = Number(res.bookings_count).toLocaleString();
+                if (chatsEl && res.chats_count !== undefined) chatsEl.textContent = Number(res.chats_count).toLocaleString();
+                if (revenueEl && res.revenue !== undefined) revenueEl.textContent = `GH₵ ${Number(res.revenue).toLocaleString()}`;
+                if (convEl && res.conversion_rate !== undefined) convEl.textContent = `${res.conversion_rate}%`;
+            }
+        }).catch(() => {});
+    }
+};
+
+window.applyCustomAnalyticsDateRange = function() {
+    const startInput = document.getElementById('analytics-start-date');
+    const endInput = document.getElementById('analytics-end-date');
+
+    const startDate = startInput ? startInput.value : '';
+    const endDate = endInput ? endInput.value : '';
+
+    if (!startDate || !endDate) {
+        if (typeof showPushNotification === 'function') {
+            showPushNotification("Select Date Range 📅", "Please select both start and end dates.");
+        } else {
+            alert("Please select both start and end dates.");
+        }
+        return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+        if (typeof showPushNotification === 'function') {
+            showPushNotification("Invalid Date Range ⚠️", "Start date cannot be after end date.");
+        } else {
+            alert("Start date cannot be after end date.");
+        }
+        return;
+    }
+
+    loadVendorRealtimeAnalytics({ 
+        period: 'custom', 
+        startDate: startDate, 
+        endDate: endDate, 
+        start_date: startDate, 
+        end_date: endDate 
+    });
+
+    if (typeof showPushNotification === 'function') {
+        showPushNotification("Filter Applied 📊", `Displaying analytics from ${startDate} to ${endDate}.`);
     }
 };
 
@@ -7396,12 +7265,18 @@ function submitRequestChange(fieldName) {
 }
 
 function saveProfileChanges() {
+    const saveBtn = document.querySelector('button[onclick="saveProfileChanges()"]');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Saving Changes...';
+    }
+
     const payload = {};
     const textFields = ['name', 'username', 'email', 'phone', 'dob', 'gender', 'country', 'state', 'city', 'language', 'currency'];
     
     textFields.forEach(f => {
         const el = document.getElementById('edit-' + f);
-        if (el) payload[f] = el.value.trim();
+        if (el && el.value !== undefined) payload[f] = el.value.trim();
     });
 
     if (state.tempAvatarUrl) {
@@ -7410,7 +7285,10 @@ function saveProfileChanges() {
 
     API.updateProfile(payload)
         .then(() => {
-            if (state.user.active_role === 'vendor') {
+            const activeRole = state.user ? (state.user.active_role || state.user.role) : 'customer';
+            const vendorId = state.user ? (state.user.vendor_id || (state.vendor ? state.vendor.id : 0)) : 0;
+            
+            if (activeRole === 'vendor' && vendorId > 0) {
                 const bio = document.getElementById('edit-bio')?.value.trim() || '';
                 const social = {
                     instagram: document.getElementById('edit-social-instagram')?.value.trim() || '',
@@ -7419,7 +7297,7 @@ function saveProfileChanges() {
                 };
                 
                 return API.updateVendor({
-                    id: state.user.vendor_id,
+                    id: vendorId,
                     name: document.getElementById('edit-vendor-name')?.value.trim() || '',
                     category: document.getElementById('edit-vendor-category')?.value || '',
                     phone: document.getElementById('edit-vendor-phone')?.value.trim() || '',
@@ -7441,16 +7319,26 @@ function saveProfileChanges() {
             }
         })
         .then(() => {
-            return API.getSession();
+            return API.getSession().catch(() => null);
         })
         .then(res => {
-            state.user = res.user;
-            showPushNotification('Profile Updated', 'Your profile details have been saved successfully.');
-            updateSidebarUI();
-            navigateTo('profile');
+            if (res && res.user) {
+                state.user = res.user;
+                if (res.vendor) state.vendor = res.vendor;
+                try {
+                    localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+                } catch (e) {}
+            }
+            showPushNotification('Profile Updated 🎉', 'Your profile details have been saved successfully.');
+            if (typeof updateSidebarUI === 'function') updateSidebarUI();
+            if (typeof navigateTo === 'function') navigateTo('profile');
         })
         .catch(err => {
-            showPushNotification('Error saving changes', err.message);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Changes';
+            }
+            showPushNotification('Error saving changes', err.message || 'Could not save profile changes.');
         });
 }
 
@@ -7557,27 +7445,17 @@ async function submitReportIssue() {
     }
 
     try {
-        const reportIssueApiUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=report_issue';
-        const res = await fetch(reportIssueApiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': state.csrfToken || ''
-            },
-            body: JSON.stringify({ title, category, description, screenshot })
-        });
-        const data = await res.json();
-        if (data.success) {
+        const data = await API.post('report_issue', { title, category, description, screenshot });
+        if (data && data.success) {
             showPushNotification('Report Submitted', 'Thank you! Our team will review your report.');
-            // Reset form
-            document.getElementById('report-title').value = '';
-            document.getElementById('report-description').value = '';
-            clearReportScreenshot();
+            if (document.getElementById('report-title')) document.getElementById('report-title').value = '';
+            if (document.getElementById('report-description')) document.getElementById('report-description').value = '';
+            if (typeof clearReportScreenshot === 'function') clearReportScreenshot();
         } else {
-            showPushNotification('Error', data.error || 'Could not submit report.');
+            showPushNotification('Error', (data && data.error) ? data.error : 'Could not submit report.');
         }
     } catch (e) {
-        showPushNotification('Error', 'Network error. Please try again.');
+        showPushNotification('Error', e.message || 'Could not submit report.');
     }
 }
 

@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIcon = document.getElementById('theme-icon');
     const headerLogo = document.getElementById('header-logo-img');
     
-    if (savedTheme === 'dark') {
+    const initialPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+    const isBlogRoute = initialPath.includes('blog.php');
+
+    if (savedTheme === 'dark' && !isBlogRoute) {
         body.classList.add('dark-theme');
         if (themeIcon) themeIcon.className = 'fa-solid fa-sun';
         if (headerLogo) headerLogo.src = 'img/logo white transparent small.png';
@@ -35,9 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dismissLoading();
     }, 1500);
 
-    // Instant check: If no stored auth session token exists, lock to login IMMEDIATELY without waiting for network API delay
+    // Instant check: If no stored auth session token exists, check if accessing public routes (blog.php, about.php, help.php)
+    const currentPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+    const isPublicGuestPage = (currentPath.includes('blog.php') || currentPath.includes('about.php') || currentPath.includes('help.php'));
     const hasLocalAuth = localStorage.getItem('ohati_auth_token') || localStorage.getItem('ohati_user_session');
-    if (!hasLocalAuth) {
+
+    if (!hasLocalAuth && !isPublicGuestPage) {
         state.user = null;
         dismissLoading();
         if (typeof showMandatoryAuthLockScreen === 'function') {
@@ -51,13 +57,38 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => {
             clearTimeout(splashTimer);
             if (!res || !res.user) {
-                // UNAUTHENTICATED USER: Clear local state & lock screen to LOGIN ONLY
+                // UNAUTHENTICATED USER: Clear local state
                 state.user = null;
                 localStorage.removeItem('ohati_auth_token');
                 localStorage.removeItem('ohati_user_session');
                 localStorage.removeItem('ohati_user');
-                localStorage.removeItem('wedmi_user');
+                localStorage.removeItem('ohati_user_session');
                 dismissLoading();
+
+                if (isPublicGuestPage) {
+                    // Boot public guest page cleanly
+                    let startScreen = 'blog';
+                    let startParams = {};
+                    if (currentPath === 'about.php') startScreen = 'about';
+                    else if (currentPath === 'help.php') startScreen = 'help';
+                    else if (currentPath === 'blog.php') {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const bId = parseInt(urlParams.get('id'));
+                        const bSlug = urlParams.get('slug');
+                        if (bId || bSlug) {
+                            startScreen = 'blog-detail';
+                            if (bId) state.selectedBlogId = bId;
+                            startParams = { id: bId, slug: bSlug };
+                        } else {
+                            startScreen = 'blog';
+                        }
+                    }
+                    if (typeof navigateTo === 'function') {
+                        navigateTo(startScreen, startParams, { replace: true, force: true });
+                    }
+                    return null;
+                }
+
                 if (typeof showMandatoryAuthLockScreen === 'function') {
                     showMandatoryAuthLockScreen('login');
                 }
@@ -119,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.faqs = results[8].status === 'fulfilled' ? results[8].value : [];
 
             // Detect screen & parameters from URL path & query string
-            const path = window.location.pathname.split('/').pop();
+            const path = decodeURIComponent(window.location.pathname.split('/').pop() || '');
             const urlParams = new URLSearchParams(window.location.search);
             let startScreen = 'home';
             let startParams = {};
@@ -140,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (vid) {
                     state.activeChatVendorId = vid;
                     startParams = { vendor_id: vid };
+                } else {
+                    state.activeChatVendorId = null;
+                    startParams = {};
                 }
             }
             else if (path === 'bookings.php') {
@@ -160,6 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (path === 'report-issue.php') startScreen = 'report-issue';
             else if (path === 'help.php') startScreen = 'help';
             else if (path === 'about.php') startScreen = 'about';
+            else if (path === 'blog.php') {
+                const bId = parseInt(urlParams.get('id'));
+                const bSlug = urlParams.get('slug');
+                if (bId || bSlug) {
+                    startScreen = 'blog-detail';
+                    if (bId) state.selectedBlogId = bId;
+                    startParams = { id: bId, slug: bSlug };
+                } else {
+                    startScreen = 'blog';
+                }
+            }
             else if (path === 'vendor-auto-response.php') startScreen = 'vendor-auto-response';
             else if (path === 'jobs.php') {
                 startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-jobs' : 'user-jobs';
@@ -170,8 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             else if (path === 'reviews.php') startScreen = 'home';
-            else if (state.user && (state.user.active_role || state.user.role) === 'vendor') startScreen = 'vendor-dash';
-
+            window.history.replaceState({ screenId: startScreen, params: startParams }, '', window.location.href);
             navigateTo(startScreen, startParams, { force: true });
             if (window.OhatiNavManager) window.OhatiNavManager.init();
             dismissLoading();
@@ -198,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('ohati_auth_token');
                 localStorage.removeItem('ohati_user_session');
                 localStorage.removeItem('ohati_user');
-                localStorage.removeItem('wedmi_user');
+                localStorage.removeItem('ohati_user_session');
                 if (typeof showMandatoryAuthLockScreen === 'function') {
                     showMandatoryAuthLockScreen('login');
                 }
@@ -250,7 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const icon = document.getElementById('theme-icon');
             const logo = document.getElementById('header-logo-img');
 
-            if (body.classList.contains('dark-theme')) {
+            const isCurrentlyDark = localStorage.getItem('theme') === 'dark';
+            const isBlogScreen = (state.currentScreen === 'blog' || state.currentScreen === 'blog-detail');
+
+            if (isCurrentlyDark) {
                 body.classList.remove('dark-theme');
                 if (icon) icon.className = 'fa-solid fa-moon';
                 if (state.currentScreen !== 'home') {
@@ -258,10 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 localStorage.setItem('theme', 'light');
             } else {
-                body.classList.add('dark-theme');
-                if (icon) icon.className = 'fa-solid fa-sun';
-                if (logo) logo.src = 'img/logo white transparent small.png';
                 localStorage.setItem('theme', 'dark');
+                if (!isBlogScreen) {
+                    body.classList.add('dark-theme');
+                    if (logo) logo.src = 'img/logo white transparent small.png';
+                }
+                if (icon) icon.className = 'fa-solid fa-sun';
             }
 
             // Sync native mobile status bar color with active theme
@@ -313,25 +362,43 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Handle internal app routes (e.g. detail.php?id=123, planner.php, etc.)
-        if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')) {
-            try {
-                const urlObj = new URL(href, window.location.href);
+        // Check if link already handles navigation via inline onclick attribute to avoid double invocation
+        const inlineOnclick = link.getAttribute('onclick') || '';
+        if (inlineOnclick.includes('navigateTo(')) {
+            return;
+        }
+
+        // Handle internal app routes (e.g. detail.php?id=123, planner.php, blog.php, chat.php, etc.)
+        try {
+            const urlObj = new URL(href, window.location.href);
+            if (urlObj.origin === window.location.origin) {
                 const pathName = urlObj.pathname.split('/').pop();
 
                 if (pathName === 'detail.php') {
                     e.preventDefault();
-                    const vendorId = urlObj.searchParams.get('id');
+                    const vendorId = urlObj.searchParams.get('id') || urlObj.searchParams.get('vendor_id');
                     if (vendorId) {
                         state.selectedVendorId = parseInt(vendorId);
-                        navigateTo('detail');
+                        navigateTo('detail', { id: parseInt(vendorId) });
                     }
                     return;
                 } else if (pathName === 'chat.php') {
                     e.preventDefault();
-                    const vendorId = urlObj.searchParams.get('vendor_id');
-                    state.activeChatVendorId = vendorId ? parseInt(vendorId) : null;
-                    navigateTo('chat');
+                    const vendorId = urlObj.searchParams.get('vendor_id') || urlObj.searchParams.get('id') || urlObj.searchParams.get('user_id');
+                    const numVid = vendorId ? parseInt(vendorId) : null;
+                    state.activeChatVendorId = numVid;
+                    navigateTo('chat', numVid ? { vendor_id: numVid } : null);
+                    return;
+                } else if (pathName === 'blog.php') {
+                    e.preventDefault();
+                    const bId = urlObj.searchParams.get('id');
+                    const bSlug = urlObj.searchParams.get('slug');
+                    if (bId || bSlug) {
+                        if (bId) state.selectedBlogId = parseInt(bId);
+                        navigateTo('blog-detail', { id: bId ? parseInt(bId) : null, slug: bSlug });
+                    } else {
+                        navigateTo('blog');
+                    }
                     return;
                 } else if (pathName === 'planner.php') {
                     e.preventDefault();
@@ -343,7 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 } else if (pathName === 'bookings.php') {
                     e.preventDefault();
-                    navigateTo('bookings');
+                    const bId = urlObj.searchParams.get('id');
+                    navigateTo('bookings', bId ? { id: parseInt(bId) } : null);
                     return;
                 } else if (pathName === 'favorites.php') {
                     e.preventDefault();
@@ -361,13 +429,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     navigateTo('vendor-dash');
                     return;
+                } else if (pathName === 'promotions.php') {
+                    e.preventDefault();
+                    navigateTo((state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home');
+                    return;
                 } else if (pathName === 'help.php') {
                     e.preventDefault();
                     navigateTo('help');
                     return;
+                } else if (pathName === 'about.php') {
+                    e.preventDefault();
+                    navigateTo('about');
+                    return;
+                } else if (pathName === 'report-issue.php') {
+                    e.preventDefault();
+                    navigateTo('report-issue');
+                    return;
+                } else if (pathName === 'index.php') {
+                    e.preventDefault();
+                    navigateTo('home');
+                    return;
                 }
-            } catch (err) {}
-        }
+            }
+        } catch (err) {}
 
         // If running in Capacitor / Mobile native app, open external links via system browser cleanly
         const isNative = window.Capacitor && (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);

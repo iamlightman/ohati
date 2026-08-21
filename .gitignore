@@ -14,3 +14,6 @@ uploads/*
 *.mobileprovision
 node_modules/
 scratch/
+mail_log.txt
+test_login.php
+

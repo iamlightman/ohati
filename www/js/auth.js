@@ -600,7 +600,7 @@ function handleLogout() {
     localStorage.removeItem('ohati_auth_token');
     localStorage.removeItem('ohati_user_session');
     localStorage.removeItem('ohati_user');
-    localStorage.removeItem('wedmi_user');
+    localStorage.removeItem('ohati_user_session');
     sessionStorage.clear();
 
     const doLocalCleanup = () => {
@@ -1269,6 +1269,10 @@ window.triggerAccountDeletionFlow = function() {
 };
 
 window.showMandatoryAuthLockScreen = function(initialMode) {
+    const currentPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+    if (currentPath.includes('login.php') || currentPath.includes('register.php')) {
+        return;
+    }
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -1422,7 +1426,10 @@ window.showMandatoryAuthLockScreen = function(initialMode) {
                             <input type="text" id="m-lock-id" required placeholder="email@example.com or phone" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Password</label>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin:0;">Password</label>
+                                <a href="forgot-password.php" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
+                            </div>
                             <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
@@ -1512,7 +1519,7 @@ window.handleMandatoryLoginSubmit = function(e) {
                 state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
                 
                 if (typeof navigateTo === 'function') {
-                    navigateTo((res.user.active_role || res.user.role) === 'vendor' ? 'vendor-dash' : 'home');
+                    navigateTo('home');
                 }
             });
         } else {

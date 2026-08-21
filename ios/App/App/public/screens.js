@@ -81,7 +81,7 @@ function navigateTo(screenId, params = {}, options = {}) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
 
     // Auth Guard: Lock screen to login/signup unless authenticated
-    if (!state.user && screenId !== 'blog' && screenId !== 'blog-detail' && screenId !== 'about' && screenId !== 'help') {
+    if (!state.user && screenId !== 'blog' && screenId !== 'blog-detail' && screenId !== 'about' && screenId !== 'help' && screenId !== 'report-issue') {
         if (typeof showMandatoryAuthLockScreen === 'function') {
             showMandatoryAuthLockScreen('login');
         }
@@ -2019,7 +2019,9 @@ window.startVendorChat = function(vid) {
         return;
     }
     const numVid = vid ? parseInt(vid) : null;
-    if (numVid) {
+    if (typeof navigateTo === 'function') {
+        navigateTo('chat', { vendor_id: numVid });
+    } else if (numVid) {
         window.location.href = `chat.php?vendor_id=${numVid}`;
     } else {
         window.location.href = 'chat.php';

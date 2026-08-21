@@ -162,113 +162,125 @@ function updateSidebarUI() {
         if (navContainer) {
             if (activeRole === 'vendor') {
                 navContainer.innerHTML = `
-                    <a class="sidebar-link" onclick="navigateTo('vendor-dash', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-dash', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-chart-pie"></i><span>Vendor Dashboard</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-briefcase"></i><span>Find Event Jobs</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
                     </a>
-                    <a class="sidebar-link" onclick="JobsModule.openCreateJobModal(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="JobsModule.openCreateJobModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-plus-circle"></i><span>Post Event Job</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-ads', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-ads', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-rectangle-ad"></i><span>Promotions Hub</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-auto-response', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-auto-response', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-robot"></i><span>Auto-Response</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('profile-edit', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('profile-edit', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-user-pen"></i><span>Edit Profile</span>
                     </a>
-                    <a class="sidebar-link" onclick="switchAccountType('customer'); toggleSidebar(false)" style="background:var(--gray-100); border-radius:8px; margin-top:10px;">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="switchAccountType('customer'); toggleSidebar(false)" style="background:var(--gray-100); border-radius:8px; margin-top:10px;">
                         <i class="fa-solid fa-repeat"></i><span>Switch to Customer Mode</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
-                    <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-star"></i><span>Give a Review</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
-                    <a class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-circle-info"></i><span>About Us</span>
+                    </a>
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
+                    </a>
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-gear"></i><span>Settings</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link sidebar-signin-link" id="sidebar-auth-link" onclick="handleLogout(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link sidebar-signin-link" id="sidebar-auth-link" onclick="handleLogout(); toggleSidebar(false)">
                         <i class="fa-solid fa-right-from-bracket"></i><span>Sign Out</span>
                     </a>
                 `;
             } else {
                 navContainer.innerHTML = `
-                    <a class="sidebar-link" onclick="navigateTo('profile', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('profile', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-user-gear"></i><span>My Profile</span>
                     </a>
-                    <a class="sidebar-link" onclick="JobsModule.openCreateJobModal(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="JobsModule.openCreateJobModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-plus-circle"></i><span>Post Event Job</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('user-jobs', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('user-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-list-check"></i><span>My Posted Jobs</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-briefcase"></i><span>Browse Event Jobs</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('favorites', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('favorites', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-heart"></i><span>Saved Vendors</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('notifications', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('notifications', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bell"></i><span>Notifications</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('compare', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('compare', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-scale-balanced"></i><span>Compare Vendors</span>
                     </a>
                     ${state.user.has_vendor_profile ? `
-                        <a class="sidebar-link" onclick="switchAccountType('vendor'); toggleSidebar(false)" style="background:var(--gray-100); border-radius:8px; margin-top:10px;">
+                        <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="switchAccountType('vendor'); toggleSidebar(false)" style="background:var(--gray-100); border-radius:8px; margin-top:10px;">
                             <i class="fa-solid fa-repeat"></i><span>Switch to Vendor Mode</span>
                         </a>
                     ` : `
-                        <a class="sidebar-link sidebar-premium" onclick="openPremiumModal(); toggleSidebar(false)">
+                        <a href="javascript:void(0)" role="button" class="sidebar-link sidebar-premium" onclick="openPremiumModal(); toggleSidebar(false)">
                             <i class="fa-solid fa-crown"></i><span>Become a Vendor</span>
                             <span class="sidebar-badge-new">NEW</span>
                         </a>
                     `}
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                         <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                     </a>
-                    <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
-                    <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-star"></i><span>Give a Review</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
-                    <a class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-circle-info"></i><span>About Us</span>
+                    </a>
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
+                    </a>
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-gear"></i><span>Settings</span>
                     </a>
                     <div class="sidebar-divider"></div>
-                    <a class="sidebar-link sidebar-signin-link" id="sidebar-auth-link" onclick="handleLogout(); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link sidebar-signin-link" id="sidebar-auth-link" onclick="handleLogout(); toggleSidebar(false)">
                         <i class="fa-solid fa-right-from-bracket"></i><span>Sign Out</span>
                     </a>
                 `;
@@ -284,31 +296,40 @@ function updateSidebarUI() {
         }
         if (navContainer) {
             navContainer.innerHTML = `
-                <a class="sidebar-link" onclick="navigateTo('home', {}, { force: true }); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('home', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-house"></i><span>Home</span>
                 </a>
-                <a class="sidebar-link" onclick="navigateTo('search', {}, { force: true }); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('search', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-magnifying-glass"></i><span>Find Vendors</span>
                 </a>
-                <a class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('blog', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-newspaper"></i><span>Blog & Guides</span>
                 </a>
                 <div class="sidebar-divider"></div>
-                <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                     <i class="fa-solid fa-bullhorn"></i><span>Refer & Earn</span>
                     <span class="sidebar-badge-new" style="background:var(--accent);">PROMO</span>
                 </a>
-                <a class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="showComingSoonReferral(); toggleSidebar(false)">
                     <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                 </a>
-                <a class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="openPlatformReviewModal(); toggleSidebar(false)">
                     <i class="fa-solid fa-star"></i><span>Give a Review</span>
                 </a>
-                <a class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                 </a>
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
+                    <i class="fa-solid fa-circle-info"></i><span>About Us</span>
+                </a>
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
+                    <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
+                </a>
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="openSettingsModal(); toggleSidebar(false)">
+                    <i class="fa-solid fa-gear"></i><span>Settings</span>
+                </a>
                 <div class="sidebar-divider"></div>
-                <a class="sidebar-link sidebar-signin-link" id="sidebar-auth-link" onclick="openLoginModal(); toggleSidebar(false)">
+                <a href="javascript:void(0)" role="button" class="sidebar-link sidebar-signin-link" id="sidebar-auth-link" onclick="openLoginModal(); toggleSidebar(false)">
                     <i class="fa-solid fa-right-to-bracket"></i><span>Sign In</span>
                 </a>
             `;

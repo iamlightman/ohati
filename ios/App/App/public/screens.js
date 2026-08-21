@@ -202,9 +202,14 @@ function navigateTo(screenId, params = {}, options = {}) {
     else if (screenId === 'blog') pageName = 'blog.php';
     else if (screenId === 'blog-detail') pageName = `blog.php${state.selectedBlogId ? '?id=' + state.selectedBlogId : ''}`;
 
+    const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
     const isSPA = !!document.getElementById('screen-home');
     if (!isSPA) {
-        window.location.href = pageName;
+        if (isNative) {
+            window.location.href = 'index.html';
+        } else {
+            window.location.href = pageName;
+        }
         return;
     }
 

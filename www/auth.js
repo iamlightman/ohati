@@ -613,6 +613,7 @@ function handleLogout() {
     const doLocalCleanup = () => {
         if (typeof updateAppHeader === 'function') updateAppHeader();
         if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+        if (typeof updateSidebarContent === 'function') updateSidebarContent();
         if (typeof renderSidebar === 'function') renderSidebar();
 
         // Lock screen to Login overlay
@@ -626,6 +627,12 @@ function handleLogout() {
         // Prevent browser Back button from revealing protected content
         if (window.history && window.history.replaceState) {
             window.history.replaceState(null, '', window.location.pathname);
+        }
+        const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+        if (isNative) {
+            window.location.href = 'index.html';
+        } else {
+            window.location.reload();
         }
     };
 
@@ -1506,8 +1513,15 @@ window.handleMandatoryLoginSubmit = function (e) {
             if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
             else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
+            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            if (typeof updateSidebarContent === 'function') updateSidebarContent();
 
-            window.location.reload();
+            const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+            if (isNative) {
+                window.location.href = 'index.html';
+            } else {
+                window.location.reload();
+            }
         } else {
             unlockLogin();
             throw new Error(res.error || 'Login failed.');

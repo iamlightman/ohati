@@ -628,6 +628,12 @@ function handleLogout() {
         if (window.history && window.history.replaceState) {
             window.history.replaceState(null, '', window.location.pathname);
         }
+        const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+        if (isNative) {
+            window.location.href = 'index.html';
+        } else {
+            window.location.reload();
+        }
     };
 
     if (window.API && typeof API.logout === 'function') {
@@ -1510,7 +1516,12 @@ window.handleMandatoryLoginSubmit = function (e) {
             if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
             if (typeof updateSidebarContent === 'function') updateSidebarContent();
 
-            window.location.reload();
+            const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+            if (isNative) {
+                window.location.href = 'index.html';
+            } else {
+                window.location.reload();
+            }
         } else {
             unlockLogin();
             throw new Error(res.error || 'Login failed.');

@@ -208,6 +208,16 @@ function navigateTo(screenId, params = {}, options = {}) {
         return;
     }
 
+    // BLOG EXCLUSIVE LIGHT MODE LOCK: Remove dark-theme when on blog screens
+    if (screenId === 'blog' || screenId === 'blog-detail') {
+        document.body.classList.remove('dark-theme');
+    } else {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+    }
+
     const appContainer = document.getElementById('ohati-app');
     const headerLogo = document.getElementById('header-logo-img');
     const isDark = document.body.classList.contains('dark-theme');
@@ -1210,13 +1220,10 @@ function initDetailScreen() {
                     <button class="btn btn-primary" onclick="openBookingRequestModal(${v.id})"><i class="fa-solid fa-calendar-check"></i> Book Now</button>
                 </div>
 
-                <!-- Discovery Carousels Wrapper -->
-                <div id="detail-recommendations-wrapper" style="margin-bottom:24px; padding:0;"></div>
             </div>
         `;
         screen.innerHTML = html;
         renderDetailTabContent(v);
-        renderProfileRecommendations(v);
     }).catch(err => {
         screen.innerHTML = `
             <div style="padding:50px 20px; text-align:center; max-width:480px; margin:0 auto;">
@@ -2188,6 +2195,19 @@ function updateChatMessages(history) {
 
     if (container.innerHTML !== newHTML) {
         container.innerHTML = newHTML;
+
+        // Re-append active/failed pending chat upload bubbles so polling doesn't erase them
+        if (window._pendingChatUploads) {
+            Object.keys(window._pendingChatUploads).forEach(tempId => {
+                const item = window._pendingChatUploads[tempId];
+                if (item && item.vendorId == state.activeChatVendorId && (item.status === 'uploading' || item.status === 'failed')) {
+                    if (typeof window.renderPendingChatBubble === 'function') {
+                        window.renderPendingChatBubble(tempId);
+                    }
+                }
+            });
+        }
+
         scrollToBottom('chat-messages-container');
     }
 }
@@ -4529,18 +4549,14 @@ function openReferAndEarnModal() {
                 <i class="fa-solid fa-gift"></i>
             </div>
             <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">Refer & Earn</h3>
-            <p style="font-size:0.95rem; color:var(--gray-600); font-weight:600; margin-bottom:24px;">Coming Soon</p>
+            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
             <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
         </div>
     `);
 }
 
 function copyReferralLink(link) {
-    navigator.clipboard.writeText(link).then(() => {
-        showPushNotification('Link Copied!', 'Your unique referral link has been copied to clipboard.');
-    }).catch(() => {
-        showPushNotification('Link Copied!', 'Your unique referral link has been copied to clipboard.');
-    });
+    showPushNotification('Refer & Earn', 'Refer & Earn rewards coming soon!');
 }
 
 function shareReferralLinkNative(link) {
@@ -4554,93 +4570,13 @@ window.openDiscountsAndOffersModal = function() {
                 <i class="fa-solid fa-tags"></i>
             </div>
             <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">Discounts & Offers</h3>
-            <p style="font-size:0.95rem; color:var(--gray-600); font-weight:600; margin-bottom:24px;">Coming Soon</p>
+            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
             <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
         </div>
     `);
 };
 window.openDiscountOffersModal = window.openDiscountsAndOffersModal;
-
-window.switchDiscountTab = function(tab) {
-    const cTab = document.getElementById('disc-tab-coupons');
-    const rTab = document.getElementById('disc-tab-requests');
-    const cBtn = document.getElementById('btn-disc-coupons');
-    const rBtn = document.getElementById('btn-disc-requests');
-
-    if (tab === 'coupons') {
-        if (cTab) cTab.style.display = 'block';
-        if (rTab) rTab.style.display = 'none';
-        if (cBtn) { cBtn.className = 'btn btn-xs btn-primary'; }
-        if (rBtn) { rBtn.className = 'btn btn-xs btn-outline'; }
-    } else {
-        if (cTab) cTab.style.display = 'none';
-        if (rTab) rTab.style.display = 'block';
-        if (cBtn) { cBtn.className = 'btn btn-xs btn-outline'; }
-        if (rBtn) { rBtn.className = 'btn btn-xs btn-primary'; }
-    }
-};
-
-window.openDiscountRequestModal = function(vendorId = 0, vendorName = '') {
-    if (!isNativeMobileApp()) {
-        openAppExclusiveModal(
-            "Discounts & Special Offers",
-            "Custom discount requests and exclusive vendor package offers are available only on the Ohati Mobile App!"
-        );
-        return;
-    }
-
-    if (!state.user) {
-        openLoginModal();
-        return;
-    }
-
-    let vendorsOptionHTML = '<option value="">-- Select Vendor --</option>';
-    if (state.vendors && state.vendors.length > 0) {
-        vendorsOptionHTML += state.vendors.map(v => `<option value="${v.id}" ${v.id == vendorId ? 'selected' : ''}>${v.name} (${v.category || 'Vendor'})</option>`).join('');
-    }
-
-    const html = `
-        <div class="auth-modal-header" style="text-align:center; padding-bottom:10px; border-bottom:1px solid var(--gray-200);">
-            <h3 class="auth-modal-title" style="font-size:1.15rem;">Request Custom Discount / Offer</h3>
-            <p class="auth-modal-subtitle" style="font-size:0.75rem;">Propose your target price to the vendor for your upcoming event.</p>
-        </div>
-
-        <div style="padding-top:14px;">
-            <div class="form-group mb-12">
-                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Select Vendor</label>
-                <select class="form-input" id="dr-vendor-id" style="font-size:0.8rem;">
-                    ${vendorsOptionHTML}
-                </select>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;" class="mb-12">
-                <div>
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Event Type</label>
-                    <input type="text" class="form-input" id="dr-event-type" placeholder="e.g. Wedding, Birthday" style="font-size:0.8rem;">
-                </div>
-                <div>
-                    <label class="form-label" style="font-size:0.75rem; font-weight:700;">Event Date</label>
-                    <input type="date" class="form-input" id="dr-event-date" style="font-size:0.8rem;">
-                </div>
-            </div>
-
-            <div class="form-group mb-12">
-                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Target Offered Price (GH₵)</label>
-                <input type="number" min="1" step="10" class="form-input" id="dr-target-price" placeholder="e.g. 500" style="font-size:0.85rem; font-weight:700;">
-            </div>
-
-            <div class="form-group mb-16">
-                <label class="form-label" style="font-size:0.75rem; font-weight:700;">Optional Message / Special Notes</label>
-                <textarea class="form-input" id="dr-notes" rows="2" placeholder="e.g. Booking for 2 days in Kumasi..." style="font-size:0.78rem;"></textarea>
-            </div>
-
-            <button class="btn btn-primary btn-full" id="btn-submit-discount-req" onclick="submitDiscountRequest(event)" style="font-weight:700;">
-                <i class="fa-solid fa-paper-plane"></i> Send Discount Request
-            </button>
-        </div>
-    `;
-    openModal(html);
-};
+window.openDiscountRequestModal = window.openDiscountsAndOffersModal;
 
 window.submitDiscountRequest = function(event) {
     const vid = document.getElementById('dr-vendor-id')?.value;
@@ -6752,11 +6688,11 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                     <label class="form-label">Full Name</label>
                     ${isFieldLocked('name') ? `
                         <div style="position:relative;">
-                            <input type="text" class="form-input" value="${u.name}" disabled style="background:var(--gray-50); padding-right:120px;">
+                            <input type="text" class="form-input" id="edit-name" value="${u.name || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
                             <a onclick="openRequestChangeModal('name')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--primary); font-weight:600; cursor:pointer;"><i class="fa-solid fa-lock"></i> Request Change</a>
                         </div>
                     ` : `
-                        <input type="text" class="form-input" id="edit-name" value="${u.name}">
+                        <input type="text" class="form-input" id="edit-name" value="${u.name || ''}">
                     `}
                 </div>
 
@@ -6771,7 +6707,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                     <label class="form-label">Email Address</label>
                     ${isFieldLocked('email') ? `
                         <div style="position:relative;">
-                            <input type="text" class="form-input" value="${u.email || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
+                            <input type="email" class="form-input" id="edit-email" value="${u.email || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
                             <a onclick="openRequestChangeModal('email')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--primary); font-weight:600; cursor:pointer;"><i class="fa-solid fa-lock"></i> Request Change</a>
                         </div>
                     ` : `
@@ -6784,7 +6720,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                     <label class="form-label">Phone Number</label>
                     ${isFieldLocked('phone') ? `
                         <div style="position:relative;">
-                            <input type="text" class="form-input" value="${u.phone || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
+                            <input type="text" class="form-input" id="edit-phone" value="${u.phone || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
                             <a onclick="openRequestChangeModal('phone')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--primary); font-weight:600; cursor:pointer;"><i class="fa-solid fa-lock"></i> Request Change</a>
                         </div>
                     ` : `
@@ -6797,7 +6733,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                     <label class="form-label">Date of Birth</label>
                     ${isFieldLocked('dob') ? `
                         <div style="position:relative;">
-                            <input type="text" class="form-input" value="${u.dob || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
+                            <input type="date" class="form-input" id="edit-dob" value="${u.dob || ''}" disabled style="background:var(--gray-50); padding-right:120px;">
                             <a onclick="openRequestChangeModal('dob')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--primary); font-weight:600; cursor:pointer;"><i class="fa-solid fa-lock"></i> Request Change</a>
                         </div>
                     ` : `
@@ -7424,41 +7360,52 @@ function saveProfileChanges() {
             const vendorId = state.user ? (state.user.vendor_id || (state.vendor ? state.vendor.id : 0)) : 0;
             
             if (activeRole === 'vendor' && vendorId > 0) {
-                const bio = document.getElementById('edit-bio')?.value.trim() || '';
+                const v = state.vendor || {};
+                const u = state.user || {};
+                const bio = document.getElementById('edit-bio')?.value.trim() ?? (v.description || '');
                 const social = {
-                    instagram: document.getElementById('edit-social-instagram')?.value.trim() || '',
-                    facebook: document.getElementById('edit-social-facebook')?.value.trim() || '',
-                    tiktok: document.getElementById('edit-social-tiktok')?.value.trim() || ''
+                    instagram: document.getElementById('edit-social-instagram')?.value.trim() ?? (v.social_links?.instagram || ''),
+                    facebook: document.getElementById('edit-social-facebook')?.value.trim() ?? (v.social_links?.facebook || ''),
+                    tiktok: document.getElementById('edit-social-tiktok')?.value.trim() ?? (v.social_links?.tiktok || '')
                 };
                 
+                const nameVal = document.getElementById('edit-vendor-name')?.value.trim();
+                const phoneVal = document.getElementById('edit-vendor-phone')?.value.trim();
+                const emailVal = document.getElementById('edit-vendor-email')?.value.trim();
+                const locVal = document.getElementById('edit-vendor-location')?.value.trim();
+                const catVal = document.getElementById('edit-vendor-category')?.value;
+
                 return API.updateVendor({
                     id: vendorId,
-                    name: document.getElementById('edit-vendor-name')?.value.trim() || '',
-                    category: document.getElementById('edit-vendor-category')?.value || '',
-                    phone: document.getElementById('edit-vendor-phone')?.value.trim() || '',
-                    email: document.getElementById('edit-vendor-email')?.value.trim() || '',
-                    experience: parseInt(document.getElementById('edit-vendor-experience')?.value || 0),
-                    location: document.getElementById('edit-vendor-location')?.value.trim() || '',
-                    website: document.getElementById('edit-vendor-website')?.value.trim() || '',
+                    name: nameVal || v.name || u.name || '',
+                    category: catVal || v.category || 'Photography',
+                    phone: phoneVal || v.phone || u.phone || '',
+                    email: emailVal || v.email || u.email || '',
+                    experience: parseInt(document.getElementById('edit-vendor-experience')?.value || v.experience || 0),
+                    location: locVal || v.location || u.city || '',
+                    website: document.getElementById('edit-vendor-website')?.value.trim() ?? (v.website || ''),
                     description: bio,
                     social_links: social,
-                    gallery: state.tempGallery,
-                    packages_pricing: state.tempPackages,
-                    working_hours: state.tempWorkingHours,
-                    welcome_message: document.getElementById('edit-welcome-message')?.value.trim() || '',
-                    response_time: document.getElementById('edit-vendor-response-time')?.value || 'Within 24 hours',
-                    gps_lat: parseFloat(document.getElementById('edit-vendor-gps-lat')?.value || 0),
-                    gps_lng: parseFloat(document.getElementById('edit-vendor-gps-lng')?.value || 0),
-                    has_insurance: document.getElementById('edit-vendor-insurance')?.checked ? 1 : 0
+                    gallery: state.tempGallery || (v.gallery ? (typeof v.gallery === 'string' ? JSON.parse(v.gallery) : v.gallery) : []),
+                    packages_pricing: state.tempPackages || (v.packages_pricing ? (typeof v.packages_pricing === 'string' ? JSON.parse(v.packages_pricing) : v.packages_pricing) : []),
+                    working_hours: state.tempWorkingHours || (v.working_hours ? (typeof v.working_hours === 'string' ? JSON.parse(v.working_hours) : v.working_hours) : {}),
+                    welcome_message: document.getElementById('edit-welcome-message')?.value.trim() ?? (v.welcome_message || ''),
+                    response_time: document.getElementById('edit-vendor-response-time')?.value || v.response_time || 'Within 24 hours',
+                    gps_lat: parseFloat(document.getElementById('edit-vendor-gps-lat')?.value || v.gps_lat || 0),
+                    gps_lng: parseFloat(document.getElementById('edit-vendor-gps-lng')?.value || v.gps_lng || 0),
+                    has_insurance: document.getElementById('edit-vendor-insurance')?.checked ? 1 : (v.has_insurance ? 1 : 0)
                 });
             }
         })
+        .then(() => {
+            return API.getSession().catch(() => null);
+        })
         .then(res => {
-            if (res) {
-                if (res.user) state.user = res.user;
+            if (res && res.user) {
+                state.user = res.user;
                 if (res.vendor) state.vendor = res.vendor;
                 try {
-                    if (state.user) localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                    localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
                 } catch (e) {}
             }
             showPushNotification('Profile Updated 🎉', 'Your profile details have been saved successfully.');

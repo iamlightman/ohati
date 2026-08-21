@@ -7397,12 +7397,15 @@ function saveProfileChanges() {
                 });
             }
         })
+        .then(() => {
+            return API.getSession().catch(() => null);
+        })
         .then(res => {
-            if (res) {
-                if (res.user) state.user = res.user;
+            if (res && res.user) {
+                state.user = res.user;
                 if (res.vendor) state.vendor = res.vendor;
                 try {
-                    if (state.user) localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                    localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
                 } catch (e) {}
             }
             showPushNotification('Profile Updated 🎉', 'Your profile details have been saved successfully.');

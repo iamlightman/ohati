@@ -613,6 +613,7 @@ function handleLogout() {
     const doLocalCleanup = () => {
         if (typeof updateAppHeader === 'function') updateAppHeader();
         if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+        if (typeof updateSidebarContent === 'function') updateSidebarContent();
         if (typeof renderSidebar === 'function') renderSidebar();
 
         // Lock screen to Login overlay
@@ -1506,6 +1507,8 @@ window.handleMandatoryLoginSubmit = function (e) {
             if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
             else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
+            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            if (typeof updateSidebarContent === 'function') updateSidebarContent();
 
             window.location.reload();
         } else {

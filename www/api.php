@@ -18,27 +18,6 @@ header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization'
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 require_once __DIR__ . '/db.php';
 
-if (!function_exists('respond_json_fast')) {
-    function respond_json_fast($data, $status_code = 200) {
-        if (!headers_sent()) {
-            http_response_code($status_code);
-            header('Content-Type: application/json; charset=utf-8');
-            header('Connection: close');
-        }
-        $json = json_encode($data);
-        if (!headers_sent()) {
-            header('Content-Length: ' . strlen($json));
-        }
-        echo $json;
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        } else {
-            @ob_end_flush();
-            @flush();
-        }
-    }
-}
-
 function getBlockedUserIds($uid, $pdo) {
     if ($uid <= 0 || !$pdo) return [];
     try {
@@ -1632,14 +1611,27 @@ case 'vendor_details':
     // Increment view counter & log timestamped view
     $v_uid = intval($_SESSION['user']['id'] ?? 0);
     $v_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $by_user_id = intval($_GET['by_user_id'] ?? $_POST['by_user_id'] ?? $raw_input['by_user_id'] ?? 0);
     
-    $v_find = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? OR user_id = ?");
-    $v_find->execute([$id, $id]);
-    $target_vendor = $v_find->fetch();
+    $v = null;
+    if ($by_user_id === 1) {
+        $stmt = $pdo->prepare("SELECT * FROM vendors WHERE user_id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $v = $stmt->fetch();
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $v = $stmt->fetch();
+        if (!$v) {
+            $stmt = $pdo->prepare("SELECT * FROM vendors WHERE user_id = ? LIMIT 1");
+            $stmt->execute([$id]);
+            $v = $stmt->fetch();
+        }
+    }
     
-    if ($target_vendor) {
-        $real_vid = intval($target_vendor['id']);
-        $real_v_uid = intval($target_vendor['user_id']);
+    if ($v) {
+        $real_vid = intval($v['id']);
+        $real_v_uid = intval($v['user_id']);
         if ($v_uid <= 0 || $v_uid !== $real_v_uid) {
             $sess_key = 'viewed_v_' . $real_vid;
             $last_view = intval($_SESSION[$sess_key] ?? 0);
@@ -1651,13 +1643,9 @@ case 'vendor_details':
                 } catch (Exception $vLogEx) {}
             }
         }
+    } else {
+        http_response_code(404); echo json_encode(['error'=>'Not found']); exit;
     }
-
-    
-    $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id = ? OR user_id = ?"); 
-    $stmt->execute([$id, $id]);
-    $v = $stmt->fetch();
-    if (!$v) { http_response_code(404); echo json_encode(['error'=>'Not found']); exit; }
     $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
     $info = get_online_status_info($v['last_active'] ?? '');
     $v['is_online'] = $info['is_online'];
@@ -2853,7 +2841,7 @@ case 'update_vendor':
         $_SESSION['vendor'] = $fresh_vendor;
     }
 
-    respond_json_fast([
+    echo json_encode([
         'success' => true,
         'vendor_id' => $vid,
         'vendor' => $_SESSION['vendor'] ?? null,
@@ -3146,8 +3134,6 @@ case 'create_advertisement':
     $notif = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Ad Campaign Submitted', ?, 'clock')");
     $notif->execute([$_SESSION['user']['id'], "Your campaign '$title' has been submitted and is waiting for admin approval."]);
 
-    respond_json_fast(['success' => true, 'ad_id' => $ad_id, 'message' => 'Campaign submitted for admin review']);
-
     try {
         require_once __DIR__ . '/mail_helper.php';
         send_admin_activity_notification(
@@ -3156,6 +3142,7 @@ case 'create_advertisement':
         );
     } catch (Exception $adminEx) {}
 
+    echo json_encode(['success' => true, 'ad_id' => $ad_id, 'message' => 'Campaign submitted for admin review']);
     break;
 
 case 'update_ad_status':

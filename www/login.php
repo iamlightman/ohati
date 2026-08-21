@@ -91,10 +91,11 @@ if (isset($_SESSION['user'])) {
                 .then(res => {
                     if (res.auth_token) localStorage.setItem('ohati_auth_token', res.auth_token);
                     if (res.user) localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+                    const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
                     if (res.user.role === 'admin') {
                         window.location.href = 'admin/index.php';
                     } else {
-                        window.location.href = 'index.php';
+                        window.location.href = isNative ? 'index.html' : 'index.php';
                     }
                 })
                 .catch(e => {

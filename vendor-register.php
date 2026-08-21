@@ -657,7 +657,8 @@ session_start();
                 kyc_selfie: state.authData.selfie,
                 kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
             });
-            window.location.href = 'vendor-dash.php';
+            const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+            window.location.href = isNative ? 'index.html?screen=vendor-dash' : 'vendor-dash.php';
         }
 
         document.addEventListener('DOMContentLoaded', () => {

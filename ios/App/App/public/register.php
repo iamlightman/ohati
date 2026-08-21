@@ -317,14 +317,14 @@ if (isset($_SESSION['user'])) {
                 .then(res => {
                     const role = (res.user && res.user.role) ? res.user.role : selectedRoleVal;
                     if (role === 'vendor') {
+                        const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
                         if (res.user && res.user.has_vendor_profile) {
-                            window.location.href = 'vendor-dash.php';
+                            window.location.href = isNative ? 'index.html?screen=vendor-dash' : 'vendor-dash.php';
+                        } else if (res.user && res.user.role === 'vendor') {
+                            window.location.href = isNative ? 'index.html?screen=vendor-register' : 'vendor-register.php';
                         } else {
-                            window.location.href = 'vendor-register.php';
+                            window.location.href = isNative ? 'index.html' : 'index.php';
                         }
-                    } else {
-                        window.location.href = 'index.php';
-                    }
                 })
                 .catch(e => {
                     err.textContent = e.message;

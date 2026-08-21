@@ -47,7 +47,7 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
             <div class="header-right">
                 <button class="header-icon-btn" id="theme-toggle-btn"><i class="fa-solid fa-moon" id="theme-icon"></i></button>
                 <div class="header-user">
-                    <img class="header-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="" id="header-avatar" onclick="window.location.href='index.php'">
+                    <img class="header-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="" id="header-avatar" onclick="const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:'; window.location.href = isNative ? 'index.html' : 'index.php';">
                 </div>
             </div>
         </header>
@@ -98,7 +98,7 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
                                     <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:6px;">
                                         <i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> Real-Time Business Performance
                                     </h4>
-                                    <div style="font-size:0.72rem; color:var(--gray-500);">Live profile views, chat inquiries, and bookings</div>
+                                    <div style="font-size:0.72rem; color:var(--gray-500);">Live profile views, chat inquiries, bookings, and revenue</div>
                                 </div>
 
                                 <!-- Pro Date Filter Buttons -->
@@ -130,8 +130,8 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
                                 </div>
                             </div>
 
-                            <!-- 3 Real-Time Analytics Stat Cards -->
-                            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <!-- 4 Real-Time Analytics Stat Cards -->
+                            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
                                 <div class="vd-stat-card text-center" style="padding:12px; border-radius:10px; background:var(--gray-50); border:1px solid var(--gray-200);">
                                     <div style="font-size:0.7rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-eye" style="color:var(--accent);"></i> Views</div>
                                     <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.3rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
@@ -148,6 +148,12 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
                                     <div style="font-size:0.7rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-calendar-check" style="color:#10B981;"></i> Bookings</div>
                                     <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.3rem; font-weight:800; color:var(--primary); margin-top:2px;">--</div>
                                     <div style="font-size:0.65rem; color:var(--gray-500);">Requests</div>
+                                </div>
+
+                                <div class="vd-stat-card text-center" style="padding:12px; border-radius:10px; background:var(--gray-50); border:1px solid var(--gray-200);">
+                                    <div style="font-size:0.7rem; color:var(--gray-600); font-weight:700; text-transform:uppercase;"><i class="fa-solid fa-coins" style="color:#F59E0B;"></i> Revenue</div>
+                                    <div class="vd-stat-value" id="vd-stat-revenue" style="font-size:1.1rem; font-weight:800; color:var(--accent); margin-top:2px;">GH₵ 0</div>
+                                    <div style="font-size:0.65rem; color:var(--gray-500);">Earned</div>
                                 </div>
                             </div>
 
@@ -183,7 +189,7 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
                     <!-- Right Column: Bookings -->
                     <div class="dashboard-col-right">
                         <div class="section-header" style="margin-top:0;">
-                            <h3 class="section-title">Customer Bookings</h3>
+                            <h3 class="section-title">Client Bookings</h3>
                         </div>
                         <div id="vendor-bookings-list">
                             <!-- Loaded dynamically -->
@@ -450,7 +456,8 @@ if (isset($_SESSION['user']['vendor_onboarding_completed']) && $_SESSION['user']
 
         function handleLogout() {
             API.logout().then(() => {
-                window.location.href = 'login.php';
+                const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+                window.location.href = isNative ? 'index.html' : 'login.php';
             });
         }
 

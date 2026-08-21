@@ -137,8 +137,8 @@ if (isset($_SESSION['user'])) {
 
             API.resetPassword(resetTargetVal, code, pass)
                 .then(() => {
-                    alert('Password reset successfully. Redirecting to login...');
-                    window.location.href = 'login.php';
+                    const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
+                    window.location.href = isNative ? 'index.html' : 'login.php';
                 })
                 .catch(e => {
                     if (submitBtn) {

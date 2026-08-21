@@ -30,7 +30,14 @@ const API = {
     },
 
     async get(action, params = {}) {
-        let url = `${this.base}?action=${action}`;
+        let cleanAction = action;
+        let extraQuery = '';
+        if (typeof action === 'string' && action.includes('?')) {
+            const parts = action.split('?');
+            cleanAction = parts[0];
+            extraQuery = '&' + parts.slice(1).join('&');
+        }
+        let url = `${this.base}?action=${cleanAction}${extraQuery}`;
         for (const [k, v] of Object.entries(params)) {
             if (v !== '' && v !== null && v !== undefined) url += `&${k}=${encodeURIComponent(v)}`;
         }
@@ -192,7 +199,7 @@ const API = {
     // ── Notifications ──
     getNotifications() {
         const uid = window.state?.user?.id || 0;
-        return this.get('notifications' + (uid ? '?user_id=' + uid : ''));
+        return this.get('notifications', uid ? { user_id: uid } : {});
     },
     markNotificationRead(id) {
         const uid = window.state?.user?.id || 0;

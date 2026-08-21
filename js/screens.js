@@ -4336,18 +4336,24 @@ function initNotificationsScreen() {
     `;
 
     API.getNotifications().then(list => {
-        state.notifications = Array.isArray(list) ? list : [];
-        if (window.updateNotificationBadgeUI) {
-            window.updateNotificationBadgeUI(state.notifications);
-        }
-
-        const unreadList = state.notifications.filter(n => !parseInt(n.is_read));
+        if (!Array.isArray(list)) list = [];
+        const unreadList = list.filter(n => !n.is_read);
         const unreadCount = unreadList.length;
+        
+        const badge = document.getElementById('notif-badge');
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
 
         const container = document.getElementById('notifications-list-container');
         if (!container) return;
 
-        if (state.notifications.length === 0) {
+        if (list.length === 0) {
             container.innerHTML = `
                 <div class="text-center" style="padding:60px 20px;">
                     <i class="fa-solid fa-bell-slash" style="font-size:3rem; color:var(--gray-200); margin-bottom:12px;"></i>
@@ -4357,15 +4363,15 @@ function initNotificationsScreen() {
             return;
         }
 
-        container.innerHTML = state.notifications.map(n => `
-            <div class="notif-item ${parseInt(n.is_read) ? '' : 'unread'}" onclick="handleNotificationClick(${n.id}, '${n.link || ''}')">
+        container.innerHTML = list.map(n => `
+            <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="handleNotificationClick(${n.id}, '${n.link || ''}')">
                 <div class="notif-icon"><i class="fa-solid fa-${n.icon || 'bell'}"></i></div>
                 <div class="notif-body">
                     <div class="notif-title">${n.title}</div>
                     <div class="notif-text">${n.body}</div>
                     <div class="notif-time">${formatRelativeTime(n.created_at)}</div>
                 </div>
-                ${parseInt(n.is_read) ? '' : '<div class="notif-unread-dot"></div>'}
+                ${n.is_read ? '' : '<div class="notif-unread-dot"></div>'}
             </div>
         `).join('');
 
@@ -4373,12 +4379,22 @@ function initNotificationsScreen() {
         if (unreadCount > 0) {
             setTimeout(() => {
                 API.markNotificationRead(0).then(() => {
-                    (state.notifications || []).forEach(n => n.is_read = 1);
-                    if (window.updateNotificationBadgeUI) window.updateNotificationBadgeUI(state.notifications);
+                    if (badge) badge.style.display = 'none';
                     document.querySelectorAll('.notif-unread-dot').forEach(d => d.remove());
                     document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
                 });
-            }, 1500);
+            }, 1000);
+        }
+    }).catch(err => {
+        console.error("Error loading notifications:", err);
+        const container = document.getElementById('notifications-list-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center" style="padding:60px 20px;">
+                    <i class="fa-solid fa-bell-slash" style="font-size:3rem; color:var(--gray-200); margin-bottom:12px;"></i>
+                    <p class="text-sm text-muted">You have no notifications yet.</p>
+                </div>
+            `;
         }
     });
 }

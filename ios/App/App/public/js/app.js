@@ -507,7 +507,8 @@ window.updateNotifBadgeCount = function() {
         return;
     }
     API.getNotifications().then(list => {
-        const unreadCount = list.filter(n => !n.is_read).length;
+        const notifList = Array.isArray(list) ? list : [];
+        const unreadCount = notifList.filter(n => !n.is_read).length;
         const badge = document.getElementById('notif-badge');
         if (badge) {
             if (unreadCount > 0) {

@@ -4336,6 +4336,7 @@ function initNotificationsScreen() {
     `;
 
     API.getNotifications().then(list => {
+        if (!Array.isArray(list)) list = [];
         const unreadList = list.filter(n => !n.is_read);
         const unreadCount = unreadList.length;
         
@@ -4383,6 +4384,17 @@ function initNotificationsScreen() {
                     document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
                 });
             }, 1000);
+        }
+    }).catch(err => {
+        console.error("Error loading notifications:", err);
+        const container = document.getElementById('notifications-list-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center" style="padding:60px 20px;">
+                    <i class="fa-solid fa-bell-slash" style="font-size:3rem; color:var(--gray-200); margin-bottom:12px;"></i>
+                    <p class="text-sm text-muted">You have no notifications yet.</p>
+                </div>
+            `;
         }
     });
 }

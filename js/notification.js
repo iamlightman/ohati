@@ -1,9 +1,7 @@
 // js/notification.js — Production Notification System Module
 
 window.fetchNotifications = function() {
-    const uid = state.user?.id || 0;
-    const query = uid ? `?user_id=${uid}` : '';
-    return API.get('notifications' + query).then(notifs => {
+    return API.getNotifications().then(notifs => {
         state.notifications = Array.isArray(notifs) ? notifs : [];
         window.updateNotificationBadgeUI(state.notifications);
         return state.notifications;
@@ -22,11 +20,11 @@ window.initNotificationModule = function() {
 
 window.updateNotificationBadgeUI = function(notifs) {
     const unread = (notifs || []).filter(n => parseInt(n.is_read) === 0);
-    const badges = document.querySelectorAll('.notification-badge-count, #notif-badge-count');
+    const badges = document.querySelectorAll('.notification-badge-count, #notif-badge-count, #notif-badge, .notif-badge');
     badges.forEach(b => {
         if (unread.length > 0) {
             b.textContent = unread.length;
-            b.style.display = 'inline-flex';
+            b.style.display = 'flex';
         } else {
             b.style.display = 'none';
         }

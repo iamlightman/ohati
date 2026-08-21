@@ -30,7 +30,14 @@ const API = {
     },
 
     async get(action, params = {}) {
-        let url = `${this.base}?action=${action}`;
+        let cleanAction = action;
+        let extraQuery = '';
+        if (typeof action === 'string' && action.includes('?')) {
+            const parts = action.split('?');
+            cleanAction = parts[0];
+            extraQuery = '&' + parts.slice(1).join('&');
+        }
+        let url = `${this.base}?action=${cleanAction}${extraQuery}`;
         for (const [k, v] of Object.entries(params)) {
             if (v !== '' && v !== null && v !== undefined) url += `&${k}=${encodeURIComponent(v)}`;
         }
@@ -190,8 +197,14 @@ const API = {
     raiseDispute(bookingId, subject, description) { return this.post('raise_dispute', { booking_id: bookingId, subject, description }); },
 
     // ── Notifications ──
-    getNotifications() { return this.get('notifications'); },
-    markNotificationRead(id) { return this.post('mark_notification_read', { id: id || 0 }); },
+    getNotifications() {
+        const uid = window.state?.user?.id || 0;
+        return this.get('notifications', uid ? { user_id: uid } : {});
+    },
+    markNotificationRead(id) {
+        const uid = window.state?.user?.id || 0;
+        return this.post('mark_notification_read', { id: id || 0, user_id: uid });
+    },
 
     // ── Promotions & Advertising ──
     getAdCampaigns(vendorId) { return this.get('get_advertisements', { vendor_id: vendorId || '' }); },

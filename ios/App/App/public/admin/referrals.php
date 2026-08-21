@@ -12,21 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $reward_amt = floatval($_POST['reward_amount'] ?? 10.0);
     $program_active = isset($_POST['program_active']) ? '1' : '0';
 
-    $chk_rf1 = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = 'referral_reward_amount'");
-    $chk_rf1->execute();
-    if ($chk_rf1->fetchColumn() > 0) {
-        $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = 'referral_reward_amount'")->execute([$reward_amt]);
-    } else {
-        $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_reward_amount', ?)")->execute([$reward_amt]);
-    }
-
-    $chk_rf2 = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = 'referral_program_active'");
-    $chk_rf2->execute();
-    if ($chk_rf2->fetchColumn() > 0) {
-        $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = 'referral_program_active'")->execute([$program_active]);
-    } else {
-        $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_program_active', ?)")->execute([$program_active]);
-    }
+    $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_reward_amount', ?) ON DUPLICATE KEY UPDATE val_value = ?")->execute([$reward_amt, $reward_amt]);
+    $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES ('referral_program_active', ?) ON DUPLICATE KEY UPDATE val_value = ?")->execute([$program_active, $program_active]);
 
     $message = "Referral program settings updated successfully.";
 }

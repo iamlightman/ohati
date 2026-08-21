@@ -26,7 +26,7 @@ window.openBookingDetailsModal = function(bid) {
             <div style="display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:12px; border-bottom:1px solid var(--gray-200); margin-bottom:12px;">
                 <div>
                     <div style="font-size:0.7rem; font-weight:800; color:var(--primary); letter-spacing:0.5px;">${refCode}</div>
-                    <h3 style="margin:2px 0 0 0; font-size:1.05rem; font-weight:700;">${isVendor ? (booking.user_name || 'Customer') : (booking.vendor_name || 'Vendor')}</h3>
+                    <h3 style="margin:2px 0 0 0; font-size:1.05rem; font-weight:700;">${isVendor ? (booking.user_name || 'Client') : (booking.vendor_name || 'Vendor')}</h3>
                     <p style="margin:2px 0 0 0; font-size:0.72rem; color:var(--gray-500);">
                         ${isVendor ? (booking.package_name || booking.event_type || 'Event Package') : (booking.vendor_category + ' • ' + (booking.event_type || 'Event'))}
                     </p>
@@ -43,7 +43,7 @@ window.openBookingDetailsModal = function(bid) {
             <!-- Contact & Booking Grid -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--gray-50); padding:12px; border-radius:10px; border:1px solid var(--gray-100); margin-bottom:14px; font-size:0.75rem;">
                 <div>
-                    <span style="color:var(--gray-500); font-size:0.68rem; display:block;">${isVendor ? 'CUSTOMER CONTACT' : 'VENDOR DETAILS'}</span>
+                    <span style="color:var(--gray-500); font-size:0.68rem; display:block;">${isVendor ? 'CLIENT CONTACT' : 'VENDOR DETAILS'}</span>
                     <strong style="color:var(--gray-800); font-size:0.8rem;">${isVendor ? booking.user_name : booking.vendor_name}</strong>
                     <div style="margin-top:4px;">
                         <a href="tel:${isVendor ? booking.user_phone : booking.vendor_phone}" style="color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:4px; margin-top:2px;">
@@ -66,7 +66,7 @@ window.openBookingDetailsModal = function(bid) {
             <!-- Notes Section -->
             ${booking.notes ? `
                 <div style="margin-bottom:14px;">
-                    <span style="font-size:0.7rem; font-weight:700; color:var(--gray-600); display:block; margin-bottom:4px;">CUSTOMER INSTRUCTIONS / NOTES:</span>
+                    <span style="font-size:0.7rem; font-weight:700; color:var(--gray-600); display:block; margin-bottom:4px;">CLIENT INSTRUCTIONS / NOTES:</span>
                     <div style="background:var(--gray-100); padding:10px; border-radius:8px; font-size:0.75rem; color:var(--gray-800); border-left:3px solid var(--primary);">
                         ${booking.notes}
                     </div>

@@ -1,21 +1,23 @@
 // js/notification.js — Production Notification System Module
 
-window.initNotificationModule = function() {
-    if (!state.user) return;
-    
-    // Poll notifications every 5 seconds
-    API.get('notifications').then(notifs => {
-        state.notifications = notifs;
-        window.updateNotificationBadgeUI(notifs);
-    }).catch(() => {});
+window.fetchNotifications = function() {
+    const uid = state.user?.id || 0;
+    const query = uid ? `?user_id=${uid}` : '';
+    return API.get('notifications' + query).then(notifs => {
+        state.notifications = Array.isArray(notifs) ? notifs : [];
+        window.updateNotificationBadgeUI(state.notifications);
+        return state.notifications;
+    }).catch(() => []);
+};
 
-    setInterval(() => {
-        if (!state.user) return;
-        API.get('notifications').then(notifs => {
-            state.notifications = notifs;
-            window.updateNotificationBadgeUI(notifs);
-        }).catch(() => {});
-    }, 5000);
+window.initNotificationModule = function() {
+    window.fetchNotifications();
+
+    if (!window._notifInterval) {
+        window._notifInterval = setInterval(() => {
+            window.fetchNotifications();
+        }, 10000);
+    }
 };
 
 window.updateNotificationBadgeUI = function(notifs) {

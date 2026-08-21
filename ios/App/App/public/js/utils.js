@@ -480,11 +480,53 @@ window.OhatiNavManager = {
 
         // Handle Browser Back / Forward buttons (pushState/popstate)
         window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.screenId) {
-                this.handleBackPress(true, event.state.screenId);
-            } else {
-                this.handleBackPress(true);
+            let targetScreen = event.state && event.state.screenId ? event.state.screenId : null;
+            let targetParams = event.state && event.state.params ? event.state.params : {};
+
+            // If state payload is missing/null, derive route from window.location
+            if (!targetScreen) {
+                const path = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+                const search = new URLSearchParams(window.location.search);
+                if (path === 'planner.php') targetScreen = 'event';
+                else if (path === 'search.php') targetScreen = 'search';
+                else if (path === 'detail.php') {
+                    targetScreen = 'detail';
+                    const vid = parseInt(search.get('id') || search.get('vendor_id'));
+                    if (vid) targetParams = { id: vid };
+                }
+                else if (path === 'chat.php') {
+                    targetScreen = 'chat';
+                    const vid = parseInt(search.get('vendor_id') || search.get('id'));
+                    if (vid) targetParams = { vendor_id: vid };
+                }
+                else if (path === 'bookings.php') {
+                    targetScreen = 'bookings';
+                    const bId = parseInt(search.get('id'));
+                    if (bId) targetParams = { id: bId };
+                }
+                else if (path === 'favorites.php') targetScreen = 'favorites';
+                else if (path === 'compare.php') targetScreen = 'compare';
+                else if (path === 'notifications.php') targetScreen = 'notifications';
+                else if (path === 'profile.php') targetScreen = 'profile';
+                else if (path === 'vendor-dash.php') targetScreen = 'vendor-dash';
+                else if (path === 'promotions.php') targetScreen = 'vendor-ads';
+                else if (path === 'help.php') targetScreen = 'help';
+                else if (path === 'about.php') targetScreen = 'about';
+                else if (path === 'report-issue.php') targetScreen = 'report-issue';
+                else if (path === 'blog.php') {
+                    const bId = parseInt(search.get('id'));
+                    const bSlug = search.get('slug');
+                    if (bId || bSlug) {
+                        targetScreen = 'blog-detail';
+                        targetParams = { id: bId, slug: bSlug };
+                    } else {
+                        targetScreen = 'blog';
+                    }
+                }
+                else targetScreen = 'home';
             }
+
+            this.handleBackPress(true, targetScreen, targetParams);
         });
     },
 
@@ -492,7 +534,7 @@ window.OhatiNavManager = {
         this.isPaymentProcessing = processing;
     },
 
-    handleBackPress(fromPopState = false, targetScreen = null) {
+    handleBackPress(fromPopState = false, targetScreen = null, targetParams = {}) {
         // 1. Payment Processing Guard
         if (this.isPaymentProcessing) {
             showPushNotification("Transaction Processing", "Your payment is currently being processed. Please wait to prevent double charges.");
@@ -514,14 +556,33 @@ window.OhatiNavManager = {
             }
         }
 
-        // 3. Open Custom Overlay Modals & Lightbox
-        const customModal = document.querySelector('#account-deletion-custom-modal, #account-deleted-pro-modal, #voiceCallModal, .modal-overlay.open, #lightbox');
+        // 3. Open Custom Overlay Modals, Global Modal Root & Lightbox
+        const globalRoot = document.getElementById('ohati-global-modal-root');
+        if (globalRoot && globalRoot.classList.contains('open')) {
+            if (typeof closeConfirmModal === 'function') closeConfirmModal(false);
+            if (typeof closeBlogReportModal === 'function') closeBlogReportModal();
+            if (typeof closeBlogBlockModal === 'function') closeBlogBlockModal();
+            if (typeof closeChatReportModal === 'function') closeChatReportModal();
+            if (typeof closeChatBlockModal === 'function') closeChatBlockModal();
+            if (fromPopState && typeof state !== 'undefined' && state.currentScreen) {
+                history.pushState({ screenId: state.currentScreen }, '', window.location.href);
+            }
+            return true;
+        }
+
+        const customModal = document.querySelector('#account-deletion-custom-modal, #account-deleted-pro-modal, #voiceCallModal, .modal-overlay.open, .blog-modal-backdrop, #lightbox');
         if (customModal) {
             if (typeof closeAccountDeletionModal === 'function') closeAccountDeletionModal();
             if (typeof closeAccountDeletedProModal === 'function') closeAccountDeletedProModal();
             if (typeof closeDocModal === 'function') closeDocModal();
-            if (customModal.parentNode) customModal.remove();
-            else customModal.style.display = 'none';
+            if (typeof closeBlogReportModal === 'function') closeBlogReportModal();
+            if (typeof closeBlogBlockModal === 'function') closeBlogBlockModal();
+            if (typeof closeChatReportModal === 'function') closeChatReportModal();
+            if (typeof closeChatBlockModal === 'function') closeChatBlockModal();
+            if (typeof closeModal === 'function') closeModal();
+            if (customModal.parentNode) {
+                try { customModal.remove(); } catch(e) { customModal.style.display = 'none'; }
+            }
             if (fromPopState && typeof state !== 'undefined' && state.currentScreen) {
                 history.pushState({ screenId: state.currentScreen }, '', window.location.href);
             }
@@ -576,7 +637,13 @@ window.OhatiNavManager = {
             }
         }
 
-        // 8. Root Screens (Home or Vendor Dashboard) -> Double Press Exit App
+        // 8. If fromPopState is true, navigate directly to targetScreen
+        if (fromPopState && targetScreen && typeof navigateTo === 'function') {
+            navigateTo(targetScreen, targetParams || {}, { fromPopState: true, force: true });
+            return true;
+        }
+
+        // 9. Root Screens (Home or Vendor Dashboard) -> Double Press Exit App
         const currentScreen = typeof state !== 'undefined' ? state.currentScreen : 'home';
         const isRoot = (currentScreen === 'home' || currentScreen === 'vendor-dash' || !currentScreen);
         if (isRoot) {
@@ -588,16 +655,7 @@ window.OhatiNavManager = {
             } else {
                 this.lastBackPressTime = now;
                 showPushNotification("Exit Ohati", "Press back again to exit the application.");
-                if (fromPopState && currentScreen) {
-                    history.pushState({ screenId: currentScreen }, '', window.location.href);
-                }
             }
-            return true;
-        }
-
-        // 9. If targetScreen from popstate is specified
-        if (fromPopState && targetScreen && targetScreen !== currentScreen && typeof navigateTo === 'function') {
-            navigateTo(targetScreen, {}, { fromPopState: true, force: true });
             return true;
         }
 
@@ -608,6 +666,7 @@ window.OhatiNavManager = {
         return true;
     }
 };
+
 
 window.compressImageFileBeforeUpload = function(file, maxWidth = 1600, maxHeight = 1600, quality = 0.8, callback) {
     if (!file || !file.type || !file.type.startsWith('image/')) {

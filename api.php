@@ -18,6 +18,18 @@ header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization'
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 require_once __DIR__ . '/db.php';
 
+function getBlockedUserIds($uid, $pdo) {
+    if ($uid <= 0 || !$pdo) return [];
+    try {
+        $stmt = $pdo->prepare("SELECT blocked_id FROM user_blocks WHERE blocker_id = ? UNION SELECT blocker_id FROM user_blocks WHERE blocked_id = ?");
+        $stmt->execute([$uid, $uid]);
+        $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        return array_values(array_unique(array_filter($ids)));
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
 function resolve_vendor_logo($category, $current_logo = '') {
     if (!empty($current_logo) && strpos($current_logo, 'data:image/svg+xml') === false && strpos($current_logo, 'photo-1535713875002') === false) {
         return $current_logo;
@@ -637,35 +649,45 @@ case 'me':
         if ($u_row && intval($u_row['is_active'] ?? 1) === 1) {
             $safe_user = [
                 'id' => intval($u_row['id']),
-                'name' => $u_row['name'],
-                'email' => $u_row['email'],
-                'phone' => $u_row['phone'],
-                'role' => $u_row['role'],
-                'avatar' => $u_row['avatar'],
+                'name' => $u_row['name'] ?? '',
+                'username' => $u_row['username'] ?? '',
+                'email' => $u_row['email'] ?? '',
+                'phone' => $u_row['phone'] ?? '',
+                'dob' => $u_row['dob'] ?? '',
+                'gender' => $u_row['gender'] ?? '',
+                'country' => $u_row['country'] ?? 'Ghana',
+                'state' => $u_row['state'] ?? '',
+                'city' => $u_row['city'] ?? '',
+                'language' => $u_row['language'] ?? 'English',
+                'currency' => $u_row['currency'] ?? 'GHS',
+                'role' => $u_row['role'] ?? 'customer',
+                'avatar' => $u_row['avatar'] ?? '',
                 'kyc_status' => $u_row['kyc_status'] ?? 'not_started',
                 'active_role' => !empty($u_row['active_role']) ? $u_row['active_role'] : ($u_row['role'] === 'vendor' ? 'vendor' : 'customer')
             ];
-            $v_stmt = $pdo->prepare("SELECT id, name, verification_status, description, location FROM vendors WHERE user_id = ?");
+            $v_stmt = $pdo->prepare("SELECT * FROM vendors WHERE user_id = ?");
             $v_stmt->execute([$uid]);
             $v_row = $v_stmt->fetch();
+            $vendor_res = null;
             if ($v_row) {
                 $safe_user['vendor_id'] = intval($v_row['id']);
                 $safe_user['has_vendor_profile'] = true;
                 $v_st = $v_row['verification_status'] ?? 'pending';
                 $safe_user['vendor_verification_status'] = $v_st;
                 $safe_user['vendor_onboarding_completed'] = ($v_st !== 'draft' && !empty($v_row['name']));
+                $vendor_res = $v_row;
             } else {
                 $safe_user['has_vendor_profile'] = false;
                 $safe_user['vendor_verification_status'] = 'not_created';
                 $safe_user['vendor_onboarding_completed'] = false;
             }
             $_SESSION['user'] = $safe_user;
-            echo json_encode(['success' => true, 'user' => $safe_user, 'csrf' => csrf_token()]);
+            echo json_encode(['success' => true, 'user' => $safe_user, 'vendor' => $vendor_res, 'csrf' => csrf_token()]);
             break;
         }
     }
     $_SESSION['user'] = null;
-    echo json_encode(['success' => false, 'user' => null, 'csrf' => csrf_token()]);
+    echo json_encode(['success' => false, 'user' => null, 'vendor' => null, 'csrf' => csrf_token()]);
     break;
 
 case 'login':
@@ -843,7 +865,7 @@ case 'delete_account':
             $pdo->prepare("UPDATE users SET status = 'deleted' WHERE id = ?")->execute([$uid]);
         } catch(Exception $e) {}
         try {
-            $pdo->prepare("UPDATE users SET deleted_at = NOW() WHERE id = ?")->execute([$uid]);
+            $pdo->prepare("UPDATE users SET deleted_at = ? WHERE id = ?")->execute([date('Y-m-d H:i:s'), $uid]);
         } catch(Exception $e) {}
 
     }
@@ -1173,19 +1195,8 @@ case 'update_profile':
         }
     }
 
-    // Lock core identity fields (name, email, phone) for non-admin users if already set
+    // Admin check for identity locks if ever needed
     $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
-    if (!$is_admin) {
-        $u_cur = $pdo->prepare("SELECT name, email, phone FROM users WHERE id = ?");
-        $u_cur->execute([$uid]);
-        $u_row = $u_cur->fetch();
-
-        if ($u_row) {
-            if (!empty($u_row['name']) && isset($input['name'])) $input['name'] = $u_row['name'];
-            if (!empty($u_row['email']) && isset($input['email'])) $input['email'] = $u_row['email'];
-            if (!empty($u_row['phone']) && isset($input['phone'])) $input['phone'] = $u_row['phone'];
-        }
-    }
 
     $allowed_fields = ['name','avatar','gender','dob','country','state','city','language','currency','username','kyc_status','email','phone','kyc_id_type','kyc_id_front','kyc_id_back','kyc_selfie','kyc_submitted_at'];
     $updates = [];
@@ -1205,12 +1216,18 @@ case 'update_profile':
         $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
         $pdo->prepare($sql)->execute($params);
 
-        // Sync avatar to vendor logo if user owns a vendor profile
-        if (isset($input['avatar']) && !empty($input['avatar'])) {
-            try {
-                $pdo->prepare("UPDATE vendors SET logo = ? WHERE user_id = ?")->execute([$input['avatar'], $uid]);
-            } catch (Exception $eVendLogo) {}
-        }
+        // Sync avatar, name, email, phone to vendor profile if user owns one
+        try {
+            $v_sync_fields = []; $v_sync_params = [];
+            if (!empty($input['avatar'])) { $v_sync_fields[] = "logo = ?"; $v_sync_params[] = $input['avatar']; }
+            if (!empty($input['name'])) { $v_sync_fields[] = "name = ?"; $v_sync_params[] = $input['name']; }
+            if (!empty($input['email'])) { $v_sync_fields[] = "email = ?"; $v_sync_params[] = $input['email']; }
+            if (!empty($input['phone'])) { $v_sync_fields[] = "phone = ?"; $v_sync_params[] = $input['phone']; }
+            if (!empty($v_sync_fields)) {
+                $v_sync_params[] = $uid;
+                $pdo->prepare("UPDATE vendors SET " . implode(', ', $v_sync_fields) . " WHERE user_id = ?")->execute($v_sync_params);
+            }
+        } catch (Exception $eVendSync) {}
     }
 
     echo json_encode(['success' => true, 'user' => $_SESSION['user']]);
@@ -1278,26 +1295,26 @@ case 'session':
         $fresh_stmt->execute([$uid]);
         $fresh_user = $fresh_stmt->fetch();
         if ($fresh_user) {
-            $_SESSION['user']['name'] = $fresh_user['name'];
-            $_SESSION['user']['email'] = $fresh_user['email'];
-            $_SESSION['user']['phone'] = $fresh_user['phone'];
-            $_SESSION['user']['avatar'] = $fresh_user['avatar'];
-            $_SESSION['user']['kyc_status'] = $fresh_user['kyc_status'];
-            $_SESSION['user']['role'] = $fresh_user['role'];
+            foreach (['name', 'email', 'phone', 'avatar', 'gender', 'dob', 'country', 'state', 'city', 'language', 'currency', 'username', 'kyc_status', 'role'] as $uf) {
+                if (array_key_exists($uf, $fresh_user)) {
+                    $_SESSION['user'][$uf] = $fresh_user[$uf];
+                }
+            }
         }
         
-        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+        $v_stmt = $pdo->prepare("SELECT * FROM vendors WHERE user_id = ?");
         $v_stmt->execute([$uid]);
-        $v_id = $v_stmt->fetchColumn();
-        if ($v_id) {
-            $_SESSION['user']['vendor_id'] = intval($v_id);
+        $vendor_row = $v_stmt->fetch();
+        if ($vendor_row) {
+            $_SESSION['user']['vendor_id'] = intval($vendor_row['id']);
             $_SESSION['user']['has_vendor_profile'] = true;
             if (!isset($_SESSION['user']['active_role'])) {
                 $_SESSION['user']['active_role'] = $_SESSION['user']['role'] === 'vendor' ? 'vendor' : 'customer';
             }
+            $_SESSION['vendor'] = $vendor_row;
         } else {
-            $_SESSION['user']['active_role'] = 'customer';
             $_SESSION['user']['has_vendor_profile'] = false;
+            $_SESSION['vendor'] = null;
         }
     }
 
@@ -1309,10 +1326,11 @@ case 'session':
 
     echo json_encode([
         'user' => $_SESSION['user'] ?? null,
+        'vendor' => $_SESSION['vendor'] ?? null,
         'csrf' => csrf_token(),
         'platform_reviews' => $reviews,
         'locked_profile_fields' => $locked_fields,
-        'settings' => $settings
+        'system_settings' => $settings
     ]);
     break;
 
@@ -1377,8 +1395,8 @@ case 'request_account_deletion':
     } catch(Exception $eIgn) {}
 
     // Inactivate account and set deletion request flag for admin review & fraud prevention
-    $stmt = $pdo->prepare("UPDATE users SET account_status = 'inactive', deletion_requested_at = NOW(), deletion_reason = ? WHERE id = ?");
-    $stmt->execute([$reason, $uid]);
+    $stmt = $pdo->prepare("UPDATE users SET account_status = 'inactive', deletion_requested_at = ?, deletion_reason = ? WHERE id = ?");
+    $stmt->execute([date('Y-m-d H:i:s'), $reason, $uid]);
 
     // Send notification to admin
     try {
@@ -1436,6 +1454,15 @@ case 'vendors':
     $max_price = floatval($_GET['max_price'] ?? 0);
 
     $q = "SELECT * FROM vendors WHERE is_active = 1"; $p = [];
+    $cur_uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($cur_uid > 0) {
+        $blocked = getBlockedUserIds($cur_uid, $pdo);
+        if (!empty($blocked)) {
+            $ph = implode(',', array_fill(0, count($blocked), '?'));
+            $q .= " AND user_id NOT IN ($ph) AND id NOT IN ($ph)";
+            $p = array_merge($p, $blocked, $blocked);
+        }
+    }
     if ($category && $category !== 'All') { $q .= " AND category = ?"; $p[] = $category; }
     if ($location && $location !== 'All') { $q .= " AND location LIKE ?"; $p[] = '%'.$location.'%'; }
     if ($search) { $q .= " AND (name LIKE ? OR description LIKE ? OR category LIKE ?)"; $p[] = '%'.$search.'%'; $p[] = '%'.$search.'%'; $p[] = '%'.$search.'%'; }
@@ -1518,6 +1545,28 @@ case 'vendor_details':
         http_response_code(400); 
         echo json_encode(['error'=>'Invalid vendor or profile ID requested']); 
         exit; 
+    }
+
+    // Check if vendor profile or user account is blocked for current requester
+    $cur_uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($cur_uid > 0) {
+        $blocked = getBlockedUserIds($cur_uid, $pdo);
+        if (!empty($blocked)) {
+            $v_chk = $pdo->prepare("SELECT user_id, id FROM vendors WHERE id = ? OR user_id = ?");
+            $v_chk->execute([$id, $id]);
+            $v_data = $v_chk->fetch();
+            if ($v_data) {
+                if (in_array(intval($v_data['user_id']), $blocked) || in_array(intval($v_data['id']), $blocked) || in_array($id, $blocked)) {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'This profile is unavailable or blocked.']);
+                    exit;
+                }
+            } else if (in_array($id, $blocked)) {
+                http_response_code(404);
+                echo json_encode(['error' => 'This profile is unavailable or blocked.']);
+                exit;
+            }
+        }
     }
     
     // Check if the request is explicitly for a customer's details
@@ -2088,11 +2137,39 @@ case 'block_user':
     if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $target_id = intval($input['target_user_id'] ?? $input['vendor_id'] ?? 0);
-    $reason = clean($input['reason'] ?? 'User blocked from chat');
+    $reason = clean($input['reason'] ?? 'User blocked');
     if ($target_id <= 0) { http_response_code(400); echo json_encode(['error' => 'Target user ID required']); exit; }
-    
-    $pdo->prepare("INSERT INTO user_blocks (blocker_id, blocked_id, reason) VALUES (?, ?, ?)")
-        ->execute([$uid, $target_id, $reason]);
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS user_blocks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            blocker_id INT NOT NULL,
+            blocked_id INT NOT NULL,
+            reason VARCHAR(255) DEFAULT 'User blocked',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_block (blocker_id, blocked_id)
+        )");
+
+        $target_uid = $target_id;
+        $chk_v = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? OR user_id = ?");
+        $chk_v->execute([$target_id, $target_id]);
+        $found_v = $chk_v->fetch();
+
+        if ($found_v) {
+            if (intval($found_v['user_id']) > 0) {
+                $pdo->prepare("INSERT IGNORE INTO user_blocks (blocker_id, blocked_id, reason) VALUES (?, ?, ?)")
+                    ->execute([$uid, intval($found_v['user_id']), $reason]);
+            }
+            if (intval($found_v['id']) > 0) {
+                $pdo->prepare("INSERT IGNORE INTO user_blocks (blocker_id, blocked_id, reason) VALUES (?, ?, ?)")
+                    ->execute([$uid, intval($found_v['id']), $reason]);
+            }
+        } else {
+            $pdo->prepare("INSERT IGNORE INTO user_blocks (blocker_id, blocked_id, reason) VALUES (?, ?, ?)")
+                ->execute([$uid, $target_id, $reason]);
+        }
+    } catch (Exception $eBlock) {}
+
     echo json_encode(['success' => true, 'message' => 'User blocked successfully.']);
     break;
 
@@ -2265,7 +2342,7 @@ case 'upload_chat_file':
         if (!empty($post_token)) {
             $token_hash = hash('sha256', $post_token);
             try {
-                $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > NOW())");
+                $t_stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)");
                 $t_stmt->execute([$token_hash]);
                 $upload_uid = intval($t_stmt->fetchColumn() ?: 0);
             } catch (Exception $e) {}
@@ -2533,14 +2610,65 @@ case 'reset_event':
 
 // ── NOTIFICATIONS ──────────────────────────────────────────────────────
 case 'notifications':
-    $uid = intval($_SESSION['user']['id'] ?? 0);
-    $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 50");
-    $stmt->execute([$uid]);
-    $notifs = $stmt->fetchAll();
+    $uid = intval($_SESSION['user']['id'] ?? $_GET['user_id'] ?? $_POST['user_id'] ?? 0);
+    
+    if ($uid > 0) {
+        $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? OR user_id = 0 ORDER BY id DESC LIMIT 50");
+        $stmt->execute([$uid]);
+        $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($notifs)) {
+            $now_stamp = date('Y-m-d H:i:s');
+            try {
+                $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon, is_read, created_at) VALUES 
+                    (?, 'Welcome to Ohati! 🎉', 'Explore Ghana\\'s top event vendors, request quotes, and manage your event bookings smoothly.', 'sparkles', 0, ?),
+                    (?, 'Complete Your Profile 👤', 'Add your contact details and event preferences to receive tailored vendor recommendations.', 'user-check', 0, ?)");
+                $ins->execute([$uid, $now_stamp, $uid, $now_stamp]);
+                $stmt->execute([$uid]);
+                $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                // Ignore table fallback
+            }
+        }
+    } else {
+        // Guest or unauthenticated - return system notifications or demo notifications
+        $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = 0 OR type = 'system' ORDER BY id DESC LIMIT 20");
+        $stmt->execute();
+        $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($notifs)) {
+            $now_stamp = date('Y-m-d H:i:s');
+            $notifs = [
+                [
+                    'id' => 1,
+                    'user_id' => 0,
+                    'type' => 'system',
+                    'title' => 'Welcome to Ohati! 🇬🇭',
+                    'body' => 'Ghana\'s Premier Event Marketplace. Find DJs, MCs, Photographers, Caterers & Decorators in minutes.',
+                    'icon' => 'sparkles',
+                    'is_read' => 0,
+                    'created_at' => $now_stamp
+                ],
+                [
+                    'id' => 2,
+                    'user_id' => 0,
+                    'type' => 'system',
+                    'title' => 'Post an Event Job 📝',
+                    'body' => 'Need event services? Post your job requirements to receive customized quotes from top vendors.',
+                    'icon' => 'briefcase',
+                    'is_read' => 0,
+                    'created_at' => $now_stamp
+                ]
+            ];
+        }
+    }
+
     foreach ($notifs as &$n) {
         if (empty($n['created_at'])) {
             $n['created_at'] = date('Y-m-d H:i:s');
         }
+        $n['id'] = intval($n['id']);
+        $n['is_read'] = intval($n['is_read'] ?? 0);
     }
     echo json_encode($notifs);
     break;
@@ -2549,11 +2677,16 @@ case 'mark_notification_read':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true);
     $nid = intval($input['id'] ?? 0);
-    $uid = intval($_SESSION['user']['id'] ?? 0);
+    $uid = intval($_SESSION['user']['id'] ?? $input['user_id'] ?? 0);
+    
     if ($nid > 0) {
-        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")->execute([$nid, $uid]);
+        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ?")->execute([$nid]);
     } else {
-        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?")->execute([$uid]);
+        if ($uid > 0) {
+            $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? OR user_id = 0")->execute([$uid]);
+        } else {
+            $pdo->prepare("UPDATE notifications SET is_read = 1")->execute();
+        }
     }
     echo json_encode(['success'=>true]);
     break;
@@ -2636,24 +2769,10 @@ case 'update_vendor':
     $v_row = $v_stmt->fetch();
     $is_premium = intval($v_row['premium'] ?? 0);
 
-    if (!$is_admin && $v_row) {
-        if (!empty($v_row['name']) && isset($input['name'])) $input['name'] = $v_row['name'];
-        if (!empty($v_row['email']) && isset($input['email'])) $input['email'] = $v_row['email'];
-        if (!empty($v_row['phone']) && isset($input['phone'])) $input['phone'] = $v_row['phone'];
-        if (!empty($v_row['account_number']) && isset($input['account_number'])) $input['account_number'] = $v_row['account_number'];
-    }
+    // Keep vendor identity fields editable
 
     if (isset($input['gallery']) && is_array($input['gallery'])) {
-        if (!$is_premium && !$is_admin) {
-            $input['gallery'] = []; // Portfolio Gallery is locked exclusively to Premium vendors
-        } else {
-            $input['gallery'] = array_slice($input['gallery'], 0, 100); // Up to 100 high-res images for Premium vendors
-        }
-    }
-    if (isset($input['social_links'])) {
-        if (!$is_premium) {
-            $input['social_links'] = [];
-        }
+        $input['gallery'] = array_slice($input['gallery'], 0, 100);
     }
 
     
@@ -2686,15 +2805,39 @@ case 'update_vendor':
         $params[] = $vid; 
         $pdo->prepare("UPDATE vendors SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params); 
         
-        // Sync logo back to user avatar
-        if (isset($input['logo']) && !empty($input['logo']) && !empty($owner_id)) {
-            try {
-                $pdo->prepare("UPDATE users SET avatar = ? WHERE id = ?")->execute([$input['logo'], $owner_id]);
-                if (isset($_SESSION['user'])) { $_SESSION['user']['avatar'] = $input['logo']; }
-            } catch (Exception $eUsrLogo) {}
-        }
+        // Sync vendor logo, name, email, phone back to user account
+        try {
+            $u_sync_fields = []; $u_sync_params = [];
+            if (!empty($input['logo'])) { $u_sync_fields[] = "avatar = ?"; $u_sync_params[] = $input['logo']; }
+            if (!empty($input['name'])) { $u_sync_fields[] = "name = ?"; $u_sync_params[] = $input['name']; }
+            if (!empty($input['email'])) { $u_sync_fields[] = "email = ?"; $u_sync_params[] = $input['email']; }
+            if (!empty($input['phone'])) { $u_sync_fields[] = "phone = ?"; $u_sync_params[] = $input['phone']; }
+            if (!empty($u_sync_fields) && !empty($owner_id)) {
+                $u_sync_params[] = $owner_id;
+                $pdo->prepare("UPDATE users SET " . implode(', ', $u_sync_fields) . " WHERE id = ?")->execute($u_sync_params);
+                if (isset($_SESSION['user']) && intval($_SESSION['user']['id'] ?? 0) === intval($owner_id)) {
+                    if (!empty($input['logo'])) $_SESSION['user']['avatar'] = $input['logo'];
+                    if (!empty($input['name'])) $_SESSION['user']['name'] = $input['name'];
+                    if (!empty($input['email'])) $_SESSION['user']['email'] = $input['email'];
+                    if (!empty($input['phone'])) $_SESSION['user']['phone'] = $input['phone'];
+                }
+            }
+        } catch (Exception $eUsrSync) {}
     }
-    echo json_encode(['success'=>true]);
+
+    $fresh_v_stmt = $pdo->prepare("SELECT * FROM vendors WHERE id = ?");
+    $fresh_v_stmt->execute([$vid]);
+    $fresh_vendor = $fresh_v_stmt->fetch();
+    if ($fresh_vendor) {
+        $_SESSION['vendor'] = $fresh_vendor;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'vendor_id' => $vid,
+        'vendor' => $_SESSION['vendor'] ?? null,
+        'user' => $_SESSION['user'] ?? null
+    ]);
     break;
 
 case 'get_vendor_auto_response':
@@ -3465,31 +3608,30 @@ case 'request_premium_upgrade':
         }
     }
 
-    // 1. Dual Email + SMS Notification to Admin
-    $admin_email = defined('SMTP_USER') ? SMTP_USER : 'contact@ohati.com';
-    $admin_phone = '0540477911';
-    
     try {
-        send_dual_notification(
-            $admin_phone,
-            $admin_email,
-            "New Premium Upgrade Payment Receipt",
-            "Vendor '" . $vendor['name'] . "' requested a Premium Gold Badge Upgrade and uploaded a payment receipt (TxID: " . ($tx_id ?: 'Attached') . "). Please log into Admin Console to review."
-        );
+        if (function_exists('fastcgi_finish_request')) {
+            echo json_encode(['success' => true, 'message' => 'Receipt uploaded successfully.']);
+            fastcgi_finish_request();
+        }
+    } catch (Exception $eFcgi) {}
+
+    // Dual Email + SMS Notification to Admin & Vendor
+    try {
+        $admin_email = defined('SMTP_USER') ? SMTP_USER : 'contact@ohati.com';
+        $admin_phone = '0540477911';
+        send_dual_notification($admin_phone, $admin_email, "New Premium Upgrade Payment Receipt", "Vendor '" . $vendor['name'] . "' requested a Premium Gold Badge Upgrade.");
     } catch (Throwable $eAdminNotif) {}
 
-    // 2. Dual Email + SMS Notification to Vendor
-    $v_phone = $vendor['phone'] ?: ($_SESSION['user']['phone'] ?? '');
-    $v_email = $vendor['email'] ?: ($_SESSION['user']['email'] ?? '');
-    
     try {
-        send_dual_notification(
-            $v_phone,
-            $v_email,
-            "Premium Upgrade Payment Receipt Received",
-            "Hello " . $vendor['name'] . ", your payment receipt for Premium Gold Badge Upgrade has been received by Ohati Admin. Your request is being reviewed."
-        );
+        $v_phone = $vendor['phone'] ?: ($_SESSION['user']['phone'] ?? '');
+        $v_email = $vendor['email'] ?: ($_SESSION['user']['email'] ?? '');
+        send_dual_notification($v_phone, $v_email, "Premium Upgrade Payment Receipt Received", "Hello " . $vendor['name'] . ", your payment receipt for Premium Gold Badge Upgrade has been received.");
     } catch (Throwable $eVendorNotif) {}
+
+    if (!headers_sent()) {
+        echo json_encode(['success' => true, 'message' => 'Receipt uploaded successfully.']);
+    }
+    break;
 
     // In-app notification
     try {
@@ -3852,9 +3994,15 @@ case 'report_issue':
     $stmt = $pdo->prepare("INSERT INTO reported_issues (user_id, title, category, description, screenshot_url, status) VALUES (?, ?, ?, ?, ?, 'open')");
     $stmt->execute([$uid, $title, $category, $description, $screenshot_url]);
     // Notify admins
-    $admins = $pdo->query("SELECT id FROM users WHERE role = 'admin'")->fetchAll();
-    foreach ($admins as $admin) {
-        add_notification($pdo, $admin['id'], 'New Issue Report', "A user reported: $title ($category)");
+    $admins = $pdo->query("SELECT id FROM users WHERE role = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
+    if (!empty($admins)) {
+        $notif_stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, body, created_at) VALUES (?, ?, ?, ?)");
+        $notif_title = 'New Issue Report';
+        $notif_body = "A user reported: $title ($category)";
+        $now_str = date('Y-m-d H:i:s');
+        foreach ($admins as $admin_id) {
+            $notif_stmt->execute([$admin_id, $notif_title, $notif_body, $now_str]);
+        }
     }
     echo json_encode(['success'=>true, 'message'=>'Report submitted successfully.']);
     break;

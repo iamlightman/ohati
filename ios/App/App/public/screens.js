@@ -77,6 +77,9 @@ function renderSkeletonListHTML(count = 4) {
 
 // ── Screen Manager: navigateTo ─────────────────────────────────────────
 function navigateTo(screenId, params = {}, options = {}) {
+    // Dismiss any open sidebar immediately on navigation entry
+    if (typeof toggleSidebar === 'function') toggleSidebar(false);
+
     // Auth Guard: Lock screen to login/signup unless authenticated
     if (!state.user && screenId !== 'blog' && screenId !== 'blog-detail' && screenId !== 'about' && screenId !== 'help') {
         if (typeof showMandatoryAuthLockScreen === 'function') {
@@ -117,8 +120,7 @@ function navigateTo(screenId, params = {}, options = {}) {
 
     if (state.currentScreen === screenId && !paramsChanged && !force) return;
 
-    // Dismiss any open sidebar or modals on navigation to prevent frozen overlay backdrops
-    if (typeof toggleSidebar === 'function') toggleSidebar(false);
+    // Dismiss any open modals on navigation to prevent frozen overlay backdrops
     if (typeof closeModal === 'function') closeModal();
     if (typeof closeBookingModal === 'function') closeBookingModal();
     if (state.chatInterval) {
@@ -1166,9 +1168,6 @@ function initDetailScreen() {
                     <button class="detail-action-btn ${v.is_following ? 'fav-active' : ''}" onclick="toggleFollowDetail(${v.id}, event)" title="${v.is_following ? 'Unfollow' : 'Follow'}">
                         <i class="fa-solid ${v.is_following ? 'fa-user-check' : 'fa-user-plus'}"></i>
                     </button>
-                    <button class="detail-action-btn ${v.is_favorite ? 'fav-active' : ''}" onclick="toggleFavoriteDetail(${v.id}, event)" title="Save">
-                        <i class="fa-solid fa-heart"></i>
-                    </button>
                 </div>
                 <div class="detail-vendor-identity">
                     <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="${escapeHtml(v.name)} Logo - ${escapeHtml(v.category)}" title="${escapeHtml(v.name)}">
@@ -1958,7 +1957,7 @@ function loadDesktopChatPartner(vid) {
                 </div>
                 <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
                 <div class="chat-input-bar" style="gap: 8px;">
-                    <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
+                    <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="display:none; width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
                     <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
                     <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                     <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
@@ -2084,7 +2083,7 @@ function renderChatShell(v) {
             <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
 
             <div class="chat-input-bar" style="gap: 8px;">
-                <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
+                <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="display:none; width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
                 <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
                 <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                 <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
@@ -2251,7 +2250,7 @@ let previewAudioInstance = null;
 
 function getNormalChatInputBarHTML() {
     return `
-        <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
+        <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="display:none; width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
         <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
         <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
@@ -4400,7 +4399,7 @@ function initProfileScreen() {
     const screen = document.getElementById('screen-profile');
     if (!screen) return;
 
-    if (!state.user) {
+    if (!state.user && !localStorage.getItem('ohati_user_session')) {
         screen.innerHTML = `
             <div class="text-center" style="padding:80px 20px;">
                 <i class="fa-solid fa-user-lock" style="font-size:3.5rem; color:var(--gray-200); margin-bottom:16px;"></i>
@@ -4412,55 +4411,73 @@ function initProfileScreen() {
         return;
     }
 
-    screen.innerHTML = `
-        <div class="profile-header">
-            <img class="profile-avatar" src="${state.user.avatar || window.DEFAULT_USER_AVATAR}" alt="">
-            <div class="profile-name">${state.user.name}</div>
-            <div class="profile-email">${state.user.email || state.user.phone || 'Ohati Planner'}</div>
-        </div>
+    API.getSession().then(res => {
+        if (res && res.user) {
+            state.user = res.user;
+            if (res.vendor) state.vendor = res.vendor;
+        }
+        renderProfileContent();
+    }).catch(() => {
+        renderProfileContent();
+    });
 
-        <div class="profile-kyc-banner" onclick="openKYCDetailsModal()">
-            <div class="profile-kyc-icon"><i class="fa-solid fa-shield-halved"></i></div>
-            <div style="flex:1;">
-                <div class="profile-kyc-title">Verification Status</div>
-                <div class="profile-kyc-desc" style="text-transform: capitalize;">${state.user.kyc_status.replace('_', ' ') || 'Not Started'}</div>
-            </div>
-            <i class="fa-solid fa-chevron-right text-muted" style="font-size:0.75rem;"></i>
-        </div>
+    function renderProfileContent() {
+        const u = state.user;
+        if (!u) return;
 
-        <div class="profile-menu-section">
-            <div class="profile-menu-item" onclick="openReferAndEarnModal()">
-                <div class="profile-menu-icon" style="background:rgba(var(--accent-rgb),0.12); color:var(--accent);"><i class="fa-solid fa-gift"></i></div>
-                <span class="profile-menu-label" style="font-weight:700;">Refer & Earn Rewards</span>
-                <span class="badge badge-success" style="font-size:0.65rem; margin-right:8px;">GH₵ Bonus</span>
-                <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+        screen.innerHTML = `
+            <div class="profile-header">
+                <img class="profile-avatar" src="${u.avatar || window.DEFAULT_USER_AVATAR}" alt="">
+                <div class="profile-name">${u.name || 'User Profile'}</div>
+                <div class="profile-email">${u.email || u.phone || 'Ohati Planner'}</div>
+                <button class="btn btn-outline btn-xs mb-8" onclick="navigateTo('profile-edit')" style="margin-top:10px; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.4); border-radius:20px; padding:6px 16px; font-weight:700; font-size:0.75rem; cursor:pointer;">
+                    <i class="fa-solid fa-user-pen"></i> Edit Profile Details
+                </button>
             </div>
-            <div class="profile-menu-item" onclick="navigateTo('profile-edit')">
-                <div class="profile-menu-icon"><i class="fa-solid fa-user-pen"></i></div>
-                <span class="profile-menu-label">Edit Profile Details</span>
-                <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+
+            <div class="profile-kyc-banner" onclick="openKYCDetailsModal()">
+                <div class="profile-kyc-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div style="flex:1;">
+                    <div class="profile-kyc-title">Verification Status</div>
+                    <div class="profile-kyc-desc" style="text-transform: capitalize;">${(u.kyc_status || 'not_started').replace('_', ' ')}</div>
+                </div>
+                <i class="fa-solid fa-chevron-right text-muted" style="font-size:0.75rem;"></i>
             </div>
-            <div class="profile-menu-item" onclick="navigateTo('favorites')">
-                <div class="profile-menu-icon"><i class="fa-solid fa-heart"></i></div>
-                <span class="profile-menu-label">Saved Vendors</span>
-                <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+
+            <div class="profile-menu-section">
+                <div class="profile-menu-item" onclick="openReferAndEarnModal()">
+                    <div class="profile-menu-icon" style="background:rgba(var(--accent-rgb),0.12); color:var(--accent);"><i class="fa-solid fa-gift"></i></div>
+                    <span class="profile-menu-label" style="font-weight:700;">Refer & Earn Rewards</span>
+                    <span class="badge badge-success" style="font-size:0.65rem; margin-right:8px;">GH₵ Bonus</span>
+                    <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+                </div>
+                <div class="profile-menu-item" onclick="navigateTo('profile-edit')">
+                    <div class="profile-menu-icon"><i class="fa-solid fa-user-pen"></i></div>
+                    <span class="profile-menu-label">Edit Profile Details</span>
+                    <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+                </div>
+                <div class="profile-menu-item" onclick="navigateTo('favorites')">
+                    <div class="profile-menu-icon"><i class="fa-solid fa-heart"></i></div>
+                    <span class="profile-menu-label">Saved Vendors</span>
+                    <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+                </div>
+                <div class="profile-menu-item" onclick="navigateTo('bookings')">
+                    <div class="profile-menu-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                    <span class="profile-menu-label">My Bookings</span>
+                    <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+                </div>
+                <div class="profile-menu-item" onclick="navigateTo('help')">
+                    <div class="profile-menu-icon"><i class="fa-solid fa-circle-question"></i></div>
+                    <span class="profile-menu-label">Help Center</span>
+                    <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+                </div>
+                <div class="profile-menu-item" onclick="handleLogout()">
+                    <div class="profile-menu-icon"><i class="fa-solid fa-right-from-bracket"></i></div>
+                    <span class="profile-menu-label" style="color:var(--error);">Sign Out</span>
+                </div>
             </div>
-            <div class="profile-menu-item" onclick="navigateTo('bookings')">
-                <div class="profile-menu-icon"><i class="fa-solid fa-calendar-check"></i></div>
-                <span class="profile-menu-label">My Bookings</span>
-                <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
-            </div>
-            <div class="profile-menu-item" onclick="navigateTo('help')">
-                <div class="profile-menu-icon"><i class="fa-solid fa-circle-question"></i></div>
-                <span class="profile-menu-label">Help Center</span>
-                <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
-            </div>
-            <div class="profile-menu-item" onclick="handleLogout()">
-                <div class="profile-menu-icon"><i class="fa-solid fa-right-from-bracket"></i></div>
-                <span class="profile-menu-label" style="color:var(--error);">Sign Out</span>
-            </div>
-        </div>
-    `;
+        `;
+    }
 }
 
 window.isNativeMobileApp = function() {
@@ -5461,8 +5478,10 @@ window.openPremiumUpgradeModal = function() {
 };
 
 window.submitPremiumUpgradeFromModal = function(event) {
+    if (event) event.preventDefault();
     const receipt = window._premiumReceiptData;
     const err = document.getElementById('premium-modal-error');
+    const btn = document.getElementById('premium-modal-submit-btn') || (event ? event.target.closest('button') : null);
 
     if (!receipt) {
         if (err) {
@@ -5472,18 +5491,44 @@ window.submitPremiumUpgradeFromModal = function(event) {
         return;
     }
 
-    const btn = event?.target || document.getElementById('premium-modal-submit-btn');
-    ActionLock.execute(btn, 'Uploading Receipt...', async () => {
-        const res = await API.post('request_premium_upgrade', {
-            transaction_ref: 'RECEIPT_UPLOADED',
-            receipt_image: receipt,
-            amount: 250
-        });
+    if (err) err.style.display = 'none';
+    const originalHtml = btn ? btn.innerHTML : '<i class="fa-solid fa-paper-plane"></i> Submit Receipt & Request Upgrade';
 
-        showPushNotification('Receipt Received! 🎉', 'Your payment receipt was uploaded successfully. Admin will review and activate your Gold Badge.');
-        closeModal();
-        return res;
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.8';
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting Receipt...';
+    }
+
+    API.post('request_premium_upgrade', {
+        transaction_ref: 'RECEIPT_UPLOADED',
+        receipt_image: receipt,
+        amount: 250
+    }).then(res => {
+        if (res && res.success) {
+            showPushNotification('Receipt Received! 🎉', 'Your payment receipt was uploaded successfully. Admin will review and activate your Gold Badge.');
+            closeModal();
+            window._premiumReceiptData = '';
+        } else {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btn.innerHTML = originalHtml;
+            }
+            if (err) {
+                err.textContent = (res && res.error) ? res.error : 'Failed to submit payment receipt.';
+                err.style.display = 'block';
+            }
+        }
     }).catch(e => {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            btn.innerHTML = originalHtml;
+        }
         if (err) {
             err.textContent = e.message || 'Failed to submit payment receipt.';
             err.style.display = 'block';
@@ -6596,32 +6641,56 @@ function initProfileEditScreen() {
     const screen = document.getElementById('screen-profile-edit');
     if (!screen) return;
 
-    if (!state.user) {
+    if (!state.user && !localStorage.getItem('ohati_user_session')) {
         screen.innerHTML = `<div class="p-section text-center"><p>Please sign in to edit your profile.</p></div>`;
         return;
     }
 
-    const u = state.user;
-    const activeRole = u.active_role || 'customer';
-    const isVerified = u.kyc_status === 'verified';
-    const isFieldLocked = (field, vendorObj) => {
-        if (field === 'name') return !!(u && u.name);
-        if (field === 'email') return !!(u && u.email);
-        if (field === 'phone') return !!(u && u.phone);
-        if (field === 'account_number') return !!(vendorObj && vendorObj.account_number);
-        return false;
-    };
+    screen.innerHTML = `<div class="p-section text-center"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:var(--primary);"></i><p style="margin-top:8px; color:var(--gray-600);">Loading your profile from database...</p></div>`;
 
-    if (activeRole === 'vendor') {
-        API.get('vendor_details', { id: u.vendor_id })
-            .then(vendor => {
-                renderProfileEditForm(screen, u, vendor, (f) => isFieldLocked(f, vendor));
-            })
-            .catch(() => {
-                renderProfileEditForm(screen, u, null, (f) => isFieldLocked(f, null));
-            });
-    } else {
-        renderProfileEditForm(screen, u, null, (f) => isFieldLocked(f, null));
+    API.getSession().then(res => {
+        if (res && res.user) {
+            state.user = res.user;
+            if (res.vendor) state.vendor = res.vendor;
+        }
+        loadAndRenderForm();
+    }).catch(() => {
+        loadAndRenderForm();
+    });
+
+    function loadAndRenderForm() {
+        const u = state.user;
+        if (!u) {
+            screen.innerHTML = `<div class="p-section text-center"><p>Please sign in to edit your profile.</p></div>`;
+            return;
+        }
+
+        const activeRole = u.active_role || u.role || 'customer';
+        const isFieldLocked = (field, vendorObj) => {
+            if (field === 'name') return !!(u && u.name);
+            if (field === 'email') return !!(u && u.email);
+            if (field === 'phone') return !!(u && u.phone);
+            if (field === 'account_number') return !!(vendorObj && vendorObj.account_number);
+            return false;
+        };
+
+        if (activeRole === 'vendor') {
+            const vid = u.vendor_id || (state.vendor ? state.vendor.id : 0);
+            if (vid > 0) {
+                API.get('vendor_details', { id: vid })
+                    .then(vendor => {
+                        if (vendor && vendor.id) state.vendor = vendor;
+                        renderProfileEditForm(screen, u, vendor || state.vendor, (f) => isFieldLocked(f, vendor || state.vendor));
+                    })
+                    .catch(() => {
+                        renderProfileEditForm(screen, u, state.vendor || null, (f) => isFieldLocked(f, state.vendor));
+                    });
+            } else {
+                renderProfileEditForm(screen, u, state.vendor || null, (f) => isFieldLocked(f, state.vendor));
+            }
+        } else {
+            renderProfileEditForm(screen, u, null, (f) => isFieldLocked(f, null));
+        }
     }
 }
 
@@ -7470,7 +7539,7 @@ function initReportIssueScreen() {
                     </button>
                 </div>
             </div>
-            <button class="btn btn-primary btn-full mt-12" onclick="submitReportIssue()" style="height:44px;font-size:0.85rem;">
+            <button id="report-submit-btn" class="btn btn-primary btn-full mt-12" onclick="submitReportIssue()" style="height:44px;font-size:0.85rem;">
                 <i class="fa-solid fa-paper-plane"></i> Submit Report
             </button>
         </div>
@@ -7479,13 +7548,40 @@ function initReportIssueScreen() {
 
 function previewReportScreenshot(input) {
     if (input.files && input.files[0]) {
+        const file = input.files[0];
         const reader = new FileReader();
         reader.onload = (e) => {
-            document.getElementById('report-screenshot-img').src = e.target.result;
-            document.getElementById('report-screenshot-preview').style.display = 'block';
-            document.getElementById('report-screenshot-area').style.borderColor = 'var(--accent)';
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 1200;
+                let width = img.width;
+                let height = img.height;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+
+                const previewImg = document.getElementById('report-screenshot-img');
+                if (previewImg) previewImg.src = compressedDataUrl;
+                const previewArea = document.getElementById('report-screenshot-preview');
+                if (previewArea) previewArea.style.display = 'block';
+                const uploadBox = document.getElementById('report-screenshot-area');
+                if (uploadBox) uploadBox.style.borderColor = 'var(--accent)';
+            };
+            img.src = e.target.result;
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
     }
 }
 
@@ -7497,9 +7593,14 @@ function clearReportScreenshot() {
 }
 
 async function submitReportIssue() {
-    const title = document.getElementById('report-title').value.trim();
-    const category = document.getElementById('report-category').value;
-    const description = document.getElementById('report-description').value.trim();
+    const titleEl = document.getElementById('report-title');
+    const categoryEl = document.getElementById('report-category');
+    const descriptionEl = document.getElementById('report-description');
+    const btn = document.getElementById('report-submit-btn');
+
+    const title = titleEl ? titleEl.value.trim() : '';
+    const category = categoryEl ? categoryEl.value : 'Other';
+    const description = descriptionEl ? descriptionEl.value.trim() : '';
     const screenshotImg = document.getElementById('report-screenshot-img');
     const screenshot = screenshotImg && screenshotImg.src && screenshotImg.src.startsWith('data:') ? screenshotImg.src : '';
 
@@ -7508,18 +7609,33 @@ async function submitReportIssue() {
         return;
     }
 
+    const originalBtnContent = btn ? btn.innerHTML : '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.75';
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...';
+    }
+
     try {
         const data = await API.post('report_issue', { title, category, description, screenshot });
         if (data && data.success) {
             showPushNotification('Report Submitted', 'Thank you! Our team will review your report.');
-            if (document.getElementById('report-title')) document.getElementById('report-title').value = '';
-            if (document.getElementById('report-description')) document.getElementById('report-description').value = '';
+            if (titleEl) titleEl.value = '';
+            if (descriptionEl) descriptionEl.value = '';
             if (typeof clearReportScreenshot === 'function') clearReportScreenshot();
         } else {
             showPushNotification('Error', (data && data.error) ? data.error : 'Could not submit report.');
         }
     } catch (e) {
         showPushNotification('Error', e.message || 'Could not submit report.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            btn.innerHTML = originalBtnContent;
+        }
     }
 }
 

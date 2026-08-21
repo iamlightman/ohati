@@ -1,30 +1,30 @@
 // js/notification.js — Production Notification System Module
 
-window.initNotificationModule = function() {
-    if (!state.user) return;
-    
-    // Poll notifications every 5 seconds
-    API.get('notifications').then(notifs => {
-        state.notifications = notifs;
-        window.updateNotificationBadgeUI(notifs);
-    }).catch(() => {});
+window.fetchNotifications = function() {
+    return API.getNotifications().then(notifs => {
+        state.notifications = Array.isArray(notifs) ? notifs : [];
+        window.updateNotificationBadgeUI(state.notifications);
+        return state.notifications;
+    }).catch(() => []);
+};
 
-    setInterval(() => {
-        if (!state.user) return;
-        API.get('notifications').then(notifs => {
-            state.notifications = notifs;
-            window.updateNotificationBadgeUI(notifs);
-        }).catch(() => {});
-    }, 5000);
+window.initNotificationModule = function() {
+    window.fetchNotifications();
+
+    if (!window._notifInterval) {
+        window._notifInterval = setInterval(() => {
+            window.fetchNotifications();
+        }, 10000);
+    }
 };
 
 window.updateNotificationBadgeUI = function(notifs) {
     const unread = (notifs || []).filter(n => parseInt(n.is_read) === 0);
-    const badges = document.querySelectorAll('.notification-badge-count, #notif-badge-count');
+    const badges = document.querySelectorAll('.notification-badge-count, #notif-badge-count, #notif-badge, .notif-badge');
     badges.forEach(b => {
         if (unread.length > 0) {
             b.textContent = unread.length;
-            b.style.display = 'inline-flex';
+            b.style.display = 'flex';
         } else {
             b.style.display = 'none';
         }

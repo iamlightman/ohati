@@ -3054,6 +3054,8 @@ function toggleSidebar(show) {
     if (shouldOpen) {
         overlay.classList.add('open');
         overlay.classList.add('active');
+        overlay.style.visibility = 'visible';
+        overlay.style.pointerEvents = 'auto';
         if (typeof updateSidebarUI === 'function') updateSidebarUI();
         if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
         document.querySelectorAll('.sidebar-item').forEach(item => {
@@ -3067,6 +3069,8 @@ function toggleSidebar(show) {
     } else {
         overlay.classList.remove('open');
         overlay.classList.remove('active');
+        overlay.style.visibility = 'hidden';
+        overlay.style.pointerEvents = 'none';
     }
 }
 

@@ -8051,6 +8051,15 @@ body.dark-theme .inline-verified-badge {
     gap: 10px;
     align-items: center;
     width: 100%;
+    max-width: 580px;
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .search-controls-wrap {
+        max-width: 520px;
+        margin: 0 auto 16px auto;
+    }
 }
 
 /* ── WEBRTC REAL-TIME CALLING OVERLAY DESIGN SYSTEM ────────────────────── */

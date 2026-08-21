@@ -92,110 +92,110 @@ const JobsModule = {
         }
 
         const modalHtml = `
-            <div class="job-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
-                <h3 style="margin:0; font-size:1.2rem; color:var(--primary, #1B2B4B);"><i class="fa-solid fa-briefcase" style="color:var(--accent, #F2A735); margin-right:8px;"></i>${jobToEdit ? 'Edit Job' : 'Post an Event Job'}</h3>
-                <button onclick="closeModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--gray-500);"><i class="fa-solid fa-xmark"></i></button>
+            <div class="job-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
+                <h3 style="margin:0; font-size:1.25rem; font-weight:800; color:var(--primary, #1B2B4B);"><i class="fa-solid fa-briefcase" style="color:var(--accent, #F2A735); margin-right:10px;"></i>${jobToEdit ? 'Edit Event Job' : 'Post an Event Job'}</h3>
+                <button onclick="closeModal()" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--gray-500);"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="job-step-wizard" style="display:flex; justify-content:space-around; background:var(--gray-100, #F8FAFC); padding:12px 20px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
-                <div class="wizard-step active" id="job-step-indicator-1" style="font-weight:700; color:var(--primary, #1B2B4B); font-size:0.85rem;"><span style="background:var(--primary, #1B2B4B); color:#fff; padding:2px 8px; border-radius:50%; margin-right:6px;">1</span> General Info</div>
-                <div class="wizard-step" id="job-step-indicator-2" style="font-weight:600; color:var(--gray-500); font-size:0.85rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:2px 8px; border-radius:50%; margin-right:6px;">2</span> Budget & Location</div>
-                <div class="wizard-step" id="job-step-indicator-3" style="font-weight:600; color:var(--gray-500); font-size:0.85rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:2px 8px; border-radius:50%; margin-right:6px;">3</span> Media & Settings</div>
+            <div class="job-step-wizard" style="display:flex; justify-content:space-around; align-items:center; background:var(--gray-100, #F8FAFC); padding:14px 20px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
+                <div class="wizard-step active" id="job-step-indicator-1"><span class="step-badge">1</span> General Info</div>
+                <div class="wizard-step" id="job-step-indicator-2"><span class="step-badge">2</span> Budget & Location</div>
+                <div class="wizard-step" id="job-step-indicator-3"><span class="step-badge">3</span> Media & Settings</div>
             </div>
 
-            <form id="post-job-form" onsubmit="event.preventDefault();" style="padding:20px; max-height:75vh; overflow-y:auto;">
+            <form id="post-job-form" onsubmit="event.preventDefault();" style="padding:22px 24px; max-height:75vh; overflow-y:auto;">
                 <!-- STEP 1 -->
                 <div class="job-step-pane" id="job-step-pane-1">
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Event Job Title *</label>
-                        <input type="text" id="job-input-title" class="form-control" placeholder="e.g. Wedding MC needed for Accra ceremony" value="${jobToEdit ? escapeHtml(jobToEdit.title) : ''}" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Event Job Title <span class="required-star">*</span></label>
+                        <input type="text" id="job-input-title" class="form-control job-field-input" placeholder="e.g. Wedding MC needed for Accra ceremony" value="${jobToEdit ? escapeHtml(jobToEdit.title) : ''}" required>
                     </div>
 
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Category *</label>
-                            <select id="job-input-category" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Category <span class="required-star">*</span></label>
+                            <select id="job-input-category" class="form-control job-field-input">
                                 ${this.currentCategories.map(c => `<option value="${escapeHtml(c.name)}" ${jobToEdit && jobToEdit.category === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Subcategory (Optional)</label>
-                            <input type="text" id="job-input-subcategory" class="form-control" placeholder="e.g. Traditional Wedding" value="${jobToEdit ? escapeHtml(jobToEdit.subcategory || '') : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Subcategory (Optional)</label>
+                            <input type="text" id="job-input-subcategory" class="form-control job-field-input" placeholder="e.g. Traditional Wedding" value="${jobToEdit ? escapeHtml(jobToEdit.subcategory || '') : ''}">
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Job Description *</label>
-                        <textarea id="job-input-description" class="form-control" rows="4" placeholder="Describe the job duties, event theme, guest count, and expectations in detail..." required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">${jobToEdit ? escapeHtml(jobToEdit.description) : ''}</textarea>
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Job Description <span class="required-star">*</span></label>
+                        <textarea id="job-input-description" class="form-control job-field-input" rows="4" placeholder="Describe the job duties, event theme, guest count, and expectations in detail..." required>${jobToEdit ? escapeHtml(jobToEdit.description) : ''}</textarea>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Required Skills / Equipment</label>
-                        <input type="text" id="job-input-skills" class="form-control" placeholder="e.g. Drone Camera, English & Twi fluency, Wireless Mics" value="${jobToEdit ? escapeHtml(jobToEdit.required_skills || '') : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Required Skills / Equipment</label>
+                        <input type="text" id="job-input-skills" class="form-control job-field-input" placeholder="e.g. Drone Camera, English & Twi fluency, Wireless Mics" value="${jobToEdit ? escapeHtml(jobToEdit.required_skills || '') : ''}">
                     </div>
 
-                    <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-                        <button type="button" class="btn btn-primary" onclick="JobsModule.goToStep(2)">Next: Budget & Location <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i></button>
+                    <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                        <button type="button" class="btn btn-primary" onclick="JobsModule.goToStep(2)" style="padding:10px 20px;">Next: Budget & Location <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i></button>
                     </div>
                 </div>
 
                 <!-- STEP 2 -->
                 <div class="job-step-pane" id="job-step-pane-2" style="display:none;">
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Budget (GHS) *</label>
-                            <input type="number" id="job-input-budget" class="form-control" placeholder="e.g. 5000" min="0" value="${jobToEdit ? jobToEdit.budget : ''}" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Budget (GHS) <span class="required-star">*</span></label>
+                            <input type="number" id="job-input-budget" class="form-control job-field-input" placeholder="e.g. 5000" min="0" value="${jobToEdit ? jobToEdit.budget : ''}" required>
                         </div>
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Negotiable?</label>
-                            <select id="job-input-negotiable" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Negotiable?</label>
+                            <select id="job-input-negotiable" class="form-control job-field-input">
                                 <option value="1" ${!jobToEdit || jobToEdit.negotiable == 1 ? 'selected' : ''}>Yes, open to quotes</option>
                                 <option value="0" ${jobToEdit && jobToEdit.negotiable == 0 ? 'selected' : ''}>No, fixed budget</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Event Type</label>
-                            <select id="job-input-event-type" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Event Type</label>
+                            <select id="job-input-event-type" class="form-control job-field-input">
                                 <option value="physical" ${!jobToEdit || jobToEdit.event_type === 'physical' ? 'selected' : ''}>Physical Event Location</option>
                                 <option value="online" ${jobToEdit && jobToEdit.event_type === 'online' ? 'selected' : ''}>Online / Virtual</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Location / Region</label>
-                            <input type="text" id="job-input-location" class="form-control" placeholder="e.g. East Legon, Accra" value="${jobToEdit ? escapeHtml(jobToEdit.location || '') : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Location / Region</label>
+                            <input type="text" id="job-input-location" class="form-control job-field-input" placeholder="e.g. East Legon, Accra" value="${jobToEdit ? escapeHtml(jobToEdit.location || '') : ''}">
                         </div>
                     </div>
 
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Event Date</label>
-                            <input type="date" id="job-input-event-date" class="form-control" value="${jobToEdit ? jobToEdit.event_date : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Event Date</label>
+                            <input type="date" id="job-input-event-date" class="form-control job-field-input" value="${jobToEdit ? jobToEdit.event_date : ''}">
                         </div>
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Proposal Deadline</label>
-                            <input type="date" id="job-input-deadline" class="form-control" value="${jobToEdit ? jobToEdit.deadline : ''}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Proposal Deadline</label>
+                            <input type="date" id="job-input-deadline" class="form-control job-field-input" value="${jobToEdit ? jobToEdit.deadline : ''}">
                         </div>
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; margin-top:16px;">
-                        <button type="button" class="btn btn-secondary" onclick="JobsModule.goToStep(1)"><i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i> Back</button>
-                        <button type="button" class="btn btn-primary" onclick="JobsModule.goToStep(3)">Next: Media & Options <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i></button>
+                    <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                        <button type="button" class="btn btn-secondary" onclick="JobsModule.goToStep(1)" style="padding:10px 18px;"><i class="fa-solid fa-arrow-left" style="margin-right:8px;"></i> Back</button>
+                        <button type="button" class="btn btn-primary" onclick="JobsModule.goToStep(3)" style="padding:10px 20px;">Next: Media & Options <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i></button>
                     </div>
                 </div>
 
                 <!-- STEP 3 -->
                 <div class="job-step-pane" id="job-step-pane-3" style="display:none;">
-                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Vendors Needed</label>
-                            <input type="number" id="job-input-num-vendors" class="form-control" min="1" value="${jobToEdit ? jobToEdit.num_vendors : '1'}" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Vendors Needed</label>
+                            <input type="number" id="job-input-num-vendors" class="form-control job-field-input" min="1" value="${jobToEdit ? jobToEdit.num_vendors : '1'}">
                         </div>
                         <div class="form-group">
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Visibility</label>
-                            <select id="job-input-visibility" class="form-control" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                            <label class="job-field-label">Visibility</label>
+                            <select id="job-input-visibility" class="form-control job-field-input">
                                 <option value="public" ${!jobToEdit || jobToEdit.visibility === 'public' ? 'selected' : ''}>Public (All Vendors)</option>
                                 <option value="invite_only" ${jobToEdit && jobToEdit.visibility === 'invite_only' ? 'selected' : ''}>Invite Only</option>
                                 <option value="private" ${jobToEdit && jobToEdit.visibility === 'private' ? 'selected' : ''}>Private Draft</option>
@@ -203,23 +203,23 @@ const JobsModule = {
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block; cursor:pointer;">
-                            <input type="checkbox" id="job-input-urgent" ${jobToEdit && jobToEdit.is_urgent == 1 ? 'checked' : ''} style="margin-right:6px;">
-                            <span style="color:#DC2626; font-weight:700;"><i class="fa-solid fa-bolt"></i> Mark as Urgent Job</span> (Highlights your job card)
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-urgent-callout">
+                            <input type="checkbox" id="job-input-urgent" ${jobToEdit && jobToEdit.is_urgent == 1 ? 'checked' : ''} style="margin-right:10px; width:18px; height:18px; accent-color:#DC2626; cursor:pointer;">
+                            <span><strong style="color:#DC2626;"><i class="fa-solid fa-bolt" style="margin-right:4px;"></i> Mark as Urgent Job</strong> — Highlight your job card to get quotes fast</span>
                         </label>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Attachments (Images, PDF, Floor Plans)</label>
-                        <input type="file" id="job-input-files" multiple accept="image/*,.pdf,video/*" class="form-control" style="width:100%; padding:8px; border:1px dashed var(--gray-400); border-radius:8px;">
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Attachments (Images, PDF, Floor Plans)</label>
+                        <input type="file" id="job-input-files" multiple accept="image/*,.pdf,video/*" class="job-file-dropzone">
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                        <button type="button" class="btn btn-secondary" onclick="JobsModule.goToStep(2)"><i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i> Back</button>
-                        <div style="display:flex; gap:8px;">
-                            <button type="button" class="btn btn-outline" id="btn-save-draft" onclick="JobsModule.submitJobPost('draft')">Save Draft</button>
-                            <button type="button" class="btn btn-primary" id="btn-publish-job" onclick="JobsModule.submitJobPost('open')"><i class="fa-solid fa-paper-plane" style="margin-right:6px;"></i> Publish Job</button>
+                    <div style="display:flex; justify-content:space-between; margin-top:24px;">
+                        <button type="button" class="btn btn-secondary" onclick="JobsModule.goToStep(2)" style="padding:10px 18px;"><i class="fa-solid fa-arrow-left" style="margin-right:8px;"></i> Back</button>
+                        <div style="display:flex; gap:10px;">
+                            <button type="button" class="btn btn-outline" id="btn-save-draft" onclick="JobsModule.submitJobPost('draft')" style="padding:10px 18px;">Save Draft</button>
+                            <button type="button" class="btn btn-primary" id="btn-publish-job" onclick="JobsModule.submitJobPost('open')" style="padding:10px 22px;"><i class="fa-solid fa-paper-plane" style="margin-right:8px;"></i> Publish Job</button>
                         </div>
                     </div>
                 </div>
@@ -239,11 +239,9 @@ const JobsModule = {
             const ind = document.getElementById(`job-step-indicator-${i}`);
             if (ind) {
                 if (i === stepNum) {
-                    ind.style.fontWeight = '700';
-                    ind.style.color = 'var(--primary, #1B2B4B)';
+                    ind.classList.add('active');
                 } else {
-                    ind.style.fontWeight = '600';
-                    ind.style.color = 'var(--gray-500)';
+                    ind.classList.remove('active');
                 }
             }
         }
@@ -361,41 +359,41 @@ const JobsModule = {
         }
 
         const modalHtml = `
-            <div style="padding:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <h3 style="margin:0; font-size:1.15rem; color:var(--primary);"><i class="fa-solid fa-paper-plane" style="color:var(--accent); margin-right:8px;"></i>Submit Proposal</h3>
-                    <button onclick="closeModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <div style="padding:22px 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                    <h3 style="margin:0; font-size:1.25rem; font-weight:800; color:var(--primary);"><i class="fa-solid fa-paper-plane" style="color:var(--accent); margin-right:10px;"></i>Submit Proposal</h3>
+                    <button onclick="closeModal()" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--gray-500);"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
-                <div style="background:var(--gray-100); padding:12px; border-radius:8px; margin-bottom:16px; font-size:0.85rem;">
-                    <strong style="display:block; color:var(--primary);">${escapeHtml(jobTitle)}</strong>
-                    <span style="color:var(--gray-600);">Client Budget: GHS ${number_format(budget, 2)}</span>
+                <div style="background:var(--gray-100); padding:14px 16px; border-radius:10px; margin-bottom:20px; font-size:0.9rem; border:1px solid var(--gray-200);">
+                    <strong style="display:block; color:var(--primary); font-size:1rem; margin-bottom:4px;">${escapeHtml(jobTitle)}</strong>
+                    <span style="color:var(--gray-600); font-weight:600;"><i class="fa-solid fa-wallet" style="margin-right:6px; color:var(--accent);"></i>Client Budget: GHS ${number_format(budget, 2)}</span>
                 </div>
 
                 <form onsubmit="event.preventDefault(); JobsModule.submitProposal(${jobId});">
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Your Price Quote (GHS) *</label>
-                        <input type="number" id="proposal-input-quote" class="form-control" value="${budget}" min="1" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Your Price Quote (GHS) <span class="required-star">*</span></label>
+                        <input type="number" id="proposal-input-quote" class="form-control job-field-input" value="${budget}" min="1" required>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Estimated Delivery / Timeline *</label>
-                        <input type="text" id="proposal-input-timeline" class="form-control" placeholder="e.g. 3 days before event / On-site full day" required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Estimated Delivery / Timeline <span class="required-star">*</span></label>
+                        <input type="text" id="proposal-input-timeline" class="form-control job-field-input" placeholder="e.g. 3 days before event / On-site full day" required>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Cover Letter / Proposal Details *</label>
-                        <textarea id="proposal-input-letter" class="form-control" rows="4" placeholder="Explain why you are the best fit for this event job, your experience, and setup details..." required style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;"></textarea>
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Cover Letter / Proposal Details <span class="required-star">*</span></label>
+                        <textarea id="proposal-input-letter" class="form-control job-field-input" rows="4" placeholder="Explain why you are the best fit for this event job, your experience, and setup details..." required></textarea>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:4px; display:block;">Portfolio Links (Optional)</label>
-                        <input type="text" id="proposal-input-portfolio" class="form-control" placeholder="https://instagram.com/mywork or link to gallery" style="width:100%; padding:10px; border:1px solid var(--gray-300); border-radius:8px;">
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="job-field-label">Portfolio Links (Optional)</label>
+                        <input type="text" id="proposal-input-portfolio" class="form-control job-field-input" placeholder="https://instagram.com/mywork or link to gallery">
                     </div>
 
-                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="btn-submit-proposal"><i class="fa-solid fa-paper-plane" style="margin-right:6px;"></i> Send Proposal</button>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()" style="padding:10px 18px;">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-proposal" style="padding:10px 22px;"><i class="fa-solid fa-paper-plane" style="margin-right:8px;"></i> Send Proposal</button>
                     </div>
                 </form>
             </div>

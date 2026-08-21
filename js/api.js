@@ -190,8 +190,14 @@ const API = {
     raiseDispute(bookingId, subject, description) { return this.post('raise_dispute', { booking_id: bookingId, subject, description }); },
 
     // ── Notifications ──
-    getNotifications() { return this.get('notifications'); },
-    markNotificationRead(id) { return this.post('mark_notification_read', { id: id || 0 }); },
+    getNotifications() {
+        const uid = window.state?.user?.id || 0;
+        return this.get('notifications' + (uid ? '?user_id=' + uid : ''));
+    },
+    markNotificationRead(id) {
+        const uid = window.state?.user?.id || 0;
+        return this.post('mark_notification_read', { id: id || 0, user_id: uid });
+    },
 
     // ── Promotions & Advertising ──
     getAdCampaigns(vendorId) { return this.get('get_advertisements', { vendor_id: vendorId || '' }); },

@@ -510,14 +510,14 @@ function handle_job_action($action, $pdo) {
                 $c_chk->execute([$job['user_id'], $app['vendor_id'], $app['vendor_user_id'], $app['vendor_id']]);
                 $room = $c_chk->fetch();
                 if (!$room) {
-                    $c_ins = $db_main->prepare("INSERT INTO chat_rooms (user_id, vendor_id, last_message, updated_at) VALUES (?, ?, ?, NOW())");
+                    $c_ins = $db_main->prepare("INSERT INTO chat_rooms (user_id, vendor_id, last_message, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)");
                     $c_ins->execute([$job['user_id'], $app['vendor_id'], "Job Hire: {$job['title']}"]);
                     $room_id = $db_main->lastInsertId();
                 } else {
                     $room_id = $room['id'];
                 }
                 
-                $m_ins = $db_main->prepare("INSERT INTO chat_messages (room_id, sender_type, sender_id, message, created_at) VALUES (?, 'system', 0, ?, NOW())");
+                $m_ins = $db_main->prepare("INSERT INTO chat_messages (room_id, sender_type, sender_id, message, created_at) VALUES (?, 'system', 0, ?, CURRENT_TIMESTAMP)");
                 $m_ins->execute([$room_id, "🎉 Vendor hired for job: {$job['title']} (Agreed Quote: GHS " . number_format($app['price_quote'], 2) . ")"]);
             } catch (Exception $e) {}
 

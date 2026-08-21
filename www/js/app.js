@@ -190,10 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (path === 'profile.php') startScreen = 'profile';
             else if (path === 'profile-edit.php') startScreen = 'profile-edit';
             else if (path === 'vendor-dash.php') startScreen = 'vendor-dash';
-            else if (path === 'promotions.php') startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home';
+            else if (path === 'vendor-ads.php' || path === 'promotions.php') startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home';
             else if (path === 'report-issue.php') startScreen = 'report-issue';
             else if (path === 'help.php') startScreen = 'help';
             else if (path === 'about.php') startScreen = 'about';
+            else if (path === 'privacy.php') startScreen = 'privacy';
+            else if (path === 'user-jobs.php') startScreen = 'user-jobs';
+            else if (path === 'vendor-jobs.php') startScreen = 'vendor-jobs';
+            else if (path === 'blog-detail.php') startScreen = 'blog-detail';
             else if (path === 'blog.php') {
                 const bId = parseInt(urlParams.get('id'));
                 const bSlug = urlParams.get('slug');
@@ -503,7 +507,8 @@ window.updateNotifBadgeCount = function() {
         return;
     }
     API.getNotifications().then(list => {
-        const unreadCount = list.filter(n => !n.is_read).length;
+        const notifList = Array.isArray(list) ? list : [];
+        const unreadCount = notifList.filter(n => !n.is_read).length;
         const badge = document.getElementById('notif-badge');
         if (badge) {
             if (unreadCount > 0) {

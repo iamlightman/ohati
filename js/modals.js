@@ -109,8 +109,8 @@ function toggleSidebar(open) {
                 overlay.style.pointerEvents = 'auto';
             } else {
                 overlay.classList.remove('open', 'active');
-                overlay.style.visibility = '';
-                overlay.style.pointerEvents = '';
+                overlay.style.visibility = 'hidden';
+                overlay.style.pointerEvents = 'none';
             }
         });
 

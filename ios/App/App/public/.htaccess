@@ -1,29 +1,27 @@
 # ── OHATI SECURITY & ENHANCED PROTECTION RULES ───────────────────────
 
-# PHP Upload Limit Configuration
-<IfModule mod_php7.c>
-    php_value upload_max_filesize 20M
-    php_value post_max_size 25M
-    php_value memory_limit 256M
-</IfModule>
-<IfModule mod_php.c>
-    php_value upload_max_filesize 20M
-    php_value post_max_size 25M
-    php_value memory_limit 256M
-</IfModule>
-
 # 1. Disable Directory Index Browsing
 Options -Indexes
 
-# 2. Block Direct Access to Sensitive Config, Database, Log, and Backup Files (Excluding robots.txt & .well-known)
+# 2. Block Direct Access to Sensitive Config, Database, Log, and Backup Files
 <FilesMatch "\.(db|sql|gz|tar|env|log|ini|conf|bak|sh)$">
-    Order allow,deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
 <FilesMatch "^(ohati_config\.php|capacitor\.config\.json|package\.json|package-lock\.json|\.gitignore)$">
-    Order allow,deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
 # 3. Allow Access to .well-known/assetlinks.json for Google App Indexing & Pass Authorization Headers to PHP
@@ -35,12 +33,19 @@ Options -Indexes
 </IfModule>
 
 <Files "assetlinks.json">
-    Order allow,deny
-    Allow from all
-    Header set Content-Type "application/json"
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+    <IfModule mod_headers.c>
+        Header set Content-Type "application/json"
+    </IfModule>
 </Files>
 
-# 3. Enhanced HTTP Security Headers & SEO Caching
+# 4. Enhanced HTTP Security Headers & SEO Caching
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
@@ -49,12 +54,12 @@ Options -Indexes
     Header set Permissions-Policy "geolocation=(self), camera=(self), microphone=(self)"
 </IfModule>
 
-# 4. Gzip Compression for Google PageSpeed Optimization
+# 5. Gzip Compression for Google PageSpeed Optimization
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json application/xml image/svg+xml
 </IfModule>
 
-# 5. Browser Caching Rules & Automatic Revalidation for CSS & JS
+# 6. Browser Caching Rules & Automatic Revalidation for Assets
 <IfModule mod_headers.c>
     <FilesMatch "\.(css|js)$">
         Header set Cache-Control "no-cache, must-revalidate"
@@ -68,8 +73,24 @@ Options -Indexes
     ExpiresByType image/gif "access plus 1 year"
     ExpiresByType image/png "access plus 1 year"
     ExpiresByType image/webp "access plus 1 year"
-    ExpiresByType text/css "access plus 0 seconds"
-    ExpiresByType application/javascript "access plus 0 seconds"
+    ExpiresByType text/css "access plus 1 hour"
+    ExpiresByType application/javascript "access plus 1 hour"
     ExpiresByType image/x-icon "access plus 1 year"
 </IfModule>
 
+# 7. PHP Upload Limits (25MB Maximum)
+<IfModule mod_php.c>
+    php_value upload_max_filesize 25M
+    php_value post_max_size 25M
+    php_value memory_limit 128M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 25M
+    php_value post_max_size 25M
+    php_value memory_limit 128M
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 25M
+    php_value post_max_size 25M
+    php_value memory_limit 128M
+</IfModule>

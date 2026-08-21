@@ -42,6 +42,106 @@
     --champagne-gold: #F2A735;
 }
 
+/* ===== FONTAWESOME ICON FONT GUARANTEE ===== */
+i.fa, i.fas, i.far, i.fal, i.fab, i.fa-solid, i.fa-regular, i.fa-light, i.fa-brands, [class*="fa-"] {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+}
+
+i.fa-solid, i.fas, .fa-solid, .fas {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900 !important;
+}
+
+i.fa-regular, i.far, .fa-regular, .far {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 400 !important;
+}
+
+i.fa-brands, i.fab, .fa-brands, .fab {
+    font-family: "Font Awesome 6 Brands" !important;
+    font-weight: 400 !important;
+}
+
+/* ===== SKELETON LOADING ANIMATIONS & PLACEHOLDERS ===== */
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, var(--gray-100, #E2E8F0) 25%, var(--gray-50, #F8FAFC) 50%, var(--gray-100, #E2E8F0) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite linear;
+    border-radius: var(--radius-sm, 8px);
+    display: block;
+}
+
+body.dark-theme .skeleton {
+    background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%) !important;
+    background-size: 200% 100% !important;
+}
+
+.skeleton-card {
+    background: var(--white, #FFFFFF);
+    border: 1px solid var(--gray-100, #E2E8F0);
+    border-radius: var(--radius-md, 14px);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+}
+
+body.dark-theme .skeleton-card {
+    background: #152238 !important;
+    border-color: #334155 !important;
+}
+
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.skeleton-thumb {
+    width: 100%;
+    height: 160px;
+    border-radius: var(--radius-sm, 10px);
+}
+
+.skeleton-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.skeleton-title {
+    height: 20px;
+    border-radius: 6px;
+}
+
+.skeleton-text {
+    height: 14px;
+    border-radius: 4px;
+}
+
+.skeleton-pill {
+    height: 28px;
+    border-radius: 20px;
+}
+
 /* ===== SPLASH / LOADING SCREEN STYLES ===== */
 .splash-screen {
     position: fixed;
@@ -1838,11 +1938,11 @@ body.dark-theme .sidebar-panel {
 
 /* MODAL */
 .modal-overlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0);
     visibility: hidden;
-    z-index: 6000;
+    z-index: 9600;
     display: flex;
     align-items: flex-end;
     transition: background var(--anim-mid) ease, visibility var(--anim-mid) ease;
@@ -10668,266 +10768,4 @@ body.dark-theme .blog-cat-pill.active,
 body.dark-theme .badge-accent,
 body.dark-theme .badge-primary {
     color: #081729 !important;
-}
-
-/* Save Vendor Profile Button in Quick Contact Panel */
-.detail-save-profile-btn {
-    width: 100%;
-    margin-top: 12px;
-    padding: 12px 18px;
-    border-radius: 12px;
-    border: 1.5px solid var(--border-color, #E2E8F0);
-    background: transparent;
-    color: var(--text-color, #1E293B);
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.detail-save-profile-btn:hover {
-    background: rgba(27, 43, 75, 0.05);
-    border-color: var(--primary, #1B2B4B);
-    transform: translateY(-1px);
-}
-
-.detail-save-profile-btn.saved-active {
-    background: rgba(225, 29, 72, 0.08);
-    border-color: #E11D48;
-    color: #E11D48;
-}
-
-.detail-save-profile-btn.saved-active i {
-    color: #E11D48;
-}
-
-body.dark-theme .detail-save-profile-btn {
-    border-color: #334155;
-    color: #F8FAFC;
-}
-
-body.dark-theme .detail-save-profile-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--accent, #F2A735);
-}
-
-body.dark-theme .detail-save-profile-btn.saved-active {
-    background: rgba(225, 29, 72, 0.15);
-    border-color: #F43F5E;
-    color: #F43F5E;
-}
-
-/* High-Visibility Form Fields for Post Job & Event Forms */
-#post-job-form .form-group {
-    margin-bottom: 18px;
-}
-
-#post-job-form label,
-.job-field-label,
-label.job-label {
-    display: block !important;
-    font-size: 0.92rem !important;
-    font-weight: 700 !important;
-    color: #0F172A !important;
-    margin-bottom: 6px !important;
-    letter-spacing: -0.01em;
-}
-
-#post-job-form .form-control,
-#post-job-form input[type="text"],
-#post-job-form input[type="number"],
-#post-job-form input[type="date"],
-#post-job-form select,
-#post-job-form textarea,
-.job-field-input {
-    width: 100% !important;
-    padding: 12px 14px !important;
-    font-size: 0.95rem !important;
-    font-weight: 500 !important;
-    color: #0F172A !important;
-    background-color: #FFFFFF !important;
-    border: 1.5px solid #CBD5E1 !important;
-    border-radius: 10px !important;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    box-sizing: border-box !important;
-}
-
-#post-job-form .form-control:hover,
-#post-job-form input:hover,
-#post-job-form select:hover,
-#post-job-form textarea:hover,
-.job-field-input:hover {
-    border-color: #94A3B8 !important;
-}
-
-#post-job-form .form-control:focus,
-#post-job-form input:focus,
-#post-job-form select:focus,
-#post-job-form textarea:focus,
-.job-field-input:focus {
-    border-color: #1B2B4B !important;
-    background-color: #FFFFFF !important;
-    box-shadow: 0 0 0 4px rgba(27, 43, 75, 0.15), 0 2px 4px rgba(0, 0, 0, 0.05) !important;
-    outline: none !important;
-}
-
-#post-job-form ::placeholder,
-.job-field-input::placeholder {
-    color: #64748B !important;
-    font-weight: 400 !important;
-}
-
-/* Post Job Wizard Header Enhancement */
-.job-step-wizard {
-    background: #F1F5F9 !important;
-    border-radius: 10px !important;
-    padding: 12px 16px !important;
-    border: 1px solid #E2E8F0 !important;
-}
-
-.wizard-step {
-    font-size: 0.88rem !important;
-    font-weight: 600 !important;
-    color: #64748B !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-}
-
-.wizard-step.active {
-    font-weight: 700 !important;
-    color: #1B2B4B !important;
-}
-
-.wizard-step .step-badge {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 22px !important;
-    height: 22px !important;
-    border-radius: 50% !important;
-    background: #CBD5E1 !important;
-    color: #1E293B !important;
-    font-size: 0.78rem !important;
-    font-weight: 700 !important;
-}
-
-.wizard-step.active .step-badge {
-    background: #1B2B4B !important;
-    color: #FFFFFF !important;
-}
-
-/* Callout cards in Post Job Form */
-.job-urgent-callout {
-    background: rgba(220, 38, 38, 0.06) !important;
-    border: 1.5px solid rgba(220, 38, 38, 0.25) !important;
-    border-radius: 10px !important;
-    padding: 12px 16px !important;
-    display: flex !important;
-    align-items: center !important;
-    cursor: pointer !important;
-    transition: background 0.2s ease !important;
-}
-
-.job-urgent-callout:hover {
-    background: rgba(220, 38, 38, 0.1) !important;
-}
-
-.job-file-dropzone {
-    width: 100% !important;
-    padding: 12px 14px !important;
-    border: 2px dashed #94A3B8 !important;
-    border-radius: 10px !important;
-    background-color: #F8FAFC !important;
-    color: #334155 !important;
-    font-size: 0.9rem !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
-
-.job-file-dropzone:hover {
-    border-color: #1B2B4B !important;
-    background-color: #F1F5F9 !important;
-}
-
-/* Dark Theme High Visibility Overrides */
-body.dark-theme #post-job-form label,
-body.dark-theme .job-field-label,
-body.dark-theme label.job-label {
-    color: #F8FAFC !important;
-}
-
-body.dark-theme #post-job-form .form-control,
-body.dark-theme #post-job-form input[type="text"],
-body.dark-theme #post-job-form input[type="number"],
-body.dark-theme #post-job-form input[type="date"],
-body.dark-theme #post-job-form select,
-body.dark-theme #post-job-form textarea,
-body.dark-theme .job-field-input {
-    background-color: #0F172A !important;
-    color: #F8FAFC !important;
-    border-color: #334155 !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-}
-
-body.dark-theme #post-job-form .form-control:hover,
-body.dark-theme #post-job-form input:hover,
-body.dark-theme #post-job-form select:hover,
-body.dark-theme #post-job-form textarea:hover,
-body.dark-theme .job-field-input:hover {
-    border-color: #475569 !important;
-}
-
-body.dark-theme #post-job-form .form-control:focus,
-body.dark-theme #post-job-form input:focus,
-body.dark-theme #post-job-form select:focus,
-body.dark-theme #post-job-form textarea:focus,
-body.dark-theme .job-field-input:focus {
-    border-color: #F2A735 !important;
-    background-color: #0F172A !important;
-    box-shadow: 0 0 0 4px rgba(242, 167, 53, 0.25), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-}
-
-body.dark-theme #post-job-form ::placeholder,
-body.dark-theme .job-field-input::placeholder {
-    color: #94A3B8 !important;
-}
-
-body.dark-theme .job-step-wizard {
-    background: #1E293B !important;
-    border-color: #334155 !important;
-}
-
-body.dark-theme .wizard-step {
-    color: #94A3B8 !important;
-}
-
-body.dark-theme .wizard-step.active {
-    color: #F2A735 !important;
-}
-
-body.dark-theme .wizard-step .step-badge {
-    background: #334155 !important;
-    color: #CBD5E1 !important;
-}
-
-body.dark-theme .wizard-step.active .step-badge {
-    background: #F2A735 !important;
-    color: #0F172A !important;
-}
-
-body.dark-theme .job-urgent-callout {
-    background: rgba(220, 38, 38, 0.12) !important;
-    border-color: rgba(220, 38, 38, 0.4) !important;
-}
-
-body.dark-theme .job-file-dropzone {
-    background-color: #0F172A !important;
-    border-color: #475569 !important;
-    color: #CBD5E1 !important;
 }

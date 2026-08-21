@@ -154,8 +154,9 @@ if ($requested_vendor_id > 0) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap" >
 
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" >
+    <!-- FontAwesome (Local Bundled + CDN Fallback) -->
+    <link rel="stylesheet" href="css/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css?v=1.1.9">
@@ -340,6 +341,8 @@ if ($requested_vendor_id > 0) {
             <section id="screen-vendor-jobs" class="screen" style="display:none;"></section>
             <section id="screen-blog" class="screen" style="display:none;"></section>
             <section id="screen-blog-detail" class="screen" style="display:none;"></section>
+            <section id="screen-privacy" class="screen" style="display:none;"></section>
+            <section id="screen-terms" class="screen" style="display:none;"></section>
         </main>
 
         <!-- ===== BOTTOM NAVIGATION ===== -->

@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Instant check: If no stored auth session token exists, check if accessing public routes (blog.php, about.php, help.php)
     const currentPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
-    const isPublicGuestPage = (currentPath.includes('blog.php') || currentPath.includes('about.php') || currentPath.includes('help.php'));
+    const isPublicGuestPage = (currentPath.includes('blog.php') || currentPath.includes('about.php') || currentPath.includes('help.php') || currentPath.includes('privacy.php') || currentPath.includes('privacy_policy.php') || currentPath.includes('terms.php'));
     const hasLocalAuth = localStorage.getItem('ohati_auth_token') || localStorage.getItem('ohati_user_session');
 
     if (!hasLocalAuth && !isPublicGuestPage) {
@@ -51,6 +51,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return;
     }
+
+    const getStartRoute = () => {
+        const path = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+        const urlParams = new URLSearchParams(window.location.search);
+        let startScreen = 'home';
+        let startParams = {};
+
+        if (path === 'planner.php') startScreen = 'event';
+        else if (path === 'search.php') startScreen = 'search';
+        else if (path === 'detail.php') {
+            startScreen = 'detail';
+            const idVal = parseInt(urlParams.get('id') || urlParams.get('vendor_id'));
+            if (idVal) {
+                state.selectedVendorId = idVal;
+                startParams = { id: idVal };
+            }
+        }
+        else if (path === 'chat.php') {
+            startScreen = 'chat';
+            const vid = parseInt(urlParams.get('vendor_id') || urlParams.get('id'));
+            if (vid) {
+                state.activeChatVendorId = vid;
+                startParams = { vendor_id: vid };
+            } else {
+                state.activeChatVendorId = null;
+                startParams = {};
+            }
+        }
+        else if (path === 'bookings.php') {
+            startScreen = 'bookings';
+            const bId = parseInt(urlParams.get('id'));
+            if (bId) {
+                state.selectedBookingId = bId;
+                startParams = { id: bId };
+            }
+        }
+        else if (path === 'favorites.php') startScreen = 'favorites';
+        else if (path === 'compare.php') startScreen = 'compare';
+        else if (path === 'notifications.php') startScreen = 'notifications';
+        else if (path === 'profile.php') startScreen = 'profile';
+        else if (path === 'profile-edit.php') startScreen = 'profile-edit';
+        else if (path === 'vendor-dash.php') startScreen = 'vendor-dash';
+        else if (path === 'vendor-ads.php' || path === 'promotions.php') startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home';
+        else if (path === 'report-issue.php') startScreen = 'report-issue';
+        else if (path === 'help.php') startScreen = 'help';
+        else if (path === 'about.php') startScreen = 'about';
+        else if (path === 'privacy.php' || path === 'privacy_policy.php') startScreen = 'privacy';
+        else if (path === 'terms.php') startScreen = 'terms';
+        else if (path === 'user-jobs.php') startScreen = 'user-jobs';
+        else if (path === 'vendor-jobs.php') startScreen = 'vendor-jobs';
+        else if (path === 'blog-detail.php') startScreen = 'blog-detail';
+        else if (path === 'blog.php') {
+            const bId = parseInt(urlParams.get('id'));
+            const bSlug = urlParams.get('slug');
+            if (bId || bSlug) {
+                startScreen = 'blog-detail';
+                if (bId) state.selectedBlogId = bId;
+                startParams = { id: bId, slug: bSlug };
+            } else {
+                startScreen = 'blog';
+            }
+        }
+        else if (path === 'vendor-auto-response.php') startScreen = 'vendor-auto-response';
+        else if (path === 'jobs.php') {
+            startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-jobs' : 'user-jobs';
+            const jId = parseInt(urlParams.get('id'));
+            if (jId) {
+                state.selectedJobId = jId;
+                startParams = { id: jId };
+            }
+        }
+        else if (path === 'reviews.php') startScreen = 'home';
+
+        return { startScreen, startParams, path };
+    };
 
     // 1. Authenticate Session First Before Exposing App Content
     API.getSession()
@@ -67,22 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (isPublicGuestPage) {
                     // Boot public guest page cleanly
-                    let startScreen = 'blog';
-                    let startParams = {};
-                    if (currentPath === 'about.php') startScreen = 'about';
-                    else if (currentPath === 'help.php') startScreen = 'help';
-                    else if (currentPath === 'blog.php') {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const bId = parseInt(urlParams.get('id'));
-                        const bSlug = urlParams.get('slug');
-                        if (bId || bSlug) {
-                            startScreen = 'blog-detail';
-                            if (bId) state.selectedBlogId = bId;
-                            startParams = { id: bId, slug: bSlug };
-                        } else {
-                            startScreen = 'blog';
-                        }
-                    }
+                    const { startScreen, startParams } = getStartRoute();
                     if (typeof navigateTo === 'function') {
                         navigateTo(startScreen, startParams, { replace: true, force: true });
                     }
@@ -103,13 +163,19 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (typeof unlockMandatoryAuthScreen === 'function') {
                 unlockMandatoryAuthScreen();
             }
-            dismissLoading();
 
             state.lockedFields = res.locked_profile_fields || ["name", "email", "phone", "dob"];
             if (res.platform_reviews) state.platformReviews = res.platform_reviews;
             state.settings = res.settings || {};
             updateAppHeader();
             updateNotifBadgeCount();
+
+            // Render skeleton loading screen IMMEDIATELY so user never sees a blank screen
+            const { startScreen, startParams } = getStartRoute();
+            if (typeof navigateTo === 'function') {
+                navigateTo(startScreen, startParams, { replace: true, force: true });
+            }
+            dismissLoading();
 
             // Start periodic background activity heartbeat for real-time online status
             if (!window._onlineHeartbeatStarted) {
@@ -151,93 +217,16 @@ document.addEventListener('DOMContentLoaded', () => {
             state.event = results[7].status === 'fulfilled' ? results[7].value : null;
             state.faqs = results[8].status === 'fulfilled' ? results[8].value : [];
 
-            // Detect screen & parameters from URL path & query string
-            const path = decodeURIComponent(window.location.pathname.split('/').pop() || '');
-            const urlParams = new URLSearchParams(window.location.search);
-            let startScreen = 'home';
-            let startParams = {};
-
-            if (path === 'planner.php') startScreen = 'event';
-            else if (path === 'search.php') startScreen = 'search';
-            else if (path === 'detail.php') {
-                startScreen = 'detail';
-                const idVal = parseInt(urlParams.get('id') || urlParams.get('vendor_id'));
-                if (idVal) {
-                    state.selectedVendorId = idVal;
-                    startParams = { id: idVal };
-                }
-            }
-            else if (path === 'chat.php') {
-                startScreen = 'chat';
-                const vid = parseInt(urlParams.get('vendor_id') || urlParams.get('id'));
-                if (vid) {
-                    state.activeChatVendorId = vid;
-                    startParams = { vendor_id: vid };
-                } else {
-                    state.activeChatVendorId = null;
-                    startParams = {};
-                }
-            }
-            else if (path === 'bookings.php') {
-                startScreen = 'bookings';
-                const bId = parseInt(urlParams.get('id'));
-                if (bId) {
-                    state.selectedBookingId = bId;
-                    startParams = { id: bId };
-                }
-            }
-            else if (path === 'favorites.php') startScreen = 'favorites';
-            else if (path === 'compare.php') startScreen = 'compare';
-            else if (path === 'notifications.php') startScreen = 'notifications';
-            else if (path === 'profile.php') startScreen = 'profile';
-            else if (path === 'profile-edit.php') startScreen = 'profile-edit';
-            else if (path === 'vendor-dash.php') startScreen = 'vendor-dash';
-            else if (path === 'vendor-ads.php' || path === 'promotions.php') startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-ads' : 'home';
-            else if (path === 'report-issue.php') startScreen = 'report-issue';
-            else if (path === 'help.php') startScreen = 'help';
-            else if (path === 'about.php') startScreen = 'about';
-            else if (path === 'privacy.php') startScreen = 'privacy';
-            else if (path === 'user-jobs.php') startScreen = 'user-jobs';
-            else if (path === 'vendor-jobs.php') startScreen = 'vendor-jobs';
-            else if (path === 'blog-detail.php') startScreen = 'blog-detail';
-            else if (path === 'blog.php') {
-                const bId = parseInt(urlParams.get('id'));
-                const bSlug = urlParams.get('slug');
-                if (bId || bSlug) {
-                    startScreen = 'blog-detail';
-                    if (bId) state.selectedBlogId = bId;
-                    startParams = { id: bId, slug: bSlug };
-                } else {
-                    startScreen = 'blog';
-                }
-            }
-            else if (path === 'vendor-auto-response.php') startScreen = 'vendor-auto-response';
-            else if (path === 'jobs.php') {
-                startScreen = (state.user && (state.user.active_role || state.user.role) === 'vendor') ? 'vendor-jobs' : 'user-jobs';
-                const jId = parseInt(urlParams.get('id'));
-                if (jId) {
-                    state.selectedJobId = jId;
-                    startParams = { id: jId };
-                }
-            }
-            else if (path === 'reviews.php') startScreen = 'home';
+            const { startScreen, startParams, path } = getStartRoute();
             window.history.replaceState({ screenId: startScreen, params: startParams }, '', window.location.href);
             navigateTo(startScreen, startParams, { force: true });
             if (window.OhatiNavManager) window.OhatiNavManager.init();
-            dismissLoading();
             pollUnreadChats();
             if (window.requestDeviceNotificationPermission) window.requestDeviceNotificationPermission();
             if (startScreen === 'home') {
                 openWelcomePopup();
                 if (path === 'reviews.php') {
                     setTimeout(() => openPlatformReviewModal(), 300);
-                } else if (path === 'promotions.php') {
-                    // Show a message or show the promo invite popup
-                    setTimeout(() => {
-                        if (typeof checkAndShowGeneralSponsoredPopup === 'function') {
-                            checkAndShowGeneralSponsoredPopup();
-                        }
-                    }, 500);
                 }
             }
         })

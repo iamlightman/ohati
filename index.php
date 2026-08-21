@@ -340,6 +340,8 @@ if ($requested_vendor_id > 0) {
             <section id="screen-vendor-jobs" class="screen" style="display:none;"></section>
             <section id="screen-blog" class="screen" style="display:none;"></section>
             <section id="screen-blog-detail" class="screen" style="display:none;"></section>
+            <section id="screen-privacy" class="screen" style="display:none;"></section>
+            <section id="screen-terms" class="screen" style="display:none;"></section>
         </main>
 
         <!-- ===== BOTTOM NAVIGATION ===== -->

@@ -81,7 +81,7 @@ function navigateTo(screenId, params = {}, options = {}) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
 
     // Auth Guard: Lock screen to login/signup unless authenticated
-    if (!state.user && screenId !== 'blog' && screenId !== 'blog-detail' && screenId !== 'about' && screenId !== 'help' && screenId !== 'report-issue') {
+    if (!state.user && screenId !== 'blog' && screenId !== 'blog-detail' && screenId !== 'about' && screenId !== 'help' && screenId !== 'report-issue' && screenId !== 'privacy' && screenId !== 'terms') {
         if (typeof showMandatoryAuthLockScreen === 'function') {
             showMandatoryAuthLockScreen('login');
         }
@@ -201,6 +201,8 @@ function navigateTo(screenId, params = {}, options = {}) {
     else if (screenId === 'help') pageName = 'help.php';
     else if (screenId === 'blog') pageName = 'blog.php';
     else if (screenId === 'blog-detail') pageName = `blog.php${state.selectedBlogId ? '?id=' + state.selectedBlogId : ''}`;
+    else if (screenId === 'privacy') pageName = 'privacy.php';
+    else if (screenId === 'terms') pageName = 'terms.php';
 
     const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'file:' || window.location.protocol === 'capacitor:';
     const isSPA = !!document.getElementById('screen-home');
@@ -341,6 +343,12 @@ function navigateTo(screenId, params = {}, options = {}) {
             case 'blog-detail':
                 if (typeof initBlogDetailScreen === 'function') initBlogDetailScreen(params);
                 break;
+            case 'privacy':
+                initPrivacyScreen();
+                break;
+            case 'terms':
+                initTermsScreen();
+                break;
         }
     } catch (renderErr) {
         console.error(`Error rendering screen "${screenId}":`, renderErr);
@@ -348,33 +356,19 @@ function navigateTo(screenId, params = {}, options = {}) {
 
     // Update browser history AFTER screen transition succeeds
     const currentUrl = window.location.pathname.split('/').pop() + window.location.search;
-    if (!fromPopState && currentUrl !== pageName) {
+    const targetHistoryUrl = isNative ? (screenId === 'home' ? 'index.html' : `#${screenId}`) : pageName;
+    if (!fromPopState && currentUrl !== targetHistoryUrl) {
         if (replace) {
-            window.history.replaceState({ screenId, params }, '', pageName);
+            window.history.replaceState({ screenId, params }, '', targetHistoryUrl);
         } else {
-            window.history.pushState({ screenId, params }, '', pageName);
+            window.history.pushState({ screenId, params }, '', targetHistoryUrl);
         }
     }
 
-    // Clear any active sponsored timeouts to prevent overlapping triggers
+    // Clear any active sponsored timeouts
     if (window.generalSponsoredTimeout) {
         clearTimeout(window.generalSponsoredTimeout);
         window.generalSponsoredTimeout = null;
-    }
-
-    // Trigger popups based on target screen
-    if (screenId === 'home' || screenId === 'search') {
-        window.generalSponsoredTimeout = setTimeout(() => {
-            if (typeof checkAndShowGeneralSponsoredPopup === 'function') {
-                checkAndShowGeneralSponsoredPopup();
-            }
-        }, 5000);
-    } else if (screenId === 'vendor-dash' || screenId === 'vendor-ads') {
-        setTimeout(() => {
-            if (typeof checkAndShowVendorPromotionPopup === 'function') {
-                checkAndShowVendorPromotionPopup();
-            }
-        }, 1000);
     }
 
     // Scroll viewport to top
@@ -4548,17 +4542,11 @@ window.openAppExclusiveModal = function(featureTitle = "App Exclusive Feature", 
 };
 
 function openReferAndEarnModal() {
-    openModal(`
-        <div style="text-align:center; padding:28px 20px;">
-            <div style="width:64px; height:64px; background:rgba(242, 167, 83, 0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem;">
-                <i class="fa-solid fa-gift"></i>
-            </div>
-            <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">Refer & Earn</h3>
-            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
-            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
-        </div>
-    `);
+    if (typeof showComingSoonReferral === 'function') {
+        showComingSoonReferral('Refer & Earn', 'fa-gift');
+    }
 }
+window.openReferAndEarnModal = openReferAndEarnModal;
 
 function copyReferralLink(link) {
     showPushNotification('Refer & Earn', 'Refer & Earn rewards coming soon!');
@@ -4569,16 +4557,9 @@ function shareReferralLinkNative(link) {
 }
 
 window.openDiscountsAndOffersModal = function() {
-    openModal(`
-        <div style="text-align:center; padding:28px 20px;">
-            <div style="width:64px; height:64px; background:rgba(242, 167, 83, 0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem;">
-                <i class="fa-solid fa-tags"></i>
-            </div>
-            <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">Discounts & Offers</h3>
-            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
-            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
-        </div>
-    `);
+    if (typeof showComingSoonReferral === 'function') {
+        showComingSoonReferral('Discounts & Offers', 'fa-tags');
+    }
 };
 window.openDiscountOffersModal = window.openDiscountsAndOffersModal;
 window.openDiscountRequestModal = window.openDiscountsAndOffersModal;
@@ -8102,6 +8083,68 @@ function initAboutScreen() {
                         <i class="fa-brands fa-whatsapp" style="color:#25D366;"></i> C Eye Q Digital
                     </a>
                 </div>
+            </div>
+        </div>
+    `;
+}
+
+function initPrivacyScreen() {
+    const screen = document.getElementById('screen-privacy');
+    if (!screen) return;
+    screen.innerHTML = `
+        <div style="max-width:800px; margin:0 auto; padding: 24px 16px 60px;">
+            <div class="card p-24 mb-24" style="border-radius:20px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                    <img src="img/app_icon.png" alt="Ohati Logo" style="width:40px; height:40px; border-radius:10px;">
+                    <h1 style="font-family:'Fraunces',serif; font-size:1.8rem; color:var(--primary); margin:0;">Privacy Policy</h1>
+                </div>
+                <p style="font-size:0.85rem; color:var(--gray-600); margin-bottom:16px;">Last Updated: July 29, 2026</p>
+                <p style="font-size:0.9rem; color:var(--gray-800); line-height:1.6; margin-bottom:16px;">
+                    Welcome to <strong>Ohati</strong>. We are committed to protecting your personal information and your right to privacy.
+                </p>
+                <h3 style="font-size:1.1rem; color:var(--primary); margin:20px 0 8px;">1. Information We Collect</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6;">
+                    We collect personal information such as full name, email address, phone number, and booking details necessary to connect event planners with verified vendors.
+                </p>
+                <h3 style="font-size:1.1rem; color:var(--primary); margin:20px 0 8px;">2. How We Use Your Data</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6;">
+                    Your information is used solely to facilitate vendor discovery, booking management, communication, and security verification on the Ohati platform.
+                </p>
+                <h3 style="font-size:1.1rem; color:var(--primary); margin:20px 0 8px;">3. Data Safety & Security</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6;">
+                    We implement industry-standard encryption and security protocols to safeguard user data across Web, iOS, and Android applications.
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+function initTermsScreen() {
+    const screen = document.getElementById('screen-terms');
+    if (!screen) return;
+    screen.innerHTML = `
+        <div style="max-width:800px; margin:0 auto; padding: 24px 16px 60px;">
+            <div class="card p-24 mb-24" style="border-radius:20px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                    <img src="img/app_icon.png" alt="Ohati Logo" style="width:40px; height:40px; border-radius:10px;">
+                    <h1 style="font-family:'Fraunces',serif; font-size:1.8rem; color:var(--primary); margin:0;">Terms of Service</h1>
+                </div>
+                <p style="font-size:0.85rem; color:var(--gray-600); margin-bottom:16px;">Effective Date: July 29, 2026</p>
+                <p style="font-size:0.9rem; color:var(--gray-800); line-height:1.6; margin-bottom:16px;">
+                    By accessing or using Ohati Ghana via web or mobile application, you agree to comply with and be bound by these Terms of Service.
+                </p>
+                <h3 style="font-size:1.1rem; color:var(--primary); margin:20px 0 8px;">1. User & Vendor Accounts</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6;">
+                    Users must provide accurate registration details. Event professionals must complete KYC verification before offering paid services on Ohati.
+                </p>
+                <h3 style="font-size:1.1rem; color:var(--primary); margin:20px 0 8px;">2. Bookings & Services</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6;">
+                    Bookings agreed upon between clients and vendors through Ohati are subject to platform confirmation terms and community standards.
+                </p>
+                <h3 style="font-size:1.1rem; color:var(--primary); margin:20px 0 8px;">3. Community Standards & Zero Tolerance</h3>
+                <p style="font-size:0.88rem; color:var(--gray-700); line-height:1.6;">
+                    Ohati strictly prohibits offensive, abusive, or fraudulent content. Users can block abusive users and report inappropriate listings directly within the app.
+                </p>
             </div>
         </div>
     `;

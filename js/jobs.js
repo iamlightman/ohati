@@ -618,13 +618,10 @@ const JobsModule = {
                 const notifs = res.notifications || [];
                 if (notifs.length > 0) {
                     const latest = notifs[0];
-                    if (latest.is_read == 0 && this.lastNotifId !== latest.id) {
+                    const seenKey = 'ohati_seen_notif_' + latest.id;
+                    if (latest.is_read == 0 && !localStorage.getItem(seenKey)) {
+                        localStorage.setItem(seenKey, '1');
                         this.lastNotifId = latest.id;
-                        if (typeof showPushNotification === 'function') {
-                            showPushNotification(latest.title, latest.message);
-                        } else if (typeof showToast === 'function') {
-                            showToast(`${latest.title}: ${latest.message}`, 'info');
-                        }
                     }
                 }
             }

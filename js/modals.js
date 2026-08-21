@@ -473,13 +473,20 @@ function openModal(contentHTML) {
     const content = document.getElementById('modal-content');
     if (!overlay || !content) return;
     content.innerHTML = contentHTML;
+    overlay.style.visibility = 'visible';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.display = 'flex';
     overlay.classList.add('open');
     document.body.classList.add('modal-open');
 }
 
 function closeModal() {
     const overlay = document.getElementById('modal-overlay');
-    if (overlay) overlay.classList.remove('open');
+    if (overlay) {
+        overlay.classList.remove('open');
+        overlay.style.visibility = 'hidden';
+        overlay.style.pointerEvents = 'none';
+    }
 
     // Check if any other modal is open before unlocking body scroll
     const hasOtherModals = document.querySelector('.blog-modal-backdrop:not([style*="none"]), .ohati-confirm-modal-overlay, .welcome-popup-overlay.open');
@@ -866,21 +873,24 @@ function checkAndShowGeneralSponsoredPopup() {
     });
 }
 
-function showComingSoonReferral(title = 'Refer & Earn') {
+function showComingSoonReferral(title = 'Refer & Earn', icon = 'fa-gift') {
     openModal(`
-        <div style="text-align:center; padding:28px 20px;">
-            <div style="width:64px; height:64px; background:rgba(242, 167, 83, 0.12); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem;">
-                <i class="fa-solid fa-gift"></i>
+        <div style="text-align:center; padding:32px 20px 24px;">
+            <div style="width:72px; height:72px; background:rgba(242, 167, 53, 0.15); color:var(--accent, #F2A735); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2rem; border:2px solid rgba(242,167,53,0.3); box-shadow:0 8px 24px rgba(242,167,53,0.2);">
+                <i class="fa-solid ${icon}"></i>
             </div>
-            <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:var(--primary); margin-bottom:6px;">${title}</h3>
-            <p style="font-size:1.05rem; color:var(--gray-600); font-weight:700; margin-bottom:24px;">Coming Soon</p>
-            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:44px; font-weight:700;">Close</button>
+            <span class="badge badge-warning" style="font-size:0.7rem; padding:4px 12px; font-weight:800; background:#F59E0B; color:#fff; border-radius:12px; display:inline-block; margin-bottom:10px; letter-spacing:0.5px;">COMING SOON</span>
+            <h3 style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:800; color:var(--gray-900, #0F172A); margin:0 0 6px 0;">${title}</h3>
+            <p style="font-size:0.92rem; color:var(--gray-600, #475569); line-height:1.5; margin:0 0 24px 0; max-width:320px; margin-left:auto; margin-right:auto;">
+                We're building something special! This feature will be available shortly in the upcoming app update.
+            </p>
+            <button class="btn btn-primary btn-full" onclick="closeModal()" style="height:46px; font-weight:800; border-radius:14px; font-size:0.95rem;">Got It</button>
         </div>
     `);
 }
 window.showComingSoonReferral = showComingSoonReferral;
-window.openReferAndEarnModal = function() { showComingSoonReferral('Refer & Earn'); };
-window.openDiscountsAndOffersModal = function() { showComingSoonReferral('Discounts & Offers'); };
+window.openReferAndEarnModal = function() { showComingSoonReferral('Refer & Earn', 'fa-gift'); };
+window.openDiscountsAndOffersModal = function() { showComingSoonReferral('Discounts & Offers', 'fa-tags'); };
 
 function openAllPlatformReviewsModal() {
     const reviewsHtml = state.platformReviews.map(r => `

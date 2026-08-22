@@ -9,7 +9,7 @@ if (file_exists(__DIR__ . '/ohati_config.php')) {
 /**
  * Compress image to WebP format using PHP GD library
  */
-function compress_to_webp($source_file, $destination_webp, $quality = 78, $max_width = 1200, $max_height = 900) {
+function compress_to_webp($source_file, $destination_webp, $quality = 82, $max_width = 1920, $max_height = 1080) {
     if (!file_exists($source_file)) return false;
     if (!extension_loaded('gd') || !function_exists('imagecreatefrompng') || !function_exists('imagewebp')) return false;
 
@@ -85,7 +85,7 @@ function compress_to_webp($source_file, $destination_webp, $quality = 78, $max_w
  * @param int $max_width Maximum width constraint
  * @return array ['success' => bool, 'url' => string, 'error' => string]
  */
-function upload_media_file($file_input, $folder = 'general', $max_width = 1200) {
+function upload_media_file($file_input, $folder = 'general', $max_width = 1920) {
     $upload_base_dir = __DIR__ . '/uploads/' . trim($folder, '/') . '/';
     if (!file_exists($upload_base_dir)) {
         @mkdir($upload_base_dir, 0777, true);
@@ -198,5 +198,25 @@ function upload_to_cloudinary($file_path, $cloudinary_url, $folder = 'ohati') {
     curl_close($ch);
 
     return json_decode($response, true);
+}
+
+/**
+ * Helper to convert relative media URL into absolute HTTPS URL for cross-platform WebViews (iOS / Android)
+ */
+function format_full_image_url($url) {
+    if (empty($url)) return '';
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0 || strpos($url, 'data:') === 0) {
+        return $url;
+    }
+    
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    
+    if (empty($host)) {
+        return $url;
+    }
+    
+    $clean_path = ltrim($url, '/');
+    return "$scheme://$host/$clean_path";
 }
 ?>

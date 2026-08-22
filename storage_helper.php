@@ -199,4 +199,24 @@ function upload_to_cloudinary($file_path, $cloudinary_url, $folder = 'ohati') {
 
     return json_decode($response, true);
 }
+
+/**
+ * Helper to convert relative media URL into absolute HTTPS URL for cross-platform WebViews (iOS / Android)
+ */
+function format_full_image_url($url) {
+    if (empty($url)) return '';
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0 || strpos($url, 'data:') === 0) {
+        return $url;
+    }
+    
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    
+    if (empty($host)) {
+        return $url;
+    }
+    
+    $clean_path = ltrim($url, '/');
+    return "$scheme://$host/$clean_path";
+}
 ?>

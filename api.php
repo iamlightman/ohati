@@ -568,10 +568,14 @@ case 'update_profile':
     $ref_stmt = $pdo->prepare("SELECT id, name, email, phone, username, role, active_role, avatar, gender, dob, country, state, city, language, currency, created_at FROM users WHERE id = ?");
     $ref_stmt->execute([$user_id]);
     $updated_user = $ref_stmt->fetch();
+    if ($updated_user && !empty($updated_user['avatar'])) {
+        $updated_user['avatar'] = format_full_image_url($updated_user['avatar']);
+    }
     
     $_SESSION['user'] = $updated_user;
 
-    $cache_busted_avatar = !empty($avatar_path) ? $avatar_path . '?v=' . time() : '';
+    $full_avatar = format_full_image_url($avatar_path);
+    $cache_busted_avatar = !empty($full_avatar) ? $full_avatar . '?v=' . time() : '';
 
     echo json_encode([
         'success' => true,

@@ -1,6 +1,59 @@
 window.DEFAULT_USER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
 window.DEFAULT_BUSINESS_COVER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><rect width='600' height='400' fill='%23081729'/><g fill='none' stroke='%23F2A735' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'><path d='M220 320 V120 L380 120 V320 Z'/><path d='M250 160 H270 M330 160 H350 M250 200 H270 M330 200 H350 M250 240 H270 M330 240 H350'/><path d='M285 320 V280 H315 V320'/><path d='M140 320 V200 L220 160'/><path d='M380 160 L460 200 V320'/><path d='M100 320 H500'/></g></svg>";
 
+/**
+ * Universal Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
+ * Converts relative paths (uploads/avatars/...) into absolute HTTPS domain URLs.
+ */
+window.resolveImageUrl = function(url, defaultFallback = null) {
+    const fallback = defaultFallback || window.DEFAULT_USER_AVATAR;
+    if (!url || typeof url !== 'string' || !url.trim()) return fallback;
+    
+    const trimmed = url.trim();
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    
+    let domainPrefix = '';
+    if (typeof window.getOhatiApiBaseUrl === 'function') {
+        const apiBase = window.getOhatiApiBaseUrl();
+        if (apiBase && apiBase.includes('://')) {
+            domainPrefix = apiBase.split('/api.php')[0];
+        }
+    }
+    
+    if (!domainPrefix && typeof window.location !== 'undefined' && window.location.origin && window.location.origin !== 'null' && !window.location.origin.includes('capacitor://') && !window.location.origin.includes('file://')) {
+        domainPrefix = window.location.origin;
+    }
+    
+    if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://') || domainPrefix.includes('localhost')) {
+        domainPrefix = 'https://ohati.com';
+    }
+
+    const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    return `${domainPrefix}/${cleanPath}`;
+};
+
+/**
+ * Normalizes persisted localStorage user session avatar URLs for iOS compatibility
+ */
+window.normalizeUserSession = function() {
+    try {
+        const raw = localStorage.getItem('ohati_user_session');
+        if (!raw) return;
+        const u = JSON.parse(raw);
+        if (u && u.avatar) {
+            const resolved = window.resolveImageUrl(u.avatar);
+            if (resolved !== u.avatar) {
+                u.avatar = resolved;
+                localStorage.setItem('ohati_user_session', JSON.stringify(u));
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.avatar = resolved;
+            }
+        }
+    } catch (e) {}
+};
+
 /** Format number to compact form (1.2K, 3.4M) */
 function formatCompact(n) {
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';

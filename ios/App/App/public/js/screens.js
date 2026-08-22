@@ -4448,7 +4448,7 @@ function initProfileScreen() {
 
         screen.innerHTML = `
             <div class="profile-header">
-                <img class="profile-avatar" src="${u.avatar || window.DEFAULT_USER_AVATAR}" alt="">
+                <img class="profile-avatar" src="${window.resolveImageUrl(u.avatar)}" alt="">
                 <div class="profile-name">${u.name || 'User Profile'}</div>
                 <div class="profile-email">${u.email || u.phone || 'Ohati Planner'}</div>
                 <button class="btn btn-outline btn-xs mb-8" onclick="navigateTo('profile-edit')" style="margin-top:10px; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.4); border-radius:20px; padding:6px 16px; font-weight:700; font-size:0.75rem; cursor:pointer;">
@@ -6655,7 +6655,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
             <!-- Profile Photo Upload -->
             <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
                 <div style="position:relative;">
-                    <img id="profile-edit-avatar-preview" src="${u.avatar || window.DEFAULT_USER_AVATAR}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
+                    <img id="profile-edit-avatar-preview" src="${window.resolveImageUrl(u.avatar)}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
                     <label style="position:absolute; bottom:0; right:0; background:var(--primary); color:white; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
                         <i class="fa-solid fa-camera"></i>
                         <input type="file" accept="image/*" onchange="handleProfilePhotoSelect(event)" style="display:none;">
@@ -7387,6 +7387,7 @@ function saveProfileChanges() {
             return API.getSession().catch(() => null);
         })
         .then(res => {
+            state.tempAvatarUrl = null;
             if (res && res.user) {
                 state.user = res.user;
                 if (res.vendor) state.vendor = res.vendor;
@@ -7395,6 +7396,7 @@ function saveProfileChanges() {
                 } catch (e) {}
             }
             showPushNotification('Profile Updated 🎉', 'Your profile details have been saved successfully.');
+            if (typeof updateAppHeader === 'function') updateAppHeader();
             if (typeof updateSidebarUI === 'function') updateSidebarUI();
             if (typeof navigateTo === 'function') navigateTo('profile');
         })

@@ -151,7 +151,7 @@ function updateSidebarUI() {
     if (state.user) {
         if (nameEl) nameEl.textContent = state.user.name;
         if (emailEl) emailEl.textContent = state.user.email || state.user.phone || 'Ohati Member';
-        if (avatarEl && state.user.avatar) avatarEl.src = state.user.avatar;
+        if (avatarEl) avatarEl.src = window.resolveImageUrl(state.user.avatar);
         if (authText) authText.textContent = 'Sign Out';
         if (authLink) {
             authLink.onclick = () => { handleLogout(); toggleSidebar(false); };

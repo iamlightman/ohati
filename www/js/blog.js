@@ -136,7 +136,7 @@ function renderBlogFeedSections() {
                     <p class="blog-hero-excerpt">${escapeHtml(heroPost.subheadline || '')}</p>
                     <div class="blog-hero-footer">
                         <div class="blog-author-info">
-                            <img src="${heroPost.author_avatar || window.DEFAULT_USER_AVATAR}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                            <img src="${window.resolveImageUrl(heroPost.author_avatar)}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
                             <span>${escapeHtml(heroPost.author_name || 'Ohati Editorial')}</span>
                         </div>
                         <div class="blog-stats-group">

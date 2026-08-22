@@ -1,6 +1,8 @@
 // js/app.js — Ohati Main Application Bootstrapper
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.normalizeUserSession === 'function') window.normalizeUserSession();
+
     // 0. Initialize theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const body = document.body;
@@ -480,9 +482,9 @@ function updateAppHeader() {
     const avatar = document.getElementById('header-avatar');
     if (avatar) {
         if (state.user && state.user.avatar) {
-            avatar.src = state.user.avatar;
+            avatar.src = window.resolveImageUrl(state.user.avatar);
         } else {
-            avatar.src = window.DEFAULT_USER_AVATAR || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+            avatar.src = window.resolveImageUrl(null);
         }
     }
     if (typeof window.updateHeaderNavRoleVisibility === 'function') {

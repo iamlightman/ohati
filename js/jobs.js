@@ -487,7 +487,7 @@ const JobsModule = {
                                 <div style="background:#fff; border:1px solid var(--gray-200); border-radius:10px; padding:16px;">
                                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
                                         <div style="display:flex; gap:10px; align-items:center;">
-                                            <img src="${escapeHtml(p.vendor_avatar || 'img/default-avatar.png')}" style="width:42px; height:42px; border-radius:50%; object-fit:cover;">
+                                            <img src="${escapeHtml(window.resolveImageUrl(p.vendor_avatar))}" style="width:42px; height:42px; border-radius:50%; object-fit:cover;">
                                             <div>
                                                 <strong style="color:var(--primary); font-size:0.95rem;">${escapeHtml(p.vendor_name)}</strong>
                                                 <div style="font-size:0.75rem; color:var(--gray-500);">${p.rating ? `<i class="fa-solid fa-star" style="color:#F59E0B;"></i> ${p.rating} (${p.reviews_count || 0})` : 'New Vendor'} • ${escapeHtml(p.vendor_location || 'Ghana')}</div>

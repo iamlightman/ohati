@@ -762,6 +762,23 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
     created_at $NOW
 )");
 
+// ── ASYNCHRONOUS NOTIFICATION QUEUE ────────────────────────────────────────
+$pdo->exec("CREATE TABLE IF NOT EXISTS notification_queue (
+    id $AI,
+    recipient_email VARCHAR(200) DEFAULT '',
+    recipient_phone VARCHAR(50) DEFAULT '',
+    title VARCHAR(200) NOT NULL,
+    sms_message TEXT,
+    email_subject VARCHAR(255) DEFAULT '',
+    email_body TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    attempts INT DEFAULT 0,
+    max_attempts INT DEFAULT 3,
+    last_error TEXT,
+    processed_at VARCHAR(50) DEFAULT '',
+    created_at $NOW
+)");
+
 // ── OTP ───────────────────────────────────────────────────────────────────
 $pdo->exec("CREATE TABLE IF NOT EXISTS otp_codes (
     id $AI,

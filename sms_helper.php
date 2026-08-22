@@ -196,3 +196,28 @@ function send_dual_notification($target_phone, $target_email, $title, $sms_messa
         'email_sent' => $email_res
     ];
 }
+
+/**
+ * Asynchronous Notification Queue Helper (Zero Network Latency / Non-Blocking)
+ * Inserts a notification job into notification_queue table in ~1ms without making network HTTP/SMTP calls.
+ */
+function queue_dual_notification($target_phone, $target_email, $title, $sms_message, $email_subject = null, $email_body = null) {
+    global $pdo;
+    if (!$pdo && file_exists(__DIR__ . '/db.php')) {
+        require_once __DIR__ . '/db.php';
+    }
+    if (!$pdo) return false;
+
+    $phone = trim($target_phone ?: '');
+    $email = trim($target_email ?: '');
+    $clean_msg = clean_sms_text($sms_message ?: '');
+    $subj = $email_subject ?: "Ohati Update: $title";
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO notification_queue (recipient_phone, recipient_email, title, sms_message, email_subject, email_body, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())");
+        return $stmt->execute([$phone, $email, $title, $clean_msg, $subj, $email_body ?: '']);
+    } catch (Exception $e) {
+        error_log("[Ohati Queue Insert Error] " . $e->getMessage());
+        return false;
+    }
+}

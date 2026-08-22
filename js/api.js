@@ -222,6 +222,9 @@ const API = {
     getTrustedVendors() { return this.get('get_trusted_vendors'); },
     getPopularVendors() { return this.get('get_popular_vendors'); },
 
+    // ── Profile Updates ──
+    updateProfile(data) { return this.post('update_profile', data); },
+
     // ── Followers ──
     followVendor(vendorId) { return this.post('follow_vendor', { vendor_id: vendorId }); },
     getFollowingVendors() { return this.get('get_following_vendors'); },

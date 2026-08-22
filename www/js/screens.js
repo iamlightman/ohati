@@ -7387,6 +7387,7 @@ function saveProfileChanges() {
             return API.getSession().catch(() => null);
         })
         .then(res => {
+            state.tempAvatarUrl = null;
             if (res && res.user) {
                 state.user = res.user;
                 if (res.vendor) state.vendor = res.vendor;
@@ -7395,6 +7396,7 @@ function saveProfileChanges() {
                 } catch (e) {}
             }
             showPushNotification('Profile Updated 🎉', 'Your profile details have been saved successfully.');
+            if (typeof updateAppHeader === 'function') updateAppHeader();
             if (typeof updateSidebarUI === 'function') updateSidebarUI();
             if (typeof navigateTo === 'function') navigateTo('profile');
         })

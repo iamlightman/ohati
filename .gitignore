@@ -6,6 +6,7 @@ uploads/*
 !uploads/.htaccess
 *.zip
 *.jks
+!android/app/ohati-release-key.jks
 *.p8
 *.key
 *.cer

@@ -9,8 +9,17 @@ window.resolveImageUrl = function(url, defaultFallback = null) {
     const fallback = defaultFallback || window.DEFAULT_USER_AVATAR;
     if (!url || typeof url !== 'string' || !url.trim()) return fallback;
     
-    const trimmed = url.trim();
+    let trimmed = url.trim();
     if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+    
+    const isCapacitorNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
+    const isIOS = isCapacitorNative && (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') || navigator.userAgent.includes('iPod') || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios'));
+
+    // Upgrade http:// to https:// on iOS or in secure native contexts to prevent ATS/mixed-content blocks
+    if ((isIOS || window.location.protocol === 'https:') && trimmed.startsWith('http://')) {
+        trimmed = 'https://' + trimmed.substring(7);
+    }
+
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
     
     let domainPrefix = '';

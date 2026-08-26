@@ -498,92 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrf_exempt_act
 
 switch ($action) {
 
-case 'update_profile':
-    $user_id = $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? ($token_uid ?? 0);
-    if (!$user_id) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Authentication required to update profile.']);
-        exit;
-    }
-
-    $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
-    
-    // Fetch current user from DB
-    $u_stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $u_stmt->execute([$user_id]);
-    $current_user = $u_stmt->fetch();
-    if (!$current_user) {
-        http_response_code(404);
-        echo json_encode(['error' => 'User account not found.']);
-        exit;
-    }
-
-    $avatar_path = $current_user['avatar'] ?? '';
-    
-    // Handle Profile Photo Upload / Base64 Data String
-    if (!empty($input['avatar']) && is_string($input['avatar'])) {
-        $raw_avatar = $input['avatar'];
-        if (strpos($raw_avatar, 'data:') === 0 || strpos($raw_avatar, 'base64,') !== false) {
-            if (strlen($raw_avatar) > 7 * 1024 * 1024) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Image size is too large. Maximum file size is 5MB.']);
-                exit;
-            }
-            if (file_exists(__DIR__ . '/storage_helper.php')) {
-                require_once __DIR__ . '/storage_helper.php';
-                $up_res = upload_media_file($raw_avatar, 'avatars', 800);
-                if (!empty($up_res['success']) && !empty($up_res['url'])) {
-                    $avatar_path = $up_res['url'];
-                }
-            }
-        } elseif (strpos($raw_avatar, 'http') === 0 || strpos($raw_avatar, 'uploads/') === 0) {
-            $avatar_path = clean($raw_avatar);
-        }
-    }
-
-    $name = isset($input['name']) && !empty(trim($input['name'])) ? clean($input['name']) : ($current_user['name'] ?? '');
-    $username = isset($input['username']) ? clean($input['username']) : ($current_user['username'] ?? '');
-    $gender = isset($input['gender']) ? clean($input['gender']) : ($current_user['gender'] ?? '');
-    $dob = isset($input['dob']) ? clean($input['dob']) : ($current_user['dob'] ?? '');
-    $country = isset($input['country']) ? clean($input['country']) : ($current_user['country'] ?? 'Ghana');
-    $state_loc = isset($input['state']) ? clean($input['state']) : ($current_user['state'] ?? '');
-    $city = isset($input['city']) ? clean($input['city']) : ($current_user['city'] ?? '');
-    $language = isset($input['language']) ? clean($input['language']) : ($current_user['language'] ?? 'English');
-    $currency = isset($input['currency']) ? clean($input['currency']) : ($current_user['currency'] ?? 'GHS');
-
-    $up_stmt = $pdo->prepare("UPDATE users SET avatar = ?, name = ?, username = ?, gender = ?, dob = ?, country = ?, state = ?, city = ?, language = ?, currency = ? WHERE id = ?");
-    $up_stmt->execute([$avatar_path, $name, $username, $gender, $dob, $country, $state_loc, $city, $language, $currency, $user_id]);
-
-    // If active role is vendor, sync vendors table logo
-    try {
-        $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-        $v_chk->execute([$user_id]);
-        $vendor_id = $v_chk->fetchColumn();
-        if ($vendor_id && !empty($avatar_path)) {
-            $pdo->prepare("UPDATE vendors SET logo = ? WHERE id = ?")->execute([$avatar_path, $vendor_id]);
-        }
-    } catch (Exception $e) {}
-
-    // Refetch updated user record
-    $ref_stmt = $pdo->prepare("SELECT id, name, email, phone, username, role, active_role, avatar, gender, dob, country, state, city, language, currency, created_at FROM users WHERE id = ?");
-    $ref_stmt->execute([$user_id]);
-    $updated_user = $ref_stmt->fetch();
-    if ($updated_user && !empty($updated_user['avatar'])) {
-        $updated_user['avatar'] = format_full_image_url($updated_user['avatar']);
-    }
-    
-    $_SESSION['user'] = $updated_user;
-
-    $full_avatar = format_full_image_url($avatar_path);
-    $cache_busted_avatar = !empty($full_avatar) ? $full_avatar . '?v=' . time() : '';
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Profile updated successfully!',
-        'user' => $updated_user,
-        'avatar_url' => $cache_busted_avatar
-    ]);
-    exit;
+case 'register':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     check_idempotency_lock('register', 3);
     if (!rate_limit('register', 5, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many registration attempts. Please wait 5 minutes before trying again.']); exit; }
@@ -745,7 +660,7 @@ case 'me':
                 'language' => $u_row['language'] ?? 'English',
                 'currency' => $u_row['currency'] ?? 'GHS',
                 'role' => $u_row['role'] ?? 'customer',
-                'avatar' => $u_row['avatar'] ?? '',
+                'avatar' => !empty($u_row['avatar']) ? format_full_image_url($u_row['avatar']) : '',
                 'kyc_status' => $u_row['kyc_status'] ?? 'not_started',
                 'active_role' => !empty($u_row['active_role']) ? $u_row['active_role'] : ($u_row['role'] === 'vendor' ? 'vendor' : 'customer')
             ];

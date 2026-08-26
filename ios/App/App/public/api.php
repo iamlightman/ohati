@@ -661,7 +661,7 @@ case 'me':
                 'language' => $u_row['language'] ?? 'English',
                 'currency' => $u_row['currency'] ?? 'GHS',
                 'role' => $u_row['role'] ?? 'customer',
-                'avatar' => $u_row['avatar'] ?? '',
+                'avatar' => !empty($u_row['avatar']) ? format_full_image_url($u_row['avatar']) : '',
                 'kyc_status' => $u_row['kyc_status'] ?? 'not_started',
                 'active_role' => !empty($u_row['active_role']) ? $u_row['active_role'] : ($u_row['role'] === 'vendor' ? 'vendor' : 'customer')
             ];

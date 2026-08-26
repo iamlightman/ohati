@@ -97,6 +97,7 @@ function upload_media_file($file_input, $folder = 'general', $max_width = 1920) 
     $is_base64 = false;
 
     // Handle Base64 Data String (images, PDFs, documents)
+
     if (is_string($file_input) && (strpos($file_input, 'data:') === 0 || strpos($file_input, 'base64,') !== false)) {
         $is_base64 = true;
         $base64_str = preg_replace('#^data:[^;]+;base64,#i', '', $file_input);
@@ -198,5 +199,32 @@ function upload_to_cloudinary($file_path, $cloudinary_url, $folder = 'ohati') {
     curl_close($ch);
 
     return json_decode($response, true);
+}
+
+/**
+ * Helper to convert relative media URL into absolute HTTPS URL for cross-platform WebViews (iOS / Android)
+ */
+function format_full_image_url($url) {
+    if (empty($url)) return '';
+    if (strpos($url, 'data:') === 0 || strpos($url, 'blob:') === 0) {
+        return $url;
+    }
+    
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        if ($scheme === 'https' && strpos($url, 'http://') === 0) {
+            return 'https://' . substr($url, 7);
+        }
+        return $url;
+    }
+    
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    if (empty($host)) {
+        return $url;
+    }
+    
+    $clean_path = ltrim($url, '/');
+    return "$scheme://$host/$clean_path";
 }
 ?>

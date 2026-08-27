@@ -8078,7 +8078,7 @@ function initAboutScreen() {
                     <a href="mailto:support@ohati.com" class="btn btn-outline btn-sm"><i class="fa-solid fa-envelope"></i> Contact Support</a>
                     <button class="btn btn-primary btn-sm" onclick="navigateTo('help')"><i class="fa-solid fa-circle-question"></i> Help Center</button>
                 </div>
-                <div style="font-size:0.7rem; color:var(--gray-400); margin-top:16px;">Ohati Platform Version 1.0.22.1 — All rights reserved.</div>
+                <div style="font-size:0.7rem; color:var(--gray-400); margin-top:16px;">Ohati Platform Version 1.0.22.2 — All rights reserved.</div>
                 <div style="font-size:0.78rem; color:var(--gray-500); margin-top:12px; padding-top:12px; border-top:1px dashed var(--gray-200); display:flex; align-items:center; justify-content:center; gap:6px;">
                     <span>App developed by</span>
                     <a href="https://wa.me/2348136731796" target="_blank" rel="noopener" style="color:var(--accent); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">

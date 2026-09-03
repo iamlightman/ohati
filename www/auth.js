@@ -203,7 +203,7 @@ function renderAuthModal() {
                 <div class="form-group">
                     <div class="flex-between">
                         <label class="form-label">Password</label>
-                        <a href="#" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="state.authMode='forgot'; renderAuthModal(); event.preventDefault();">Forgot?</a>
+                        <a href="forgot-password.php" target="_blank" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="window.open('forgot-password.php', '_blank'); return false;">Forgot?</a>
                     </div>
                     <div class="input-group">
                         <input type="password" class="form-input" id="login-pass" placeholder="Your password">
@@ -1723,7 +1723,7 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin:0;">Password</label>
-                                <a href="#" onclick="renderMandatoryAuthContent('forgot'); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
+                                <a href="forgot-password.php" target="_blank" onclick="window.open('forgot-password.php', '_blank'); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
                             </div>
                             <div style="position:relative;">
                                 <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px 40px 13px 13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">

@@ -1,6 +1,6 @@
 // components.js - Ohati App Frontend Controller & Components
 
-const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "profile icon.jpg";
+const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "profile-icon.jpg";
 
 // 1. Application State
 const state = {

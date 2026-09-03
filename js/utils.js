@@ -1,5 +1,5 @@
-window.DEFAULT_USER_AVATAR = "profile icon.jpg";
-window.DEFAULT_BUSINESS_COVER = "profile icon.jpg";
+window.DEFAULT_USER_AVATAR = "profile-icon.jpg";
+window.DEFAULT_BUSINESS_COVER = "profile-icon.jpg";
 
 /**
  * Universal Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
@@ -20,7 +20,7 @@ window.resolveImageUrl = function(url, defaultFallback = null) {
         trimmed = 'https://' + trimmed.substring(7);
     }
 
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return encodeURI(trimmed);
     
     let domainPrefix = '';
     if (typeof window.getOhatiApiBaseUrl === 'function') {
@@ -41,7 +41,7 @@ window.resolveImageUrl = function(url, defaultFallback = null) {
     }
 
     const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
-    return `${domainPrefix}/${cleanPath}`;
+    return encodeURI(`${domainPrefix}/${cleanPath}`);
 };
 
 /**

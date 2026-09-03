@@ -1198,7 +1198,6 @@ function initDetailScreen() {
                     ${v.verification_badge === 'gold' ? `<span class="badge badge-verified"><i class="fa-solid fa-circle-check"></i> Gold Verified</span>` : ''}
                     ${v.verification_badge === 'blue' ? `<span class="badge badge-verified"><i class="fa-solid fa-circle-check"></i> ID Verified</span>` : ''}
                     ${v.premium ? `<span class="badge badge-premium"><i class="fa-solid fa-crown"></i> Premium Vendor</span>` : ''}
-                    ${v.has_insurance ? `<span class="badge badge-insurance"><i class="fa-solid fa-shield-halved"></i> Insured</span>` : ''}
                     <span class="badge badge-top"><i class="fa-solid fa-briefcase"></i> ${v.experience} Years</span>
                 </div>
 
@@ -7350,12 +7349,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:12px;">
-                            <input type="checkbox" id="edit-vendor-insurance" ${parseInt(v.has_insurance) === 1 ? 'checked' : ''}>
-                            <span style="font-size:0.83rem; font-weight:600; color:var(--gray-800);">We carry Professional Liability Insurance</span>
-                        </label>
-                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Bio / About Business</label>
                         <textarea class="form-textarea" id="edit-bio" style="min-height:100px;">${v.description || ''}</textarea>

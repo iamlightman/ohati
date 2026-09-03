@@ -41,10 +41,16 @@ const API = {
         for (const [k, v] of Object.entries(params)) {
             if (v !== '' && v !== null && v !== undefined) url += `&${k}=${encodeURIComponent(v)}`;
         }
-        const res = await fetch(url, { 
-            credentials: 'include',
-            headers: this.getAuthHeaders()
-        });
+        const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
+        let res;
+        try {
+            res = await fetch(url, { 
+                credentials: isNative ? 'same-origin' : 'include',
+                headers: this.getAuthHeaders()
+            });
+        } catch (netErr) {
+            throw new Error('Network connection failed. Please check your internet connection.');
+        }
         let json;
         try {
             json = await res.json();
@@ -52,7 +58,7 @@ const API = {
             if (!res.ok) {
                 throw new Error(`Request failed with status ${res.status}`);
             }
-            throw new Error('Invalid JSON response from server');
+            throw new Error('Invalid response from server');
         }
         if (!res.ok) {
             if (res.status === 401 && !['login', 'register', 'send_otp', 'verify_otp', 'session'].includes(action)) {
@@ -60,7 +66,7 @@ const API = {
                     window.handleLogout();
                 }
             }
-            throw new Error(json.error || 'Request failed');
+            throw new Error((json && json.error) ? json.error : 'Request failed');
         }
         return json;
     },
@@ -74,15 +80,21 @@ const API = {
         const promise = (async () => {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
             const csrfToken = (window.state && window.state.csrfToken) ? window.state.csrfToken : (csrfMeta ? csrfMeta.getAttribute('content') : '');
-            const res = await fetch(`${this.base}?action=${action}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: this.getAuthHeaders({ 
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                }),
-                body: JSON.stringify(data)
-            });
+            const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
+            let res;
+            try {
+                res = await fetch(`${this.base}?action=${action}`, {
+                    method: 'POST',
+                    credentials: isNative ? 'same-origin' : 'include',
+                    headers: this.getAuthHeaders({ 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }),
+                    body: JSON.stringify(data)
+                });
+            } catch (netErr) {
+                throw new Error('Network connection failed. Please check your internet connection.');
+            }
             let json;
             try {
                 json = await res.json();
@@ -90,7 +102,7 @@ const API = {
                 if (!res.ok) {
                     throw new Error(`Request failed with status ${res.status}`);
                 }
-                throw new Error('Invalid JSON response from server');
+                throw new Error('Invalid response from server');
             }
             if (json && json.csrf && window.state) {
                 window.state.csrfToken = json.csrf;

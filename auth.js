@@ -222,38 +222,61 @@ function renderAuthModal() {
         case 'forgot':
             html = `
                 <div class="auth-modal-header">
-                    <h2 class="auth-modal-title">Forgot Password</h2>
-                    <p class="auth-modal-subtitle">Enter your email or phone to reset</p>
+                    <h2 class="auth-modal-title">Reset Your Password</h2>
+                    <p class="auth-modal-subtitle">Enter your registered email address to receive a reset link</p>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Email or Phone Number</label>
-                    <input type="text" class="form-input" id="forgot-target" placeholder="email@example.com or phone number">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" id="forgot-target" placeholder="name@example.com">
                 </div>
                 <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
-                <button class="btn btn-primary btn-full" onclick="submitForgot()">Send Reset Code</button>
+                <button class="btn btn-primary btn-full" onclick="submitForgot()">Send Reset Link</button>
                 <button class="btn btn-ghost btn-full mt-8" onclick="state.authMode='login'; renderAuthModal();">Back to Login</button>
             `;
             break;
 
+        case 'forgot-sent':
+            const sentEmail = state.authData?.resetTarget || document.getElementById('forgot-target')?.value || '';
+            html = `
+                <div class="auth-modal-header" style="text-align: center;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; background: #D1FAE5; color: #10B981; display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 12px;">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </div>
+                    <h2 class="auth-modal-title" style="color: var(--primary);">Reset Link Sent</h2>
+                    <p class="auth-modal-subtitle" style="font-size: 0.88rem; color: var(--gray-600); line-height: 1.5; margin-top: 8px;">
+                        If an account exists with ${sentEmail ? `<strong>${escapeHtml(sentEmail)}</strong>` : 'this email address'}, we've sent a password reset link to your email.
+                    </p>
+                </div>
+
+                <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 14px 16px; margin: 16px 0; font-size: 0.82rem; color: #4B5563; line-height: 1.5; text-align: left;">
+                    <div style="font-weight: 700; color: #1F2937; margin-bottom: 4px;"><i class="fa-solid fa-shield-halved" style="color: var(--accent); margin-right: 6px;"></i> Security Instructions:</div>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Check your inbox and click the <strong>Reset Password</strong> button.</li>
+                        <li>The link will expire in <strong>24 hours</strong> and can only be used once.</li>
+                        <li>If you don't see the email, please check your spam or junk folder.</li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-primary btn-full" onclick="state.authMode='login'; renderAuthModal();"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i> Return to Login</button>
+            `;
+            break;
+
         case 'reset':
-            const resetFallback = state.demoResetCode || '';
             html = `
                 <div class="auth-modal-header">
                     <h2 class="auth-modal-title">Reset Password</h2>
                     <p class="auth-modal-subtitle">Choose a new password</p>
                 </div>
-                ${resetFallback ? `
-                    <div style="margin: -5px 0 15px 0; padding: 10px 14px; border-radius: 12px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.82rem; color: #0284c7; text-align: center;">
-                        <i class="fa-solid fa-code" style="margin-right:6px;"></i> [Local Development] Reset code auto-filled: <strong>${resetFallback}</strong>
-                    </div>
-                ` : `
-                    <div style="margin: -5px 0 15px 0; padding: 10px 14px; border-radius: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent); font-size: 0.82rem; color: var(--primary); text-align: center;">
-                        <i class="fa-solid fa-envelope-open-text" style="color:var(--accent); margin-right:6px;"></i> Check your email inbox or spam folder for your reset code.
-                    </div>
-                `}
+                <div style="margin: -5px 0 15px 0; padding: 10px 14px; border-radius: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent); font-size: 0.82rem; color: var(--primary); text-align: center;">
+                    <i class="fa-solid fa-envelope-open-text" style="color:var(--accent); margin-right:6px;"></i> Check your email inbox or SMS for your reset code.
+                </div>
                 <div class="form-group">
                     <label class="form-label">6-digit Reset Code</label>
-                    <input type="tel" class="form-input" id="reset-code" name="reset_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter 6-digit code received" value="${resetFallback}">
+                    <input type="tel" class="form-input" id="reset-code" name="reset_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter 6-digit code received" value="">
+                </div>
+                <div class="otp-timer mb-12" id="reset-timer-box" style="font-size:0.8rem; color:#6B7280; text-align:center;">Resend code in <span id="reset-countdown">60</span>s</div>
+                <div id="reset-resend-container" style="display:none; text-align:center; margin-bottom:12px;">
+                    <button type="button" class="btn btn-ghost btn-sm" id="reset-resend-btn" onclick="resendResetCode(event)" style="color:var(--primary); font-weight:700;">Resend Code</button>
                 </div>
                 <div class="form-group">
                     <label class="form-label">New Password</label>
@@ -283,6 +306,8 @@ function renderAuthModal() {
 
     if (mode === 'otp') {
         startOTPTimer();
+    } else if (mode === 'reset') {
+        startResetOTPTimer();
     }
 }
 
@@ -616,25 +641,24 @@ function submitForgot(event) {
     const err = document.getElementById('auth-error-msg');
     if (!target) {
         if (err) {
-            err.textContent = 'Please enter your email or phone.';
+            err.textContent = 'Please enter your email address.';
             err.style.display = 'block';
         }
         return;
     }
-    state.authData.resetTarget = target;
 
     const btn = event?.target || document.querySelector('button[onclick*="submitForgot"]');
-    ActionLock.execute(btn, 'Sending Reset Code...', async () => {
+    ActionLock.execute(btn, 'Sending Reset Link...', async () => {
         const res = await API.forgotPassword(target);
-        state.authData.email_sent = res.email_sent;
-        showPushNotification('Code Sent', 'Verification code dispatched to your email & SMS.');
-        state.authMode = 'reset';
+        state.authData.resetTarget = target;
+        state.authMode = 'forgot-sent';
         renderAuthModal();
-    })
-        .catch(e => {
-            err.textContent = e.message;
+    }).catch(e => {
+        if (err) {
+            err.textContent = e.message || 'Could not process password reset request.';
             err.style.display = 'block';
-        });
+        }
+    });
 }
 
 // Reset Password
@@ -664,20 +688,68 @@ function submitReset(event) {
     });
 }
 
+window.resendResetCode = function(event) {
+    const target = state.authData.resetTarget || '';
+    if (!target) {
+        showPushNotification('Error', 'Target email/phone missing. Please try again.');
+        return;
+    }
+    const btn = event?.target || document.getElementById('reset-resend-btn');
+    if (btn) btn.disabled = true;
+    API.forgotPassword(target)
+        .then(res => {
+            if (btn) btn.disabled = false;
+            showPushNotification('Code Resent', 'A new password reset code has been sent.');
+            startResetOTPTimer();
+        })
+        .catch(err => {
+            if (btn) btn.disabled = false;
+            showPushNotification('Resend Error', err.message || 'Could not resend reset code.');
+        });
+};
+
+function startResetOTPTimer() {
+    let secs = 60;
+    const cd = document.getElementById('reset-countdown');
+    const timerBox = document.getElementById('reset-timer-box');
+    const resendContainer = document.getElementById('reset-resend-container');
+    if (timerBox) timerBox.style.display = 'block';
+    if (resendContainer) resendContainer.style.display = 'none';
+    if (window._resetCountdownTimer) clearInterval(window._resetCountdownTimer);
+    window._resetCountdownTimer = setInterval(() => {
+        secs--;
+        if (cd) cd.textContent = secs;
+        if (secs <= 0) {
+            clearInterval(window._resetCountdownTimer);
+            if (timerBox) timerBox.style.display = 'none';
+            if (resendContainer) resendContainer.style.display = 'block';
+        }
+    }, 1000);
+}
+
 // Log Out
 function handleLogout() {
     console.log("Signing out user...");
     state.user = null;
     state.currentUser = null;
+    state.vendor = null;
     state.bookings = [];
+    state.userBookings = [];
     state.favorites = [];
+    state.notifications = [];
     state.unreadChats = 0;
+    state.unreadNotifications = 0;
+    state.activeChatPartner = null;
+    state.activeChatVendorId = null;
+    state.stats = null;
 
     // Clear all auth keys & stored user tokens
     localStorage.removeItem('ohati_auth_token');
     localStorage.removeItem('ohati_user_session');
     localStorage.removeItem('ohati_user');
-    localStorage.removeItem('ohati_user_session');
+    localStorage.removeItem('ohati_vendor');
+    localStorage.removeItem('ohati_notifications');
+    localStorage.removeItem('ohati_stats');
     sessionStorage.clear();
 
     const doLocalCleanup = () => {
@@ -887,7 +959,7 @@ function renderVendorOnboardingStep() {
                     <div style="width:54px; height:54px; border-radius:50%; background:rgba(242,167,53,0.12); color:var(--accent); display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; font-size:1.6rem;">
                         <i class="fa-solid fa-shield-halved"></i>
                     </div>
-                    <h3 style="font-family:'Fraunces',serif; font-size:1.15rem; margin-bottom:4px; color:var(--primary);">Identity Verification (Didit KYC)</h3>
+                    <h3 style="font-family:'Fraunces',serif; font-size:1.15rem; margin-bottom:4px; color:var(--primary);">Identity Verification</h3>
                     <p style="font-size:0.75rem; color:var(--gray-600); line-height:1.4; max-width:380px; margin:0 auto 14px auto;">
                         Verify your identity with your Ghana Card or National ID to get your blue verified badge and start accepting client bookings.
                     </p>
@@ -904,7 +976,7 @@ function renderVendorOnboardingStep() {
                         </div>
                     </div>
                     <ul style="font-size:0.72rem; color:#475569; padding-left:18px; margin:0 0 14px 0; line-height:1.5;">
-                        <li>Instant automated Ghana Card check via Didit</li>
+                        <li>Instant automated Ghana Card & Passport check</li>
                         <li>Unlocks verified blue badge on your live profile</li>
                         <li>Higher ranking & client trust on Ohati</li>
                     </ul>
@@ -1147,10 +1219,14 @@ window.startOnboardingDiditKyc = async function() {
         closeModal();
         const res = await API.initDiditKyc();
         if (res && res.url) {
+            if (typeof renderDiditKycScreen === 'function') {
+                renderDiditKycScreen({ url: res.url, session_id: res.session_id });
+            }
             if (typeof navigateTo === 'function') {
                 navigateTo('didit-kyc', { url: res.url, session_id: res.session_id });
-            } else if (typeof renderDiditKycScreen === 'function') {
-                renderDiditKycScreen({ url: res.url, session_id: res.session_id });
+            }
+            if (typeof openDiditVerificationUrl === 'function') {
+                openDiditVerificationUrl(res.url);
             }
         } else {
             throw new Error(res?.error || 'Could not retrieve verification portal URL.');
@@ -1160,7 +1236,7 @@ window.startOnboardingDiditKyc = async function() {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Verify Identity Now';
         }
-        showPushNotification('Initialization Error', err.message || 'Could not launch Didit verification.');
+        showPushNotification('Initialization Error', err.message || 'Could not launch verification process.');
     }
 };
 
@@ -1372,6 +1448,18 @@ window.triggerAccountDeletionFlow = function () {
 };
 
 window.showMandatoryAuthLockScreen = function (initialMode) {
+    if (window.state && window.state.user && window.state.user.id) {
+        if (typeof unlockMandatoryAuthScreen === 'function') unlockMandatoryAuthScreen();
+        if (initialMode === 'signup' || initialMode === 'vendor-details' || initialMode === 'vendor-register' || initialMode === 'become-vendor' || initialMode === 'account-type') {
+            if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+                if (typeof switchAccountType === 'function') switchAccountType('vendor');
+            } else {
+                if (typeof openBecomeVendorModal === 'function') openBecomeVendorModal();
+            }
+            return;
+        }
+    }
+
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -1531,20 +1619,44 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
                     </div>
                     <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Reset Your Password</h2>
-                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Enter your registered Email or Phone Number to receive a 6-digit reset code via SMS & Email.</p>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Enter your registered email address to receive a password reset link.</p>
 
                     <form onsubmit="handleMandatoryForgotPasswordSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email or Phone Number</label>
-                            <input type="text" id="m-lock-forgot-id" required placeholder="email@example.com or phone" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email Address</label>
+                            <input type="email" id="m-lock-forgot-id" required placeholder="name@example.com" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div id="m-lock-forgot-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
-                        <button type="submit" id="m-lock-forgot-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Reset Code</button>
+                        <button type="submit" id="m-lock-forgot-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Reset Link</button>
                     </form>
 
                     <div style="margin-top:24px; font-size:0.85rem; color:#94A3B8;">
                         Remembered your password? <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Log In</a>
                     </div>
+                </div>
+            `;
+        } else if (mode === 'forgot-sent') {
+            const target = window._forgotTarget || '';
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:64px; height:64px; border-radius:50%; background:rgba(16,185,129,0.15); border:2px solid #10B981; color:#10B981; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:1.6rem;">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:800; margin:0 0 8px 0; color:#FFF;">Reset Link Sent</h2>
+                    <p style="font-size:0.88rem; color:#94A3B8; margin:0 0 20px 0; line-height:1.5;">
+                        If an account exists with ${target ? `<strong style="color:#FFF;">${escapeHtml(target)}</strong>` : 'this email address'}, we've dispatched a password reset link to your email.
+                    </p>
+
+                    <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px 16px; text-align:left; font-size:0.8rem; color:#CBD5E1; margin-bottom:20px; line-height:1.5;">
+                        <div style="font-weight:700; color:var(--accent, #F2A735); margin-bottom:4px;"><i class="fa-solid fa-circle-info"></i> Security Details:</div>
+                        <ul style="margin:0; padding-left:18px;">
+                            <li>Open your email inbox and click the <strong>Reset Password</strong> button.</li>
+                            <li>The link expires in <strong>24 hours</strong> for your security.</li>
+                            <li>Check your spam/junk folder if the email is delayed.</li>
+                        </ul>
+                    </div>
+
+                    <button onclick="renderMandatoryAuthContent('login')" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem;">Return to Login</button>
                 </div>
             `;
         } else if (mode === 'reset-pass') {
@@ -1875,10 +1987,13 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
     API.post('verify_otp', {
         target: draft.email || draft.phone,
         code: otp
-    }).then(() => {
+    }).then(otpRes => {
+        if (otpRes && otpRes.user) {
+            return otpRes;
+        }
         return API.post('register', draft);
     }).then(res => {
-        if (res.user) {
+        if (res && res.user) {
             state.user = res.user;
             const token = res.auth_token || res.token;
             if (token) localStorage.setItem('ohati_auth_token', token);
@@ -1886,62 +2001,17 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
             if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
             else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
-
-            Promise.allSettled([
-                API.getCategories(),
-                API.getVendors(),
-                API.getVendors({ premium_only: 1 }),
-                API.get('get_advertisements'),
-                API.getPopularVendors(),
-                API.getBookings(),
-                API.getFavorites(),
-                API.getEvent(),
-                API.get('get_faqs')
-            ]).then(results => {
-                state.categories = results[0].status === 'fulfilled' ? results[0].value : [];
-                state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
-                state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
-                state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
-
-                window.location.reload();
-            });
+            window.location.reload();
         } else {
             unlockOTP();
-            throw new Error(res.error || 'Registration failed.');
+            throw new Error((res && res.error) ? res.error : 'Registration failed.');
         }
     }).catch(err => {
-        // If registration detected an existing account, log user into existing account via verified OTP
-        if (err && (err.account_exists || (err.message && err.message.toLowerCase().includes('already exists')))) {
-            return API.post('login', {
-                identifier: draft.email || draft.phone,
-                otp: otp
-            }).then(loginRes => {
-                if (loginRes.user) {
-                    state.user = loginRes.user;
-                    const token = loginRes.auth_token || loginRes.token;
-                    if (token) localStorage.setItem('ohati_auth_token', token);
-                    localStorage.setItem('ohati_user_session', JSON.stringify(loginRes.user));
-                    if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
-                    else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
-                    if (typeof updateAppHeader === 'function') updateAppHeader();
-                    window.location.reload();
-                } else {
-                    unlockOTP();
-                    if (errBox) {
-                        errBox.textContent = err.message || 'Account already registered. Please log in with your password.';
-                        errBox.style.display = 'block';
-                    }
-                }
-            }).catch(loginErr => {
-                unlockOTP();
-                if (errBox) {
-                    errBox.textContent = err.message || loginErr.message || 'Account already registered. Please log in with your password.';
-                    errBox.style.display = 'block';
-                }
-            });
-        }
         unlockOTP();
-        if (errBox) { errBox.textContent = err.message || 'Invalid or expired OTP code.'; errBox.style.display = 'block'; }
+        if (errBox) {
+            errBox.textContent = (err && err.error) ? err.error : (err && err.message ? err.message : 'Registration failed. Please try again.');
+            errBox.style.display = 'block';
+        }
     });
 };
 
@@ -1963,18 +2033,18 @@ window.showDiditKycModalPopup = function(user) {
                     <i class="fa-solid fa-id-card"></i>
                 </div>
                 <div style="font-size:0.75rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Identity Verification</div>
-                <h3 style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:800; margin:0 0 8px 0; color:#FFF;">Verify Your Identity (Didit KYC)</h3>
+                <h3 style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:800; margin:0 0 8px 0; color:#FFF;">Verify Your Identity</h3>
                 <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0; line-height:1.4;">
                     Complete quick automated verification with your Ghana Card or Passport for enhanced safety and trusted badge status on Ohati.
                 </p>
                 <div style="background:rgba(255,255,255,0.04); border-radius:12px; padding:14px; margin-bottom:20px; text-align:left; font-size:0.8rem; color:#CBD5E1; display:flex; flex-direction:column; gap:8px;">
-                    <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-shield-halved" style="color:var(--accent, #F2A735);"></i> Ghana Card & Passport check via Didit V3 API</div>
+                    <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-shield-halved" style="color:var(--accent, #F2A735);"></i> Ghana Card & Passport check</div>
                     <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-lock" style="color:#34D399;"></i> Bank-grade encryption & data security</div>
                     <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-badge-check" style="color:#60A5FA;"></i> Earn your Verified badge for higher trust</div>
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="btn btn-primary btn-full" id="btn-popup-start-kyc" onclick="startPopupDiditKyc()" style="padding:13px; font-weight:800; font-size:0.95rem; border-radius:12px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; border:none; cursor:pointer;">
+                    <button class="btn btn-primary btn-full" id="btn-popup-start-kyc" onclick="startPopupDiditKyc(event)" style="padding:13px; font-weight:800; font-size:0.95rem; border-radius:12px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; border:none; cursor:pointer;">
                         <i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> Start Verification
                     </button>
                     <button class="btn btn-outline btn-full" onclick="skipPopupDiditKyc(${user.id})" style="padding:12px; font-weight:700; font-size:0.85rem; border-radius:12px; background:transparent; border:1px solid rgba(255,255,255,0.2); color:#CBD5E1; cursor:pointer;">
@@ -1999,23 +2069,26 @@ window.skipPopupDiditKyc = function(userId) {
     if (popup) popup.remove();
 };
 
-window.startPopupDiditKyc = async function() {
+window.startPopupDiditKyc = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const btn = document.getElementById('btn-popup-start-kyc');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Launching Didit...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Launching Verification...';
     }
     try {
         const res = await API.initDiditKyc();
         const popup = document.getElementById('didit-kyc-popup-container');
         if (popup) popup.remove();
         if (res && res.url) {
-            if (typeof navigateTo === 'function') {
-                navigateTo('didit-kyc', { url: res.url, session_id: res.session_id });
-            } else if (typeof renderDiditKycScreen === 'function') {
+            if (typeof renderDiditKycScreen === 'function') {
                 renderDiditKycScreen({ url: res.url, session_id: res.session_id });
-            } else {
-                window.location.href = res.url;
+            }
+            if (typeof navigateTo === 'function') {
+                navigateTo('didit-kyc', { url: res.url, session_id: res.session_id }, { force: true });
+            }
+            if (typeof openDiditVerificationUrl === 'function') {
+                openDiditVerificationUrl(res.url);
             }
         }
     } catch (err) {
@@ -2023,7 +2096,7 @@ window.startPopupDiditKyc = async function() {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> Start Verification';
         }
-        alert(err.message || 'Failed to initialize Didit identity verification.');
+        alert(err.message || 'Failed to initialize identity verification.');
     }
 };
 
@@ -2076,13 +2149,13 @@ window.handleMandatoryForgotPasswordSubmit = function (e) {
     const target = idInput ? idInput.value.trim() : '';
 
     if (!target) {
-        if (errBox) { errBox.textContent = 'Please enter your email or phone number.'; errBox.style.display = 'block'; }
+        if (errBox) { errBox.textContent = 'Please enter your email address.'; errBox.style.display = 'block'; }
         return;
     }
 
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending code...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending reset link...';
     }
 
     fetch('api.php?action=forgot_password', {
@@ -2092,16 +2165,13 @@ window.handleMandatoryForgotPasswordSubmit = function (e) {
     }).then(r => r.json()).then(res => {
         if (res.success) {
             window._forgotTarget = target;
-            if (res.fallback_code) {
-                alert('Local Mode Reset Code: ' + res.fallback_code);
-            }
-            renderMandatoryAuthContent('reset-pass');
+            renderMandatoryAuthContent('forgot-sent');
         } else {
-            if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Code'; }
-            if (errBox) { errBox.textContent = res.error || 'Failed to send reset code.'; errBox.style.display = 'block'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+            if (errBox) { errBox.textContent = res.error || 'Failed to send reset link.'; errBox.style.display = 'block'; }
         }
     }).catch(err => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Code'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
         if (errBox) { errBox.textContent = 'Network error. Please try again.'; errBox.style.display = 'block'; }
     });
 };

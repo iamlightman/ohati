@@ -25,39 +25,62 @@ if (isset($_SESSION['user'])) {
             <!-- Page 1: Request Code -->
             <div id="step-forgot">
                 <div class="auth-modal-header" style="text-align: center;">
-                    <h2 class="auth-modal-title">Forgot Password</h2>
-                    <p class="auth-modal-subtitle">Enter your email or phone to reset</p>
+                    <h2 class="auth-modal-title">Reset Your Password</h2>
+                    <p class="auth-modal-subtitle">Enter your registered email address to receive a password reset link</p>
                 </div>
                 <form onsubmit="handleForgotSubmit(event)">
                     <div class="form-group">
-                        <label class="form-label">Email or Phone Number</label>
-                        <input type="text" class="form-input" id="forgot-target" placeholder="email@example.com or phone" required>
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="forgot-target" placeholder="name@example.com" required>
                     </div>
                     <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
-                    <button type="submit" class="btn btn-primary btn-full">Send Reset Code</button>
+                    <button type="submit" class="btn btn-primary btn-full">Send Reset Link</button>
                     <button type="button" class="btn btn-ghost btn-full mt-8" onclick="window.location.href='login.php'">Back to Login</button>
                 </form>
             </div>
 
             <!-- Page 2: Reset Password -->
-            <div id="step-reset" style="display:none;">
-                <div class="auth-modal-header" style="text-align: center;">
-                    <h2 class="auth-modal-title">Reset Password</h2>
-                    <p class="auth-modal-subtitle">Choose a new password</p>
-                </div>
-                <form onsubmit="handleResetSubmit(event)">
-                    <div class="form-group">
-                        <label class="form-label">6-digit Reset Code</label>
-                        <input type="text" class="form-input" id="reset-code" name="reset_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter code received" required maxlength="6">
-                    </div>
-                    <div class="otp-timer" id="reset-timer-box" style="font-size:0.8rem; color:#6B7280; text-align:center; margin-bottom:8px;">Resend code in <span id="reset-countdown">60</span>s</div>
-                    <div id="reset-resend-container" style="display:none; text-align:center; margin-bottom:12px;">
-                        <button type="button" class="btn btn-ghost btn-sm" id="reset-resend-btn" onclick="resendResetCode(event)">Resend Code</button>
-                    </div>
-                    <p style="font-size:0.75rem; color:#6B7280; text-align:center; margin-bottom:16px; line-height:1.4;">
-                        <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent, #E05A47); margin-right:3px;"></i>
-                        Note: Email OTP may take a minute or two to enter your inbox. Please check your spam/junk folder if delayed.
-                    </p>
+            <div id="step-reset" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let resetTargetVal = '';
+
+        function handleForgotSubmit(e) {
+            e.preventDefault();
+            const target = document.getElementById('forgot-target').value.trim();
+            const err = document.getElementById('auth-error-msg');
+            const submitBtn = e.target ? e.target.querySelector('button[type="submit"]') : null;
+
+            err.style.display = 'none';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.dataset.origText = submitBtn.textContent;
+                submitBtn.textContent = 'Sending Reset Link...';
+            }
+
+            API.forgotPassword(target)
+                .then(res => {
+                    const msg = res.message || "If an account exists with this email address, we've sent you a password reset link. Please check your inbox.";
+                    document.getElementById('step-forgot').innerHTML = `
+                        <div class="auth-modal-header" style="text-align: center;">
+                            <h2 class="auth-modal-title" style="color:var(--accent, #E05A47); margin-bottom:10px;"><i class="fa-solid fa-paper-plane"></i> Reset Link Sent</h2>
+                            <p class="auth-modal-subtitle" style="font-size:0.9rem; line-height:1.5; color:var(--text);">${msg}</p>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-full mt-16" style="margin-top:20px;" onclick="window.location.href='login.php'">Proceed to Login</button>
+                    `;
+                })
+                .catch(e => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = submitBtn.dataset.origText || 'Send Reset Link';
+                    }
+                    err.textContent = e.message;
+                    err.style.display = 'block';
+                });
+        }
                     <div class="form-group">
                         <label class="form-label">New Password</label>
                         <div style="position:relative;">

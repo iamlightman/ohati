@@ -162,7 +162,7 @@ function updateSidebarUI() {
         if (navContainer) {
             if (activeRole === 'vendor') {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('dashboard', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-dash', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-chart-pie"></i><span>Vendor Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
@@ -203,9 +203,6 @@ function updateSidebarUI() {
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
-                        <i class="fa-solid fa-circle-info"></i><span>About Us</span>
-                    </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                     </a>
@@ -219,7 +216,7 @@ function updateSidebarUI() {
                 `;
             } else {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('dashboard', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo((state.user && (state.user.vendor_id || state.user.role === 'vendor' || state.user.vendor)) ? 'vendor-dash' : 'home', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
@@ -276,9 +273,6 @@ function updateSidebarUI() {
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
-                        <i class="fa-solid fa-circle-info"></i><span>About Us</span>
-                    </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                     </a>
@@ -328,9 +322,6 @@ function updateSidebarUI() {
                 <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                 </a>
-                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
-                    <i class="fa-solid fa-circle-info"></i><span>About Us</span>
-                </a>
                 <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                 </a>
@@ -374,6 +365,20 @@ function switchAccountType(targetRole) {
 }
 
 function openBecomeVendorModal() {
+    if (!window.state || !window.state.user || !window.state.user.id) {
+        if (typeof openSignUpModal === 'function') {
+            openSignUpModal();
+        }
+        return;
+    }
+
+    if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+        if (typeof switchAccountType === 'function') {
+            switchAccountType('vendor');
+        }
+        return;
+    }
+
     const html = `
         <div class="auth-modal-content p-24" style="max-width:520px; width:100%; border-radius:20px; background:var(--white);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -788,11 +793,16 @@ function openSignUpModal() {
 
 function openPremiumModal() {
     if (window.state && window.state.user && window.state.user.id) {
-        openBecomeVendorModal();
+        if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+            switchAccountType('vendor');
+        } else {
+            openBecomeVendorModal();
+        }
     } else {
         openSignUpModal();
     }
 }
+window.openPremiumModal = openPremiumModal;
 
 function openSettingsModal() {
     openModal(`

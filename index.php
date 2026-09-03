@@ -424,7 +424,6 @@ if ($requested_vendor_id > 0) {
                     <a class="sidebar-link" onclick="openDiscountsAndOffersModal(); toggleSidebar(false)">
                         <i class="fa-solid fa-tags"></i><span>Discounts & Offers</span>
                     </a>
-                    <a class="sidebar-link" onclick="navigateTo('about'); toggleSidebar(false)"><i class="fa-solid fa-circle-info"></i> About Us</a>
                     <a class="sidebar-link" onclick="navigateTo('help'); toggleSidebar(false)">
                         <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                     </a>
@@ -436,15 +435,6 @@ if ($requested_vendor_id > 0) {
                         <i class="fa-solid fa-right-to-bracket"></i><span id="sidebar-auth-text">Sign In</span>
                     </a>
                 </nav>
-
-                <div class="sidebar-footer">
-                    <img src="img/logo black transparent small.png" alt="Ohati" class="sidebar-footer-logo" id="sidebar-footer-logo">
-                    <div class="sidebar-footer-text">
-                        <span style="font-weight:700;color:var(--primary);font-size:0.65rem;">Ohati v1.0.0</span>
-                        <span>Find. Compare. Book. Celebrate.</span>
-                        <a href="javascript:void(0)" onclick="navigateTo('about'); toggleSidebar(false)" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; margin-top:6px;"><i class="fa-solid fa-circle-info"></i> About Ohati</a>
-                    </div>
-                </div>
             </aside>
         </div>
 

@@ -203,9 +203,6 @@ function updateSidebarUI() {
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
-                        <i class="fa-solid fa-circle-info"></i><span>About Us</span>
-                    </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                     </a>
@@ -219,7 +216,7 @@ function updateSidebarUI() {
                 `;
             } else {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('profile', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo((state.user && (state.user.vendor_id || state.user.role === 'vendor' || state.user.vendor)) ? 'vendor-dash' : 'home', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
@@ -276,9 +273,6 @@ function updateSidebarUI() {
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
                     </a>
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
-                        <i class="fa-solid fa-circle-info"></i><span>About Us</span>
-                    </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-circle-question"></i><span>Help Center</span>
                     </a>
@@ -327,9 +321,6 @@ function updateSidebarUI() {
                 </a>
                 <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('report-issue', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-bug"></i><span>Report an Issue</span>
-                </a>
-                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('about', {}, { force: true }); toggleSidebar(false)">
-                    <i class="fa-solid fa-circle-info"></i><span>About Us</span>
                 </a>
                 <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('help', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-circle-question"></i><span>Help Center</span>

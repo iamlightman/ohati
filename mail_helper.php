@@ -67,6 +67,23 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
         ];
     }
 
+    if ($smtp_host !== 'stardust.globaldnsnetwork.com') {
+        $candidates[] = [
+            'host' => 'stardust.globaldnsnetwork.com',
+            'port' => 465,
+            'secure' => 'ssl',
+            'auth' => true,
+            'desc' => 'Global DNS Network Fallback Port 465 (SSL)'
+        ];
+        $candidates[] = [
+            'host' => 'stardust.globaldnsnetwork.com',
+            'port' => 587,
+            'secure' => 'tls',
+            'auth' => true,
+            'desc' => 'Global DNS Network Fallback Port 587 (TLS)'
+        ];
+    }
+
     $log("Attempting SMTP email delivery to: {$to}");
 
     foreach ($candidates as $cand) {

@@ -118,6 +118,18 @@ $pdo_logs = ($db_type === 'mysql') ? (create_pdo_conn($db_name_5, $db_user_5, $d
 $pdo_5 = $pdo_logs;
 
 $AI  = ($db_type === 'mysql') ? "INT AUTO_INCREMENT PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
+        id $AI,
+        user_id INT NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME NOT NULL,
+        used INT DEFAULT 0,
+        ip_address VARCHAR(45) DEFAULT NULL
+    )");
+} catch (Exception $ePwResets) {}
 $NOW = ($db_type === 'mysql') ? "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" : "TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
 
 $tables_exist = false;

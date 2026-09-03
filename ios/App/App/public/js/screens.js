@@ -304,6 +304,15 @@ function navigateTo(screenId, params = {}, options = {}) {
     // Run screen specific initialization/render inside try/catch
     try {
         switch (screenId) {
+            case 'dashboard':
+                if (isVendor) {
+                    screenId = 'vendor-dash';
+                    initVendorDashScreen(params);
+                } else {
+                    screenId = 'profile';
+                    initProfileScreen(params);
+                }
+                break;
             case 'home':
                 initHomeScreen(params);
                 break;
@@ -523,7 +532,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <i class="fa-solid ${labelIcon}"></i> ${recLabel}
                         </div>
                         <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
-                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
+                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
                             <div style="flex:1; min-width:0;">
                                 <h4 style="font-family:'Fraunces',serif; font-size:0.95rem; margin:0 0 2px 0; color:var(--primary); display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     <span>${recVendor.name}</span>
@@ -586,7 +595,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
         return `
             <div class="handpicked-card" onclick="${clickAction}">
                 <div class="handpicked-img-wrapper">
-                    <img src="${v.img}" alt="${v.name}" class="handpicked-cover">
+                    <img src="${v.img}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600';" alt="${v.name}" class="handpicked-cover">
                     <div class="handpicked-logo-badge ${v.badgeClass || ''}">
                         ${badgeContent}
                     </div>
@@ -680,7 +689,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${premiumVendors.length > 0 ? premiumVendors.map(v => `
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})">
                         <div class="vendor-card-cover">
-                            <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" alt="">
+                            <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300';" alt="">
                             <div style="position:absolute; top:12px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:5;">
                                 <button onclick="shareVendorProfile(state.vendors.find(x => x.id === ${v.id}), event)" style="border:none; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); color:#1B2B4B; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:var(--shadow-sm);">
                                     <i class="fa-solid fa-share-nodes"></i>
@@ -729,7 +738,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${popularVendors.length > 0 ? popularVendors.map(v => `
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})" style="flex:0 0 160px; min-height:165px; margin-bottom:8px;">
                         <div class="vendor-card-cover" style="height:90px;">
-                            <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" alt="">
+                            <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300';" alt="">
                         </div>
                         <div class="vendor-card-body" style="padding:6px 8px;">
                             <div class="vendor-card-name" style="font-size:0.75rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.name}</div>
@@ -3741,8 +3750,8 @@ function renderFavoritesScreen(favorites) {
     `;
 }
 
-function initFavoritesScreen() {
-    const screen = document.getElementById('screen-favorites');
+function initFavoritesScreen(params = {}, targetContainer = null) {
+    const screen = targetContainer || document.getElementById('screen-favorites');
     if (!screen) return;
 
     screen.innerHTML = `
@@ -3754,13 +3763,15 @@ function initFavoritesScreen() {
         </div>
     `;
 
+    const getListEl = () => screen.querySelector('#favorites-list') || document.getElementById('favorites-list');
+
     if (state.favorites && state.favorites.length > 0) {
-        renderFavoritesScreen(state.favorites);
+        renderFavoritesScreen(state.favorites, getListEl());
     }
 
     API.getFavorites().then(favorites => {
         state.favorites = favorites;
-        renderFavoritesScreen(favorites);
+        renderFavoritesScreen(favorites, getListEl());
     });
 }
 
@@ -4327,8 +4338,8 @@ function resetPlannerData() {
 }
 
 // ── 8. COMPARE SCREEN ──────────────────────────────────────────────────
-function initCompareScreen() {
-    const screen = document.getElementById('screen-compare');
+function initCompareScreen(params = {}, targetContainer = null) {
+    const screen = targetContainer || document.getElementById('screen-compare');
     if (!screen) return;
 
     screen.innerHTML = `
@@ -4341,7 +4352,7 @@ function initCompareScreen() {
     `;
 
     API.getCompareList().then(list => {
-        const container = document.getElementById('compare-grid-container');
+        const container = screen.querySelector('#compare-grid-container') || document.getElementById('compare-grid-container');
         if (!container) return;
 
         if (list.length === 0) {
@@ -4404,8 +4415,8 @@ window.removeCompareVendor = function(vid, e) {
 };
 
 // ── 9. NOTIFICATIONS SCREEN ────────────────────────────────────────────
-function initNotificationsScreen() {
-    const screen = document.getElementById('screen-notifications');
+function initNotificationsScreen(params = {}, targetContainer = null) {
+    const screen = targetContainer || document.getElementById('screen-notifications');
     if (!screen) return;
 
     screen.innerHTML = `
@@ -4433,7 +4444,7 @@ function initNotificationsScreen() {
             }
         }
 
-        const container = document.getElementById('notifications-list-container');
+        const container = screen.querySelector('#notifications-list-container') || document.getElementById('notifications-list-container');
         if (!container) return;
 
         if (list.length === 0) {
@@ -4711,8 +4722,8 @@ function openKYCDetailsModal() {
         <div style="font-size:0.78rem; line-height:1.5; color:var(--gray-600); margin-bottom:20px;">
             Verified badges offer booking assurances, faster quote processing, priority vendor response, and improved client protection plans.
         </div>
-        ${status === 'not_started' ? `
-            <button class="btn btn-primary btn-full" onclick="closeModal(); state.authMode='vendor-register'; state.authStep=5; renderAuthModal();">Verify My ID</button>
+        ${(status === 'not_started' || status === 'unverified') ? `
+            <button class="btn btn-primary btn-full" onclick="closeModal(); showKycInfoModal();">Verify My ID</button>
         ` : `<button class="btn btn-outline btn-full" onclick="closeModal()">Done</button>`}
     `;
     openModal(html);
@@ -4766,6 +4777,15 @@ function initVendorDashScreen(params) {
         return;
     }
 
+    if (state.user && state.user.vendor) {
+        renderVendorDashScreen(state.user);
+        if (typeof loadVendorRealtimeAnalytics === 'function') loadVendorRealtimeAnalytics({ period: '7days' });
+    } else {
+        screen.innerHTML = `
+            <div class="full-spinner-wrap"><div class="spinner"></div></div>
+        `;
+    }
+
     API.getSession().then(res => {
         if (res && res.user) {
             state.user = res.user;
@@ -4774,10 +4794,20 @@ function initVendorDashScreen(params) {
         const userObj = state.user || {};
         if (!userObj.vendor && state.vendor) userObj.vendor = state.vendor;
         renderVendorDashScreen(userObj);
-    }).catch(() => {
+        if (typeof loadVendorRealtimeAnalytics === 'function') loadVendorRealtimeAnalytics({ period: '7days' });
+    }).catch(err => {
         const userObj = state.user || {};
         if (!userObj.vendor && state.vendor) userObj.vendor = state.vendor;
-        renderVendorDashScreen(userObj);
+        if (userObj.vendor) {
+            renderVendorDashScreen(userObj);
+        } else {
+            screen.innerHTML = `
+                <div class="p-section text-center" style="padding:60px 20px;">
+                    <p style="color:var(--danger); font-size:0.85rem;">Failed to load vendor portal: ${escapeHtml(err?.message || 'Network error')}</p>
+                    <button class="btn btn-primary btn-sm mt-8" onclick="initVendorDashScreen()">Retry</button>
+                </div>
+            `;
+        }
     });
 }
 
@@ -5029,33 +5059,7 @@ function renderVendorDashScreen(user) {
     `;
 }
 
-function initVendorDashScreen() {
-    const screen = document.getElementById('screen-vendor-dash');
-    if (!screen) return;
 
-    if (state.user && state.user.vendor) {
-        renderVendorDashScreen(state.user);
-    } else {
-        screen.innerHTML = `
-            <div class="full-spinner-wrap"><div class="spinner"></div></div>
-        `;
-    }
-
-    API.getSession().then(sessionRes => {
-        state.user = sessionRes.user || {};
-        renderVendorDashScreen(state.user);
-        if (typeof loadVendorRealtimeAnalytics === 'function') loadVendorRealtimeAnalytics({ period: '7days' });
-    }).catch(err => {
-        if (!state.user || !state.user.vendor) {
-            screen.innerHTML = `
-                <div class="p-section text-center">
-                    <p style="color:var(--danger); font-size:0.8rem;">Failed to load vendor portal: ${err.message}</p>
-                    <button class="btn btn-primary btn-sm mt-8" onclick="initVendorDashScreen()">Retry</button>
-                </div>
-            `;
-        }
-    });
-}
 
 window.setQuickCustomRange = function(days) {
     const end = new Date();
@@ -5366,7 +5370,7 @@ function showKycInfoModal() {
                     <i class="fa-solid fa-user-shield"></i> Account Fully Verified
                 </button>
             `;
-        } else if (kycStatus === 'UNDER_REVIEW') {
+        } else if (kycStatus === 'UNDER_REVIEW' || kycStatus === 'PENDING' || kycStatus === 'PENDING_VERIFICATION' || kycStatus === 'IN_REVIEW') {
             statusHeader = `
                 <div style="width:64px; height:64px; border-radius:50%; background:#FEF3C7; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; color:#D97706; font-size:1.8rem;">
                     <i class="fa-solid fa-clock-rotate-left"></i>
@@ -5430,6 +5434,15 @@ function showKycInfoModal() {
 window.checkPostSignupKycPrompt = function() {
     if (sessionStorage.getItem('ohati_just_registered_kyc_prompt') === '1') {
         sessionStorage.removeItem('ohati_just_registered_kyc_prompt');
+        const userObj = state.user || {};
+        const vendor = userObj.vendor || state.vendor || {};
+        const status = (userObj.kyc_status || vendor.verification_status || '').toLowerCase();
+        const dDecision = (userObj.didit_decision || vendor.didit_decision || '').toLowerCase();
+        const isVerified = parseInt(userObj.verified || vendor.verified || 0) === 1 || status === 'verified' || status === 'approved' || dDecision === 'approved';
+        const isUnderReview = status === 'under_review' || status === 'pending' || status === 'pending_verification' || dDecision === 'in review' || dDecision === 'in_review';
+
+        if (isVerified || isUnderReview) return;
+
         setTimeout(() => {
             if (typeof showKycInfoModal === 'function') {
                 showKycInfoModal();
@@ -5446,6 +5459,27 @@ if (document.readyState === 'loading') {
 
 window.startDiditKycFlow = function(e) {
     if (e && e.preventDefault) e.preventDefault();
+    const userObj = state.user || {};
+    const vendor = userObj.vendor || state.vendor || {};
+    const status = (userObj.kyc_status || vendor.verification_status || '').toLowerCase();
+    const dDecision = (userObj.didit_decision || vendor.didit_decision || '').toLowerCase();
+    const isVerified = parseInt(userObj.verified || vendor.verified || 0) === 1 || status === 'verified' || status === 'approved' || dDecision === 'approved';
+    const isUnderReview = status === 'under_review' || status === 'pending' || status === 'pending_verification' || dDecision === 'in review' || dDecision === 'in_review';
+
+    if (isVerified) {
+        if (typeof showToast === 'function') showToast('Your account is already fully verified.', 'success');
+        else showPushNotification('Account Verified', 'Your identity has already been verified.');
+        closeModal();
+        return;
+    }
+
+    if (isUnderReview) {
+        if (typeof showToast === 'function') showToast('Your identity submission is currently under active review.', 'info');
+        else showPushNotification('Under Active Review', 'Your verification documents are currently being reviewed by administrators.');
+        closeModal();
+        return;
+    }
+
     const btn = document.getElementById('didit-start-btn');
     if (btn) {
         btn.disabled = true;
@@ -5461,9 +5495,8 @@ window.startDiditKycFlow = function(e) {
                 }
                 if (typeof navigateTo === 'function') {
                     navigateTo('didit-kyc', { url: res.url, session_id: res.session_id }, { force: true });
-                } else if (typeof renderDiditKycScreen !== 'function') {
-                    window.location.href = res.url;
                 }
+                openDiditVerificationUrl(res.url);
             } else if (res && res.is_verified) {
                 if (typeof showToast === 'function') showToast(res.error || 'Your account is already verified.', 'success');
                 else showPushNotification('Account Verified', 'Your identity has already been verified.');
@@ -5481,6 +5514,24 @@ window.startDiditKycFlow = function(e) {
         });
 };
 
+window.openDiditVerificationUrl = function(url) {
+    if (!url) return;
+    try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+            window.Capacitor.Plugins.Browser.open({ url: url });
+            return;
+        }
+    } catch(e) {}
+    try {
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+            window.open(url, '_system');
+            return;
+        }
+    } catch(e) {}
+    const win = window.open(url, '_blank');
+    if (!win) window.location.href = url;
+};
+
 function renderDiditKycScreen(params) {
     const screen = document.getElementById('screen-didit-kyc');
     if (!screen) return;
@@ -5489,24 +5540,62 @@ function renderDiditKycScreen(params) {
     const sessionId = params?.session_id || '';
 
     screen.innerHTML = `
-        <div style="display:flex; flex-direction:column; height:100vh; background:#F8FAFC;">
+        <div style="display:flex; flex-direction:column; min-height:100vh; background:#F8FAFC;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#0B1F3A; color:#fff; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <button onclick="navigateTo('vendor-dash')" style="background:none; border:none; color:#fff; font-size:1.1rem; cursor:pointer;">
                         <i class="fa-solid fa-arrow-left"></i>
                     </button>
-                    <span style="font-weight:700; font-size:0.95rem;">Identity Verification</span>
+                    <span style="font-weight:700; font-size:0.95rem;">Identity Verification (KYC)</span>
                 </div>
                 <button onclick="navigateTo('vendor-dash')" style="background:none; border:none; color:#fff; font-size:1.1rem; cursor:pointer;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div style="flex:1; width:100%; position:relative; background:#F8FAFC;">
-                ${url ? `<iframe src="${url}" allow="camera; microphone; fullscreen; autoplay; encrypted-media" style="width:100%; height:100%; border:none;"></iframe>` : '<div style="padding:40px; text-align:center;">Invalid verification session.</div>'}
+            <div style="flex:1; width:100%; max-width:540px; margin:0 auto; padding:24px 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(242, 167, 53, 0.15); display:flex; align-items:center; justify-content:center; margin-bottom:16px; color:var(--accent, #E05A47); font-size:2rem;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 style="font-size:1.35rem; font-weight:800; color:#0B1F3A; margin:0 0 8px 0;">Official Identity Verification</h2>
+                <p style="font-size:0.88rem; color:#64748B; margin:0 0 24px 0; line-height:1.5; max-width:440px;">
+                    Complete your identity verification (Ghana Card & selfie check) via our secure Didit verification portal.
+                </p>
+
+                <div style="width:100%; background:#FFFFFF; border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); border:1px solid #E2E8F0; margin-bottom:24px; text-align:left;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#0B1F3A; font-weight:700;">1</div>
+                        <div style="font-size:0.85rem; font-weight:600; color:#1E293B;">Click the button below to launch the secure portal</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#0B1F3A; font-weight:700;">2</div>
+                        <div style="font-size:0.85rem; font-weight:600; color:#1E293B;">Scan your Ghana Card & complete quick selfie check</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#0B1F3A; font-weight:700;">3</div>
+                        <div style="font-size:0.85rem; font-weight:600; color:#1E293B;">Return to Ohati; status updates automatically in real-time</div>
+                    </div>
+                </div>
+
+                ${url ? `
+                    <button onclick="window.openDiditVerificationUrl('${url}')" class="btn btn-primary btn-full mb-12" style="padding:14px; font-weight:700; font-size:0.95rem; border-radius:12px; box-shadow:0 4px 14px rgba(224, 90, 71, 0.3);">
+                        <i class="fa-solid fa-arrow-up-right-from-square" style="margin-right:6px;"></i> Launch Verification Portal
+                    </button>
+                ` : '<div style="color:#EF4444; margin-bottom:16px;">Invalid verification session URL. Please retry.</div>'}
+
+                <div id="kyc-poll-status" style="font-size:0.82rem; color:#64748B; margin-top:8px; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-spinner fa-spin" style="color:var(--accent, #E05A47);"></i> Waiting for verification response...
+                </div>
+
+                <button onclick="navigateTo('vendor-dash')" class="btn btn-ghost btn-full mt-16" style="color:#64748B; font-size:0.85rem;">
+                    Return to Vendor Dashboard
+                </button>
             </div>
         </div>
     `;
 
+    if (url) {
+        window.openDiditVerificationUrl(url);
+    }
     if (sessionId) {
         window.pollDiditKycStatus(sessionId);
     }
@@ -5711,10 +5800,6 @@ window.openPremiumUpgradeModal = function() {
                             <div style="font-size:0.65rem; color:var(--gray-500);">${b.account_name || 'Ohati Global Services'}</div>
                         </div>
                     </div>
-
-                    <div style="font-size:0.7rem; color:var(--gray-600); line-height:1.4;">
-                        <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> ${b.payment_instructions || 'Please transfer GH₵ 250 to MTN MoMo or Ecobank Ghana above, then upload your transfer receipt below.'}
-                    </div>
                 </div>
 
                 <!-- Payment Receipt Upload Zone -->
@@ -5885,8 +5970,8 @@ window.openChatSupport = function() {
     });
 };
 
-function initHelpScreen() {
-    const screen = document.getElementById('screen-help');
+function initHelpScreen(params = {}, targetContainer = null) {
+    const screen = targetContainer || document.getElementById('screen-help');
     if (!screen) return;
 
     screen.innerHTML = `
@@ -7263,13 +7348,6 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
             <!-- Preferences -->
             <h4 style="margin-bottom:12px;">Preferences</h4>
             <div class="card p-16 mb-16">
-                <div class="form-group">
-                    <label class="form-label">Preferred Language</label>
-                    <select class="form-select" id="edit-language">
-                        <option value="English" ${u.language === 'English' || !u.language ? 'selected' : ''}>English</option>
-                        <option value="French" ${u.language === 'French' ? 'selected' : ''}>French</option>
-                    </select>
-                </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Preferred Currency</label>
                     <select class="form-select" id="edit-currency" disabled style="opacity:0.7;">
@@ -7792,19 +7870,23 @@ window.saveEditedPhoto = function() {
 };
 
 function openRequestChangeModal(fieldName) {
+    const fnLower = (fieldName || '').toLowerCase();
+    const isDocExempt = fnLower === 'email' || fnLower === 'phone' || fnLower === 'phone number';
     const html = `
         <div class="auth-modal-header">
             <h2 class="auth-modal-title">Request Profile Update</h2>
-            <p class="auth-modal-subtitle">Submit verification details to update locked field: ${fieldName}</p>
+            <p class="auth-modal-subtitle">Submit details to update locked field: ${fieldName}</p>
         </div>
         <div class="form-group">
-            <label class="form-label">New Value</label>
+            <label class="form-label">New ${fieldName}</label>
             <input type="text" class="form-input" id="req-new-value" placeholder="Enter new ${fieldName}">
         </div>
+        ${isDocExempt ? '' : `
         <div class="form-group">
             <label class="form-label">Supporting Document (ID/Certificate/etc.)</label>
             <input type="file" id="req-doc-file" class="form-input" accept="image/*,application/pdf">
         </div>
+        `}
         <button class="btn btn-primary btn-full mt-12" id="req-submit-btn" onclick="submitRequestChange('${fieldName}')">Submit Request</button>
     `;
     openModal(html);
@@ -7822,7 +7904,7 @@ function submitRequestChange(fieldName) {
     const btn = document.getElementById('req-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
 
-    let docUrl = 'doc_uploaded.jpg';
+    let docUrl = '';
     if (docInput && docInput.files[0]) {
         docUrl = docInput.files[0].name;
     }
@@ -7832,7 +7914,7 @@ function submitRequestChange(fieldName) {
         new_value: val,
         supporting_document: docUrl
     }).then(res => {
-        showPushNotification('Request Sent', res.message);
+        showPushNotification('Request Sent', res.message || 'Change request submitted for admin approval.');
         closeModal();
     }).catch(err => {
         showPushNotification('Error', err.message);
@@ -7980,8 +8062,8 @@ function handleCoverPhotoSelect(event) {
 }
 
 // ── REPORT AN ISSUE SCREEN ─────────────────────────────────────────────
-function initReportIssueScreen() {
-    const screen = document.getElementById('screen-report-issue');
+function initReportIssueScreen(params = {}, targetContainer = null) {
+    const screen = targetContainer || document.getElementById('screen-report-issue');
     if (!screen) return;
 
     screen.innerHTML = `
@@ -8280,8 +8362,8 @@ function handleVoicePlayerSeek(rangeInput) {
 }
 
 // ── EVENT JOBS MARKETPLACE SCREEN INITIALIZERS ─────────────────────────
-async function initUserJobsScreen() {
-    const container = document.getElementById('screen-user-jobs');
+async function initUserJobsScreen(params = {}, targetContainer = null) {
+    const container = targetContainer || document.getElementById('screen-user-jobs');
     if (!container) return;
 
     container.innerHTML = `
@@ -8405,8 +8487,8 @@ function renderUserJobsTab(tabKey) {
     `).join('');
 }
 
-async function initVendorJobsScreen() {
-    const container = document.getElementById('screen-vendor-jobs');
+async function initVendorJobsScreen(params = {}, targetContainer = null) {
+    const container = targetContainer || document.getElementById('screen-vendor-jobs');
     if (!container) return;
 
     container.innerHTML = `
@@ -8568,8 +8650,8 @@ function renderVendorJobsTab(tabKey) {
 
 
 
-function initAboutScreen() {
-    const screen = document.getElementById('screen-about');
+function initAboutScreen(params = {}, targetContainer = null) {
+    const screen = targetContainer || document.getElementById('screen-about');
     if (!screen) return;
 
     screen.innerHTML = `

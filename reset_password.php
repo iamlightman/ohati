@@ -8,32 +8,46 @@ $message = '';
 $message_type = '';
 $is_valid_token = false;
 $user_data = null;
+$reset_record = null;
 
 if (!empty($token)) {
     try {
+        $token_hash = hash('sha256', $token);
         $now = date('Y-m-d H:i:s');
-        $stmt = $pdo->prepare("SELECT id, name, email, phone FROM users WHERE reset_token = ? AND reset_expires > ?");
-        $stmt->execute([$token, $now]);
-        $user_data = $stmt->fetch();
+        
+        $stmt = $pdo->prepare("SELECT r.id as reset_id, r.user_id, r.expires_at, r.used, u.id, u.name, u.email, u.phone 
+                               FROM password_resets r 
+                               JOIN users u ON r.user_id = u.id 
+                               WHERE r.token_hash = ? AND r.used = 0 AND r.expires_at > ?
+                               LIMIT 1");
+        $stmt->execute([$token_hash, $now]);
+        $reset_record = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($user_data) {
+        if ($reset_record) {
             $is_valid_token = true;
+            $user_data = $reset_record;
         } else {
-            $checkStmt = $pdo->prepare("SELECT id FROM users WHERE reset_token = ?");
-            $checkStmt->execute([$token]);
-            if ($checkStmt->fetch()) {
-                $message = "This password reset link has expired. Please ask the administrator to resend a new reset link.";
+            $chk = $pdo->prepare("SELECT used, expires_at FROM password_resets WHERE token_hash = ? LIMIT 1");
+            $chk->execute([$token_hash]);
+            $expired_row = $chk->fetch(PDO::FETCH_ASSOC);
+            
+            if ($expired_row) {
+                if ($expired_row['used'] == 1) {
+                    $message = "This password reset link has already been used. Please request a new password reset link.";
+                } else {
+                    $message = "This password reset link has expired. Please request a new password reset link.";
+                }
             } else {
-                $message = "Invalid password reset link or token.";
+                $message = "This password reset link is invalid or malformed.";
             }
             $message_type = "error";
         }
     } catch (Exception $e) {
-        $message = "Database connection error. Please try again later.";
+        $message = "Unable to validate reset link at this time. Please try again later.";
         $message_type = "error";
     }
 } else {
-    $message = "No security reset token provided in URL.";
+    $message = "No password reset security token provided in URL.";
     $message_type = "error";
 }
 
@@ -42,20 +56,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_valid_token && isset($_POST['pa
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    if (strlen($password) < 6) {
-        $message = "Password must be at least 6 characters long.";
+    if (strlen($password) < 8) {
+        $message = "Password must be at least 8 characters long.";
         $message_type = "error";
     } elseif ($password !== $confirm_password) {
         $message = "Passwords do not match. Please re-enter.";
         $message_type = "error";
     } else {
         $new_hash = password_hash($password, PASSWORD_BCRYPT);
-        $uid = intval($user_data['id']);
+        $uid = intval($user_data['user_id']);
 
-        $update_stmt = $pdo->prepare("UPDATE users SET password_hash = ?, reset_token = '', reset_expires = NULL WHERE id = ?");
-        $update_stmt->execute([$new_hash, $uid]);
+        // Update password hash & mark reset token as used immediately
+        $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$new_hash, $uid]);
+        $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = ?")->execute([$uid]);
 
-        $message = "Your password has been successfully reset! You can now log into your Ohati account with your new password.";
+        // Revoke active sessions / tokens for security
+        try {
+            $pdo->prepare("DELETE FROM auth_tokens WHERE user_id = ?")->execute([$uid]);
+        } catch (Exception $eTokens) {}
+
+        $message = "Your password has been successfully reset! You can now log into your Ohati account using your new password.";
         $message_type = "success";
         $is_valid_token = false;
     }

@@ -14,9 +14,10 @@ window.blogState = {
 };
 
 // ── 1. BLOG INDEX SCREEN (SECTION-BY-SECTION) ─────────────────────────────
-function initBlogScreen(params = {}) {
-    const container = document.getElementById('screen-blog');
+function initBlogScreen(params = {}, targetContainer = null) {
+    const container = targetContainer || document.getElementById('screen-blog');
     if (!container) return;
+    container.classList.add('light-theme-forced');
 
     if (params && params.category) {
         window.blogState.currentCategory = params.category;
@@ -135,7 +136,7 @@ function renderBlogFeedSections() {
                     <p class="blog-hero-excerpt">${escapeHtml(heroPost.subheadline || '')}</p>
                     <div class="blog-hero-footer">
                         <div class="blog-author-info">
-                            <img src="${heroPost.author_avatar || window.DEFAULT_USER_AVATAR}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                            <img src="${window.resolveImageUrl(heroPost.author_avatar)}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
                             <span>${escapeHtml(heroPost.author_name || 'Ohati Editorial')}</span>
                         </div>
                         <div class="blog-stats-group">
@@ -268,6 +269,7 @@ function openBlogArticle(idOrSlug) {
 function initBlogDetailScreen(params = {}) {
     const container = document.getElementById('screen-blog-detail');
     if (!container) return;
+    container.classList.add('light-theme-forced');
 
     const targetId = params.id || state.selectedBlogId || 0;
     const targetSlug = params.slug || '';

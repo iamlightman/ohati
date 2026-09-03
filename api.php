@@ -82,6 +82,34 @@ if (!function_exists('resolve_vendor_logo')) {
     }
 }
 
+if (!function_exists('resolve_vendor_cover')) {
+    function resolve_vendor_cover($category, $current_cover = '') {
+        if (!empty($current_cover) && strpos($current_cover, 'data:image/svg+xml') === false && strpos($current_cover, 'photo-1535713875002') === false && strpos($current_cover, 'default-cover') === false) {
+            return $current_cover;
+        }
+        $map = [
+            'Photography' => 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800',
+            'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=800',
+            'Makeup Artists' => 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=800',
+            'Event Planners' => 'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?q=80&w=800',
+            'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=800',
+            'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=800',
+            'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=800',
+            'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800',
+            'DJs' => 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800',
+            'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=800',
+            'MCs' => 'https://images.unsplash.com/photo-1516280440614-37939bbacd6a?q=80&w=800',
+            'Florists' => 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=800',
+            'Car Rentals' => 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
+            'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=800',
+            'Rental Equipment' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=800',
+            'Juice Bar' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=800',
+            'Chilling Services' => 'img/chill/services.jpg'
+        ];
+        return $map[$category] ?? 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800';
+    }
+}
+
 if (!function_exists('get_online_status_info')) {
     function get_online_status_info($last_active_str) {
         if (empty($last_active_str) || $last_active_str === '1970-01-01 00:00:00') {
@@ -1312,95 +1340,151 @@ case 'verify_otp':
 
 case 'forgot_password':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!rate_limit('forgot_password', 3, 60)) { http_response_code(429); echo json_encode(['error'=>'Too many reset attempts. Please wait 60 seconds.']); exit; }
+    if (!rate_limit('forgot_password', 5, 60)) { 
+        http_response_code(429); 
+        echo json_encode(['error' => 'Too many password reset requests. Please wait a moment before trying again.']); 
+        exit; 
+    }
+    
     $input = json_decode(file_get_contents('php://input'), true);
-    $target = clean($input['target'] ?? '');
-    if (empty($target)) { http_response_code(400); echo json_encode(['error'=>'Please enter your email or phone number.']); exit; }
+    $target_email = strtolower(trim($input['target'] ?? $input['email'] ?? ''));
 
-    $stmt = $pdo->prepare("SELECT id, name, email, phone FROM users WHERE LOWER(email) = LOWER(?) OR phone = ?");
-    $stmt->execute([$target, $target]);
-    $u_found = $stmt->fetch();
-    if (!$u_found) { http_response_code(404); echo json_encode(['error'=>'Account not found with that email or phone number.']); exit; }
+    // Uniform anti-enumeration message returned for all requests
+    $generic_response = [
+        'success' => true,
+        'message' => "If an account exists with this email address, we've sent you a password reset link. Please check your inbox and follow the link to create a new password."
+    ];
 
-    $email_target = $u_found['email'] ?: (strpos($target, '@') !== false ? $target : '');
-    $phone_target = $u_found['phone'] ?: (strpos($target, '@') === false ? $target : '');
-
-    $code = str_pad(rand(0,999999), 6, '0', STR_PAD_LEFT);
-    $code_hash = password_hash($code, PASSWORD_DEFAULT);
-    $expires = date('Y-m-d H:i:s', time() + 600);
-
-    // Save reset code into otp_codes table
-    $targets_to_insert = array_unique(array_filter([$target, $email_target, $phone_target]));
-    foreach ($targets_to_insert as $t) {
-        $pdo->prepare("INSERT INTO otp_codes (target, code, code_hash, type, expires_at) VALUES (?, ?, ?, 'reset', ?)")
-            ->execute([$t, $code, $code_hash, $expires]);
+    if (empty($target_email) || filter_var($target_email, FILTER_VALIDATE_EMAIL) === false) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Please enter a valid email address.']);
+        exit;
     }
 
-    $sms_sent = false;
-    $email_sent = false;
+    $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE LOWER(email) = ? LIMIT 1");
+    $stmt->execute([$target_email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Dispatch SMS OTP
-    if (!empty($phone_target)) {
+    if ($user && !empty($user['email'])) {
         try {
-            $sms_msg = "Your Ohati password reset code is: $code. Valid for 10 minutes. Do not share this code.";
-            $sms_res = send_smsonlinegh($phone_target, $sms_msg);
-            $sms_sent = $sms_res['success'] ?? false;
-        } catch (Exception $eSms) {}
-    }
+            $raw_token = bin2hex(random_bytes(32)); // 64 hex chars
+            $token_hash = hash('sha256', $raw_token);
+            $now_str = date('Y-m-d H:i:s');
+            $expires_str = date('Y-m-d H:i:s', time() + 86400); // 24 hours
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
-    // Dispatch Email OTP
-    if (!empty($email_target) && strpos($email_target, '@') !== false) {
-        try {
+            // Invalidate existing unused tokens for this user
+            $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0")->execute([$user['id']]);
+
+            // Insert new reset token
+            $ins = $pdo->prepare("INSERT INTO password_resets (user_id, token_hash, expires_at, created_at, used, ip_address) VALUES (?, ?, ?, ?, 0, ?)");
+            $ins->execute([$user['id'], $token_hash, $expires_str, $now_str, $ip]);
+
+            // Determine production reset URL (prevent localhost in reset emails)
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $is_local = empty($host) || strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false || strpos($host, '::1') !== false;
+
+            if ($is_local) {
+                $base_prod = defined('APP_URL') ? rtrim(APP_URL, '/') : 'https://ohati.com';
+                $reset_url = "{$base_prod}/reset_password.php?token={$raw_token}";
+            } else {
+                $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443;
+                $scheme = $is_https ? "https" : "http";
+                $script_dir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+                $dir = ($script_dir === '/' || $script_dir === '\\' || $script_dir === '.') ? '' : rtrim(str_replace('\\', '/', $script_dir), '/');
+                $reset_url = "{$scheme}://{$host}{$dir}/reset_password.php?token={$raw_token}";
+            }
+
+            // Send branded HTML email via send_smtp_mail with 100% inline-styled HTML for email client rendering
             require_once __DIR__ . '/mail_helper.php';
-            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-            $domainName = $_SERVER['HTTP_HOST'];
-            $currentDir = dirname($_SERVER['REQUEST_URI']);
-            $currentDir = str_replace('\\', '/', $currentDir);
-            if ($currentDir === '/') $currentDir = '';
+            $user_name = htmlspecialchars($user['name'] ?: 'Ohati User');
+            $subject = "Reset your Ohati password";
+            $year = date('Y');
             
-            $resetLink = $protocol . $domainName . $currentDir . '/forgot-password.php?target=' . urlencode($email_target) . '&code=' . urlencode($code);
-            $subject = "Reset Your Ohati Password: " . $code;
-            $body = "<html><body style='font-family:sans-serif; background-color:#f6f9fc; padding:30px; color:#333;'>"
-                  . "<div style='max-width:550px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #e4e8eb;'>"
-                  . "<div style='text-align:center; background-color:#1B2B4B; padding:20px; border-radius:8px 8px 0 0; margin:-30px -30px 25px -30px;'>"
-                  . "<h1 style='color:#fff; margin:0; font-size:24px; letter-spacing:2px;'>OHATI</h1>"
-                  . "</div>"
-                  . "<h2 style='color:#1B2B4B; margin-top:0; font-size:20px;'>Reset Your Password</h2>"
-                  . "<p style='font-size:15px; margin-bottom:20px;'>Your 6-digit password reset code is:</p>"
-                  . "<div style='background-color:#f4f6f8; border-radius:8px; padding:20px; text-align:center; margin-bottom:20px; border:1px solid #e9ecef;'>"
-                  . "<span style='font-size:32px; font-weight:bold; letter-spacing:6px; color:#1B2B4B; font-family:monospace;'>{$code}</span>"
-                  . "</div>"
-                  . "<p style='font-size:13px; color:#666;'>This code expires in 10 minutes.</p>"
-                  . "</div>"
-                  . "</body></html>";
-            $email_sent = send_smtp_mail($email_target, $subject, $body);
-        } catch (Exception $e) {}
+            $html_body = "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>"
+                       . "<html xmlns='http://www.w3.org/1999/xhtml'><head>"
+                       . "<meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />"
+                       . "<meta name='viewport' content='width=device-width, initial-scale=1.0'/>"
+                       . "<title>Reset Your Ohati Password</title></head>"
+                       . "<body style='margin:0; padding:0; background-color:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;'>"
+                       . "<table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#F3F4F6; table-layout:fixed; padding:30px 10px;'>"
+                       . "<tr><td align='center'>"
+                       . "<table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:560px; background-color:#FFFFFF; border-radius:18px; border:1px solid #E5E7EB; box-shadow:0 10px 30px rgba(0,0,0,0.06); overflow:hidden;'>"
+                       
+                       . "<tr><td align='center' style='background:#111827; padding:32px 24px; text-align:center;'>"
+                       . "<h1 style='color:#FFFFFF; font-size:26px; font-weight:900; margin:0; letter-spacing:3px; font-family:sans-serif;'>OHATI</h1>"
+                       . "<p style='color:#F2A735; font-size:12px; margin:6px 0 0 0; text-transform:uppercase; letter-spacing:1.5px; font-weight:700;'>Secure Account Password Reset</p>"
+                       . "</td></tr>"
+
+                       . "<tr><td style='padding:36px 32px; background-color:#FFFFFF;'>"
+                       . "<h2 style='color:#111827; font-size:20px; font-weight:800; margin:0 0 16px 0;'>Reset Your Password</h2>"
+                       . "<p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 16px 0;'>Hello <strong>{$user_name}</strong>,</p>"
+                       . "<p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 24px 0;'>We received a request to reset the password for your Ohati account. Click the button below to create your new password:</p>"
+
+                       . "<table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'><tr><td align='center'>"
+                       . "<a href='{$reset_url}' target='_blank' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a>"
+                       . "</td></tr></table>"
+
+                       . "<table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; margin:24px 0;'><tr>"
+                       . "<td style='padding:14px 16px; color:#92400E; font-size:13px; line-height:1.5;'>"
+                       . "<strong>⚠️ Security Notice:</strong> This reset link will expire in <strong>24 hours</strong> and can only be used once."
+                       . "</td></tr></table>"
+
+                       . "<p style='color:#6B7280; font-size:13px; line-height:1.5; margin:24px 0 8px 0;'>If the button above does not work, copy and paste this link into your browser address bar:</p>"
+                       . "<div style='background-color:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px 14px; font-size:12px; color:#4B5563; word-break:break-all; font-family:monospace; line-height:1.4;'>{$reset_url}</div>"
+
+                       . "<p style='color:#9CA3AF; font-size:12px; line-height:1.5; margin:28px 0 0 0; border-top:1px solid #F3F4F6; padding-top:20px;'>"
+                       . "If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged."
+                       . "</p>"
+                       . "</td></tr>"
+
+                       . "<tr><td align='center' style='background-color:#F9FAFB; padding:24px 32px; border-top:1px solid #E5E7EB; text-align:center;'>"
+                       . "<p style='color:#6B7280; font-size:12px; margin:0 0 6px 0; font-weight:600;'>Ohati Event Marketplace & Professional Network</p>"
+                       . "<p style='color:#9CA3AF; font-size:11px; margin:0;'>&copy; {$year} Ohati Inc. All rights reserved. &bull; <a href='https://ohati.com' style='color:#E05A47; text-decoration:none; font-weight:600;'>ohati.com</a></p>"
+                       . "</td></tr>"
+
+                       . "</table></td></tr></table>"
+                       . "</body></html>";
+
+            send_smtp_mail($user['email'], $subject, $html_body, 'Ohati Security');
+        } catch (Exception $eMail) {
+            error_log("Password reset email dispatch error: " . $eMail->getMessage());
+        }
     }
 
-    $msg_channel = ($sms_sent && $email_sent) ? 'SMS & Email' : ($sms_sent ? 'SMS' : ($email_sent ? 'Email' : 'SMS/Email'));
-    echo json_encode([
-        'success' => true, 
-        'message' => "Password reset code dispatched via $msg_channel. Valid for 10 minutes.", 
-        'sms_sent' => $sms_sent, 
-        'email_sent' => $email_sent
-    ]);
+    echo json_encode($generic_response);
     break;
 
 case 'reset_password':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true);
-    $target = clean($input['target'] ?? '');
-    $code = clean($input['code'] ?? '');
+    $token = trim($input['token'] ?? '');
     $password = $input['password'] ?? '';
-    if (strlen($password) < 8) { http_response_code(400); echo json_encode(['error'=>'Password must be 8+ characters.']); exit; }
-    $ov = $pdo->prepare("SELECT * FROM otp_codes WHERE target = ? AND code = ? AND type='reset' AND used=0 AND expires_at > ? ORDER BY id DESC LIMIT 1");
-    $ov->execute([$target,$code,date('Y-m-d H:i:s')]);
-    if (!$ov->fetch()) { http_response_code(400); echo json_encode(['error'=>'Invalid or expired code.']); exit; }
-    $pdo->prepare("UPDATE otp_codes SET used=1 WHERE target=? AND code=?")->execute([$target,$code]);
-    $hash = password_hash($password, PASSWORD_BCRYPT);
-    $col = strpos($target,'@') !== false ? 'email' : 'phone';
-    $pdo->prepare("UPDATE users SET password_hash = ? WHERE $col = ?")->execute([$hash,$target]);
-    echo json_encode(['success'=>true]);
+    
+    if (empty($token)) { http_response_code(400); echo json_encode(['error' => 'Reset token is required.']); exit; }
+    if (strlen($password) < 8) { http_response_code(400); echo json_encode(['error' => 'Password must be at least 8 characters long.']); exit; }
+    
+    $token_hash = hash('sha256', $token);
+    $now = date('Y-m-d H:i:s');
+    
+    $stmt = $pdo->prepare("SELECT r.id as reset_id, r.user_id FROM password_resets r JOIN users u ON r.user_id = u.id WHERE r.token_hash = ? AND r.used = 0 AND r.expires_at > ? LIMIT 1");
+    $stmt->execute([$token_hash, $now]);
+    $rec = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$rec) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid or expired password reset token. Please request a new link.']);
+        exit;
+    }
+    
+    $new_hash = password_hash($password, PASSWORD_BCRYPT);
+    $uid = intval($rec['user_id']);
+    
+    $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$new_hash, $uid]);
+    $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = ?")->execute([$uid]);
+    try { $pdo->prepare("DELETE FROM auth_tokens WHERE user_id = ?")->execute([$uid]); } catch (Exception $eT) {}
+    
+    echo json_encode(['success' => true, 'message' => 'Password reset successfully. You can now login.']);
     break;
 
 case 'update_profile':
@@ -1484,8 +1568,8 @@ case 'update_profile':
 case 'init_didit_kyc':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true);
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? $input['user_id'] ?? 0);
-    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+    $uid = intval($_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? $input['user_id'] ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required. Please sign in to verify your identity.']); exit; }
 
     require_once __DIR__ . '/didit_helper.php';
 
@@ -1569,9 +1653,11 @@ case 'init_didit_kyc':
             $pdo->prepare("UPDATE vendors SET didit_session_id = ?, verification_status = 'pending', didit_decision = 'In Progress' WHERE id = ?")->execute([$sessionId, $vendorId]);
         }
 
-        $_SESSION['user']['didit_session_id'] = $sessionId;
-        $_SESSION['user']['kyc_status'] = 'in_progress';
-        $_SESSION['user']['didit_decision'] = 'In Progress';
+        if (isset($_SESSION['user']) && is_array($_SESSION['user'])) {
+            $_SESSION['user']['didit_session_id'] = $sessionId;
+            $_SESSION['user']['kyc_status'] = 'in_progress';
+            $_SESSION['user']['didit_decision'] = 'In Progress';
+        }
 
         echo json_encode([
             'success' => true,
@@ -1580,8 +1666,12 @@ case 'init_didit_kyc':
             'session_token' => $session['session_token'] ?? ''
         ]);
     } catch (Exception $eDidit) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to initialize Didit verification session', 'detail' => $eDidit->getMessage()]);
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $eDidit->getMessage() ?: 'Failed to initialize Didit verification session',
+            'detail' => $eDidit->getMessage()
+        ]);
     }
     break;
 
@@ -2028,6 +2118,7 @@ case 'vendors':
     $filtered = [];
     foreach ($vendors as &$v) {
         $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
+        $v['cover_photo'] = resolve_vendor_cover($v['category'] ?? '', $v['cover_photo'] ?? '');
         $v['packages_pricing'] = json_decode($v['packages_pricing'] ?? '[]', true) ?: [];
         $v['social_links'] = json_decode($v['social_links'] ?? '{}', true) ?: [];
         $v['gallery'] = json_decode($v['gallery'] ?? '[]', true) ?: [];
@@ -2169,6 +2260,7 @@ case 'vendor_details':
         http_response_code(404); echo json_encode(['error'=>'Not found']); exit;
     }
     $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
+    $v['cover_photo'] = resolve_vendor_cover($v['category'] ?? '', $v['cover_photo'] ?? '');
     $info = get_online_status_info($v['last_active'] ?? '');
     $v['is_online'] = $info['is_online'];
     $v['online_status'] = $info['online_status'];
@@ -2597,65 +2689,7 @@ case 'get_user_status':
     echo json_encode($info);
     break;
 
-case 'init_didit_kyc':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if ($uid <= 0) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Authentication required for identity verification.']);
-        exit;
-    }
-    require_once __DIR__ . '/didit_helper.php';
-    try {
-        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-        $v_stmt->execute([$uid]);
-        $vendor_id = intval($v_stmt->fetchColumn() ?: 0);
-        
-        $session = DiditHelper::createSession($uid, $vendor_id ?: null);
-        $sess_id = $session['session_id'] ?? ('sess_' . time() . '_' . $uid);
-        $url = $session['url'] ?? '';
 
-        $pdo->prepare("UPDATE users SET didit_session_id = ?, kyc_status = 'pending_verification' WHERE id = ?")->execute([$sess_id, $uid]);
-        if ($vendor_id > 0) {
-            $pdo->prepare("UPDATE vendors SET didit_session_id = ?, verification_status = 'pending_verification' WHERE id = ?")->execute([$sess_id, $vendor_id]);
-        }
-
-        echo json_encode([
-            'success' => true,
-            'url' => $url,
-            'session_id' => $sess_id
-        ]);
-    } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-    break;
-
-case 'check_didit_kyc':
-    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if ($uid <= 0) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Authentication required.']);
-        exit;
-    }
-    $sess_id = clean($_GET['session_id'] ?? $_POST['session_id'] ?? $raw_input['session_id'] ?? '');
-    require_once __DIR__ . '/didit_helper.php';
-    try {
-        if (!empty($sess_id)) {
-            $status = DiditHelper::getSessionStatus($sess_id);
-            echo json_encode(['success' => true, 'status' => $status]);
-        } else {
-            $u_stmt = $pdo->prepare("SELECT kyc_status FROM users WHERE id = ?");
-            $u_stmt->execute([$uid]);
-            $st = $u_stmt->fetchColumn() ?: 'not_started';
-            echo json_encode(['success' => true, 'status' => ['decision' => $st]]);
-        }
-    } catch (Exception $e) {
-        $u_stmt = $pdo->prepare("SELECT kyc_status FROM users WHERE id = ?");
-        $u_stmt->execute([$uid]);
-        $st = $u_stmt->fetchColumn() ?: 'not_started';
-        echo json_encode(['success' => true, 'status' => ['decision' => $st]]);
-    }
-    break;
 
 case 'chat_inbox':
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
@@ -4456,7 +4490,7 @@ case 'get_bank_details':
         'momo_provider' => $settings['admin_momo_provider'] ?? 'MTN Mobile Money',
         'momo_number' => $settings['admin_momo_number'] ?? '0540477911',
         'momo_name' => $settings['admin_momo_name'] ?? 'Ohati Payments',
-        'payment_instructions' => $settings['admin_payment_instructions'] ?? 'Please transfer the ad campaign fee to MTN MoMo (0540477911) or Ecobank Ghana (1441002939201). Upload your receipt screenshot and enter your transaction ID below.'
+        'payment_instructions' => $settings['admin_payment_instructions'] ?? ''
     ];
     echo json_encode(['success' => true, 'bank_details' => $details]);
     break;

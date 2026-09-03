@@ -14,8 +14,8 @@ window.blogState = {
 };
 
 // ── 1. BLOG INDEX SCREEN (SECTION-BY-SECTION) ─────────────────────────────
-function initBlogScreen(params = {}) {
-    const container = document.getElementById('screen-blog');
+function initBlogScreen(params = {}, targetContainer = null) {
+    const container = targetContainer || document.getElementById('screen-blog');
     if (!container) return;
     container.classList.add('light-theme-forced');
 

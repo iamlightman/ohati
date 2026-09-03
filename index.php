@@ -525,25 +525,25 @@ if ($requested_vendor_id > 0) {
     <div id="ohati-global-modal-root"></div>
 
     
-    <script src="js/utils.js?v=3.8.0"></script>
-    <script src="js/helpers.js?v=3.8.0"></script>
-    <script src="js/api.js?v=3.8.0"></script>
-    <script src="js/action_lock.js?v=3.8.0"></script>
-    <script src="js/state.js?v=3.8.0"></script>
-    <script src="js/modals.js?v=3.8.0"></script>
-    <script src="js/auth.js?v=3.8.0"></script>
-    <script src="js/booking.js?v=3.8.0"></script>
-    <script src="js/vendor.js?v=3.8.0"></script>
-    <script src="js/chat.js?v=3.8.0"></script>
-    <script src="js/search.js?v=3.8.0"></script>
-    <script src="js/review.js?v=3.8.0"></script>
-    <script src="js/notification.js?v=3.8.0"></script>
-    <script src="js/payment.js?v=3.8.0"></script>
-    <script src="js/screens.js?v=3.8.0"></script>
-    <script src="js/calling.js?v=3.8.0"></script>
-    <script src="js/jobs.js?v=3.8.0"></script>
-    <script src="js/blog.js?v=3.8.0"></script>
-    <script src="js/app.js?v=3.8.0"></script>
+    <script src="js/utils.js?v=3.9.0"></script>
+    <script src="js/helpers.js?v=3.9.0"></script>
+    <script src="js/api.js?v=3.9.0"></script>
+    <script src="js/action_lock.js?v=3.9.0"></script>
+    <script src="js/state.js?v=3.9.0"></script>
+    <script src="js/modals.js?v=3.9.0"></script>
+    <script src="js/auth.js?v=3.9.0"></script>
+    <script src="js/booking.js?v=3.9.0"></script>
+    <script src="js/vendor.js?v=3.9.0"></script>
+    <script src="js/chat.js?v=3.9.0"></script>
+    <script src="js/search.js?v=3.9.0"></script>
+    <script src="js/review.js?v=3.9.0"></script>
+    <script src="js/notification.js?v=3.9.0"></script>
+    <script src="js/payment.js?v=3.9.0"></script>
+    <script src="js/screens.js?v=3.9.0"></script>
+    <script src="js/calling.js?v=3.9.0"></script>
+    <script src="js/jobs.js?v=3.9.0"></script>
+    <script src="js/blog.js?v=3.9.0"></script>
+    <script src="js/app.js?v=3.9.0"></script>
 
 </body>
 </html>

@@ -274,7 +274,11 @@ if (!function_exists('verify_csrf')) {
 
 // Sanitize output helper
 if (!function_exists('clean')) {
-    function clean($str) { return htmlspecialchars(trim($str), ENT_QUOTES, 'UTF-8'); }
+    function clean($str) {
+        if ($str === null || $str === false) return '';
+        if (is_array($str)) return '';
+        return htmlspecialchars(trim((string)$str), ENT_QUOTES, 'UTF-8');
+    }
 }
 
 if (!function_exists('add_notification')) {

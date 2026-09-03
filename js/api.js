@@ -9,6 +9,11 @@ window.getOhatiApiBaseUrl = function() {
                         (navigator.userAgent && navigator.userAgent.includes('OhatiApp'));
 
     if (isNativeApp) {
+        if (window.location.origin && window.location.origin.startsWith('http') && !window.location.origin.includes('capacitor://')) {
+            const pathName = window.location.pathname || '';
+            const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
+            return window.location.origin + (appDir ? appDir + '/api.php' : '/api.php');
+        }
         return 'https://ohati.com/api.php';
     }
     return 'api.php';
@@ -50,7 +55,8 @@ const API = {
                 headers: this.getAuthHeaders()
             });
         } catch (netErr) {
-            throw new Error('Network connection failed. Please check your internet connection.');
+            console.error('[API GET Error]', cleanAction, netErr);
+            throw new Error('Network connection failed. Please check server connection.');
         }
         let json;
         try {
@@ -83,19 +89,23 @@ const API = {
             const csrfToken = (window.state && window.state.csrfToken) ? window.state.csrfToken : (csrfMeta ? csrfMeta.getAttribute('content') : '');
             const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
             const isPreAuth = ['forgot_password', 'reset_password', 'send_otp', 'verify_otp', 'login', 'register'].includes(action);
+            
+            const postHeaders = { 'Content-Type': 'application/json' };
+            if (csrfToken) {
+                postHeaders['X-CSRF-Token'] = csrfToken;
+            }
+
             let res;
             try {
                 res = await fetch(`${this.base}?action=${action}`, {
                     method: 'POST',
                     credentials: isNative ? (isPreAuth ? 'omit' : 'same-origin') : 'include',
-                    headers: this.getAuthHeaders({ 
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    }),
+                    headers: this.getAuthHeaders(postHeaders),
                     body: JSON.stringify(data)
                 });
             } catch (netErr) {
-                throw new Error('Network connection failed. Please check your internet connection.');
+                console.error('[API POST Error]', action, netErr);
+                throw new Error('Network connection failed. Please check server connection.');
             }
             let json;
             try {

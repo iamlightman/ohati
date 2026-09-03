@@ -1,5 +1,5 @@
-window.DEFAULT_USER_AVATAR = "img/default-avatar.png";
-window.DEFAULT_BUSINESS_COVER = "img/default-avatar.png";
+window.DEFAULT_USER_AVATAR = "profile icon.jpg";
+window.DEFAULT_BUSINESS_COVER = "profile icon.jpg";
 
 /**
  * Universal Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)

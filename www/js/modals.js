@@ -162,7 +162,7 @@ function updateSidebarUI() {
         if (navContainer) {
             if (activeRole === 'vendor') {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('dashboard', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-dash', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-chart-pie"></i><span>Vendor Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
@@ -219,7 +219,7 @@ function updateSidebarUI() {
                 `;
             } else {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('dashboard', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('profile', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">

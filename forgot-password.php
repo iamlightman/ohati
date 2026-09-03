@@ -225,12 +225,15 @@ if (isset($_SESSION['user'])) {
             const urlParams = new URLSearchParams(window.location.search);
             const target = urlParams.get('target');
             const code = urlParams.get('code');
-            if (target && code) {
+            if (target) {
                 resetTargetVal = target;
-                const codeInput = document.getElementById('reset-code');
-                if (codeInput) codeInput.value = code;
+                if (code) {
+                    const codeInput = document.getElementById('reset-code');
+                    if (codeInput) codeInput.value = code;
+                }
                 document.getElementById('step-forgot').style.display = 'none';
                 document.getElementById('step-reset').style.display = 'block';
+                startResetTimer();
             }
         });
     </script>

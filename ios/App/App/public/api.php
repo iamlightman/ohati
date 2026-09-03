@@ -6,9 +6,13 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
 if (!empty($origin)) {
-    header("Access-Control-Allow-Origin: $origin");
+    $origin_clean = rtrim($origin, '/');
+    header("Access-Control-Allow-Origin: $origin_clean");
+    header('Access-Control-Allow-Credentials: true');
+} else if (isset($_SERVER['HTTP_USER_AGENT']) && (strpos($_SERVER['HTTP_USER_AGENT'], 'Capacitor') !== false || strpos($_SERVER['HTTP_USER_AGENT'], 'Ohati') !== false)) {
+    header("Access-Control-Allow-Origin: capacitor://localhost");
     header('Access-Control-Allow-Credentials: true');
 } else {
     header('Access-Control-Allow-Origin: *');
@@ -599,7 +603,7 @@ try {
 
 // ── CSRF ENFORCEMENT ────────────────────────────────────────────────────
 // Enforce CSRF on all state-changing POST actions except pre-auth flows
-$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'logout', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'mark_notifications_read', 'vendor_stats', 'dashboard_stats', 'record_vendor_view', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status', 'upload_chat_file', 'get_call_number', 'init_didit_kyc', 'check_didit_kyc'];
+$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'logout', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'mark_notifications_read', 'vendor_stats', 'dashboard_stats', 'record_vendor_view', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status', 'upload_chat_file', 'get_call_number', 'init_didit_kyc', 'check_didit_kyc', 'switch_role'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrf_exempt_actions)) {
     $headers = function_exists('getallheaders') ? getallheaders() : [];
     $csrf = $headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? $raw_input['csrf_token'] ?? '';
@@ -3790,12 +3794,33 @@ case 'payment_history':
 
 case 'switch_role':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_in = file_get_contents('php://input');
+    $input = json_decode($raw_in, true);
+    if (!is_array($input)) $input = $_POST;
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? $input['user_id'] ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
+
+    if (!isset($_SESSION['user']) && $uid > 0) {
+        $uStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $uStmt->execute([$uid]);
+        $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+        if ($uRow) {
+            $_SESSION['user'] = [
+                'id' => $uRow['id'],
+                'name' => $uRow['name'],
+                'email' => $uRow['email'],
+                'phone' => $uRow['phone'],
+                'role' => $uRow['role'],
+                'avatar' => $uRow['avatar'] ?? '',
+                'kyc_status' => $uRow['kyc_status'] ?? 'not_started'
+            ];
+        }
+    }
+
     $role = ($input['role'] ?? '') === 'vendor' ? 'vendor' : 'customer';
 
     $stmt = $pdo->prepare("SELECT id, name FROM vendors WHERE user_id = ?");
-    $stmt->execute([$_SESSION['user']['id']]);
+    $stmt->execute([$uid]);
     $vendor = $stmt->fetch();
 
     if ($role === 'vendor') {
@@ -3822,10 +3847,10 @@ case 'switch_role':
     try {
         if ($vendor && !empty($vendor['name'])) {
             $stmt = $pdo->prepare("UPDATE users SET role = ?, active_role = ?, name = ? WHERE id = ?");
-            $stmt->execute([$role, $role, $vendor['name'], $_SESSION['user']['id']]);
+            $stmt->execute([$role, $role, $vendor['name'], $uid]);
         } else {
             $stmt = $pdo->prepare("UPDATE users SET role = ?, active_role = ? WHERE id = ?");
-            $stmt->execute([$role, $role, $_SESSION['user']['id']]);
+            $stmt->execute([$role, $role, $uid]);
         }
     } catch (Exception $e) {}
     echo json_encode(['success'=>true, 'active_role'=>$role, 'user'=>$_SESSION['user']]);

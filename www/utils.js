@@ -1,5 +1,5 @@
 window.DEFAULT_USER_AVATAR = "img/default-avatar.png";
-window.DEFAULT_BUSINESS_COVER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><rect width='600' height='400' fill='%23081729'/><g fill='none' stroke='%23F2A735' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'><path d='M220 320 V120 L380 120 V320 Z'/><path d='M250 160 H270 M330 160 H350 M250 200 H270 M330 200 H350 M250 240 H270 M330 240 H350'/><path d='M285 320 V280 H315 V320'/><path d='M140 320 V200 L220 160'/><path d='M380 160 L460 200 V320'/><path d='M100 320 H500'/></g></svg>";
+window.DEFAULT_BUSINESS_COVER = "img/default-avatar.png";
 
 /**
  * Universal Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)

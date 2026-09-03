@@ -42,10 +42,11 @@ const API = {
             if (v !== '' && v !== null && v !== undefined) url += `&${k}=${encodeURIComponent(v)}`;
         }
         const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
+        const isPreAuth = ['forgot_password', 'reset_password', 'send_otp', 'verify_otp', 'login', 'register'].includes(cleanAction);
         let res;
         try {
             res = await fetch(url, { 
-                credentials: isNative ? 'same-origin' : 'include',
+                credentials: isNative ? (isPreAuth ? 'omit' : 'same-origin') : 'include',
                 headers: this.getAuthHeaders()
             });
         } catch (netErr) {
@@ -81,11 +82,12 @@ const API = {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
             const csrfToken = (window.state && window.state.csrfToken) ? window.state.csrfToken : (csrfMeta ? csrfMeta.getAttribute('content') : '');
             const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
+            const isPreAuth = ['forgot_password', 'reset_password', 'send_otp', 'verify_otp', 'login', 'register'].includes(action);
             let res;
             try {
                 res = await fetch(`${this.base}?action=${action}`, {
                     method: 'POST',
-                    credentials: isNative ? 'same-origin' : 'include',
+                    credentials: isNative ? (isPreAuth ? 'omit' : 'same-origin') : 'include',
                     headers: this.getAuthHeaders({ 
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': csrfToken

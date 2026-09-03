@@ -304,6 +304,15 @@ function navigateTo(screenId, params = {}, options = {}) {
     // Run screen specific initialization/render inside try/catch
     try {
         switch (screenId) {
+            case 'dashboard':
+                if (isVendor) {
+                    screenId = 'vendor-dash';
+                    initVendorDashScreen(params);
+                } else {
+                    screenId = 'profile';
+                    initProfileScreen(params);
+                }
+                break;
             case 'home':
                 initHomeScreen(params);
                 break;
@@ -5482,6 +5491,17 @@ window.startDiditKycFlow = function(e) {
         });
 };
 
+window.openDiditVerificationUrl = function(url) {
+    if (!url) return;
+    try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+            window.Capacitor.Plugins.Browser.open({ url: url });
+            return;
+        }
+    } catch(e) {}
+    window.open(url, '_blank');
+};
+
 function renderDiditKycScreen(params) {
     const screen = document.getElementById('screen-didit-kyc');
     if (!screen) return;
@@ -5490,24 +5510,62 @@ function renderDiditKycScreen(params) {
     const sessionId = params?.session_id || '';
 
     screen.innerHTML = `
-        <div style="display:flex; flex-direction:column; height:100vh; background:#F8FAFC;">
+        <div style="display:flex; flex-direction:column; min-height:100vh; background:#F8FAFC;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#0B1F3A; color:#fff; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <button onclick="navigateTo('vendor-dash')" style="background:none; border:none; color:#fff; font-size:1.1rem; cursor:pointer;">
                         <i class="fa-solid fa-arrow-left"></i>
                     </button>
-                    <span style="font-weight:700; font-size:0.95rem;">Identity Verification</span>
+                    <span style="font-weight:700; font-size:0.95rem;">Identity Verification (KYC)</span>
                 </div>
                 <button onclick="navigateTo('vendor-dash')" style="background:none; border:none; color:#fff; font-size:1.1rem; cursor:pointer;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div style="flex:1; width:100%; position:relative; background:#F8FAFC;">
-                ${url ? `<iframe src="${url}" allow="camera; microphone; fullscreen; autoplay; encrypted-media" style="width:100%; height:100%; border:none;"></iframe>` : '<div style="padding:40px; text-align:center;">Invalid verification session.</div>'}
+            <div style="flex:1; width:100%; max-width:540px; margin:0 auto; padding:24px 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(242, 167, 53, 0.15); display:flex; align-items:center; justify-content:center; margin-bottom:16px; color:var(--accent, #E05A47); font-size:2rem;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 style="font-size:1.35rem; font-weight:800; color:#0B1F3A; margin:0 0 8px 0;">Official Identity Verification</h2>
+                <p style="font-size:0.88rem; color:#64748B; margin:0 0 24px 0; line-height:1.5; max-width:440px;">
+                    Complete your identity verification (Ghana Card & selfie check) via our secure Didit verification portal.
+                </p>
+
+                <div style="width:100%; background:#FFFFFF; border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); border:1px solid #E2E8F0; margin-bottom:24px; text-align:left;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#0B1F3A; font-weight:700;">1</div>
+                        <div style="font-size:0.85rem; font-weight:600; color:#1E293B;">Click the button below to launch the secure portal</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#0B1F3A; font-weight:700;">2</div>
+                        <div style="font-size:0.85rem; font-weight:600; color:#1E293B;">Scan your Ghana Card & complete quick selfie check</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#0B1F3A; font-weight:700;">3</div>
+                        <div style="font-size:0.85rem; font-weight:600; color:#1E293B;">Return to Ohati; status updates automatically in real-time</div>
+                    </div>
+                </div>
+
+                ${url ? `
+                    <button onclick="window.openDiditVerificationUrl('${url}')" class="btn btn-primary btn-full mb-12" style="padding:14px; font-weight:700; font-size:0.95rem; border-radius:12px; box-shadow:0 4px 14px rgba(224, 90, 71, 0.3);">
+                        <i class="fa-solid fa-arrow-up-right-from-square" style="margin-right:6px;"></i> Launch Verification Portal
+                    </button>
+                ` : '<div style="color:#EF4444; margin-bottom:16px;">Invalid verification session URL. Please retry.</div>'}
+
+                <div id="kyc-poll-status" style="font-size:0.82rem; color:#64748B; margin-top:8px; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-spinner fa-spin" style="color:var(--accent, #E05A47);"></i> Waiting for verification response...
+                </div>
+
+                <button onclick="navigateTo('vendor-dash')" class="btn btn-ghost btn-full mt-16" style="color:#64748B; font-size:0.85rem;">
+                    Return to Vendor Dashboard
+                </button>
             </div>
         </div>
     `;
 
+    if (url) {
+        window.openDiditVerificationUrl(url);
+    }
     if (sessionId) {
         window.pollDiditKycStatus(sessionId);
     }
@@ -7264,13 +7322,6 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
             <!-- Preferences -->
             <h4 style="margin-bottom:12px;">Preferences</h4>
             <div class="card p-16 mb-16">
-                <div class="form-group">
-                    <label class="form-label">Preferred Language</label>
-                    <select class="form-select" id="edit-language">
-                        <option value="English" ${u.language === 'English' || !u.language ? 'selected' : ''}>English</option>
-                        <option value="French" ${u.language === 'French' ? 'selected' : ''}>French</option>
-                    </select>
-                </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Preferred Currency</label>
                     <select class="form-select" id="edit-currency" disabled style="opacity:0.7;">
@@ -7798,19 +7849,23 @@ window.saveEditedPhoto = function() {
 };
 
 function openRequestChangeModal(fieldName) {
+    const fnLower = (fieldName || '').toLowerCase();
+    const isDocExempt = fnLower === 'email' || fnLower === 'phone' || fnLower === 'phone number';
     const html = `
         <div class="auth-modal-header">
             <h2 class="auth-modal-title">Request Profile Update</h2>
-            <p class="auth-modal-subtitle">Submit verification details to update locked field: ${fieldName}</p>
+            <p class="auth-modal-subtitle">Submit details to update locked field: ${fieldName}</p>
         </div>
         <div class="form-group">
-            <label class="form-label">New Value</label>
+            <label class="form-label">New ${fieldName}</label>
             <input type="text" class="form-input" id="req-new-value" placeholder="Enter new ${fieldName}">
         </div>
+        ${isDocExempt ? '' : `
         <div class="form-group">
             <label class="form-label">Supporting Document (ID/Certificate/etc.)</label>
             <input type="file" id="req-doc-file" class="form-input" accept="image/*,application/pdf">
         </div>
+        `}
         <button class="btn btn-primary btn-full mt-12" id="req-submit-btn" onclick="submitRequestChange('${fieldName}')">Submit Request</button>
     `;
     openModal(html);
@@ -7828,7 +7883,7 @@ function submitRequestChange(fieldName) {
     const btn = document.getElementById('req-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
 
-    let docUrl = 'doc_uploaded.jpg';
+    let docUrl = '';
     if (docInput && docInput.files[0]) {
         docUrl = docInput.files[0].name;
     }
@@ -7838,7 +7893,7 @@ function submitRequestChange(fieldName) {
         new_value: val,
         supporting_document: docUrl
     }).then(res => {
-        showPushNotification('Request Sent', res.message);
+        showPushNotification('Request Sent', res.message || 'Change request submitted for admin approval.');
         closeModal();
     }).catch(err => {
         showPushNotification('Error', err.message);

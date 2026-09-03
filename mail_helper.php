@@ -81,7 +81,7 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
 
         $socket = @stream_socket_client(
             $protocol . $chost . ':' . $cport,
-            $errno, $errstr, 2,
+            $errno, $errstr, 1.5,
             STREAM_CLIENT_CONNECT, $context
         );
 

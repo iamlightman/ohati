@@ -248,6 +248,10 @@ function renderAuthModal() {
                     <label class="form-label">6-digit Reset Code</label>
                     <input type="tel" class="form-input" id="reset-code" name="reset_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter 6-digit code received" value="">
                 </div>
+                <div class="otp-timer mb-12" id="reset-timer-box" style="font-size:0.8rem; color:#6B7280; text-align:center;">Resend code in <span id="reset-countdown">60</span>s</div>
+                <div id="reset-resend-container" style="display:none; text-align:center; margin-bottom:12px;">
+                    <button type="button" class="btn btn-ghost btn-sm" id="reset-resend-btn" onclick="resendResetCode(event)" style="color:var(--primary); font-weight:700;">Resend Code</button>
+                </div>
                 <div class="form-group">
                     <label class="form-label">New Password</label>
                     <div class="input-group">
@@ -276,6 +280,8 @@ function renderAuthModal() {
 
     if (mode === 'otp') {
         startOTPTimer();
+    } else if (mode === 'reset') {
+        startResetOTPTimer();
     }
 }
 
@@ -655,6 +661,45 @@ function submitReset(event) {
     }).catch(e => {
         if (err) { err.textContent = e.message; err.style.display = 'block'; }
     });
+}
+
+window.resendResetCode = function(event) {
+    const target = state.authData.resetTarget || '';
+    if (!target) {
+        showPushNotification('Error', 'Target email/phone missing. Please try again.');
+        return;
+    }
+    const btn = event?.target || document.getElementById('reset-resend-btn');
+    if (btn) btn.disabled = true;
+    API.forgotPassword(target)
+        .then(res => {
+            if (btn) btn.disabled = false;
+            showPushNotification('Code Resent', 'A new password reset code has been sent.');
+            startResetOTPTimer();
+        })
+        .catch(err => {
+            if (btn) btn.disabled = false;
+            showPushNotification('Resend Error', err.message || 'Could not resend reset code.');
+        });
+};
+
+function startResetOTPTimer() {
+    let secs = 60;
+    const cd = document.getElementById('reset-countdown');
+    const timerBox = document.getElementById('reset-timer-box');
+    const resendContainer = document.getElementById('reset-resend-container');
+    if (timerBox) timerBox.style.display = 'block';
+    if (resendContainer) resendContainer.style.display = 'none';
+    if (window._resetCountdownTimer) clearInterval(window._resetCountdownTimer);
+    window._resetCountdownTimer = setInterval(() => {
+        secs--;
+        if (cd) cd.textContent = secs;
+        if (secs <= 0) {
+            clearInterval(window._resetCountdownTimer);
+            if (timerBox) timerBox.style.display = 'none';
+            if (resendContainer) resendContainer.style.display = 'block';
+        }
+    }, 1000);
 }
 
 // Log Out

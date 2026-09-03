@@ -164,7 +164,7 @@ if (isset($_SESSION['user'])) {
         <!-- Success Sent State -->
         <div id="step-forgot-sent" style="display:none;">
             <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16,185,129,0.15); color: #10B981; display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; margin: 0 auto 12px auto;">
-                <i class="fa-solid fa-paper-plane"></i>
+                <i class="fa-solid fa-circle-check"></i>
             </div>
             <h2 class="forgot-title" style="color: #FFF;">Reset Link Sent</h2>
             <p class="forgot-subtitle" style="font-size: 0.88rem; color: #94A3B8; line-height: 1.5; margin-top: 8px;">

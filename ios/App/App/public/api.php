@@ -1340,14 +1340,10 @@ case 'verify_otp':
 
 case 'forgot_password':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!rate_limit('forgot_password', 5, 60)) { 
-        http_response_code(429); 
-        echo json_encode(['error' => 'Too many password reset requests. Please wait a moment before trying again.']); 
-        exit; 
-    }
     
     $input = json_decode(file_get_contents('php://input'), true);
-    $target_email = strtolower(trim($input['target'] ?? $input['email'] ?? ''));
+    $target_raw = trim($input['target'] ?? $input['email'] ?? '');
+    $target_email = strtolower($target_raw);
 
     // Uniform anti-enumeration message returned for all requests
     $generic_response = [
@@ -1361,8 +1357,8 @@ case 'forgot_password':
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE LOWER(email) = ? LIMIT 1");
-    $stmt->execute([$target_email]);
+    $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE LOWER(TRIM(email)) = ? OR LOWER(email) = ? LIMIT 1");
+    $stmt->execute([$target_email, $target_email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && !empty($user['email'])) {
@@ -1372,6 +1368,19 @@ case 'forgot_password':
             $now_str = date('Y-m-d H:i:s');
             $expires_str = date('Y-m-d H:i:s', time() + 86400); // 24 hours
             $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+
+            // Ensure password_resets table exists
+            $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                token_hash VARCHAR(64) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at DATETIME NOT NULL,
+                used TINYINT(1) DEFAULT 0,
+                ip_address VARCHAR(45) DEFAULT '',
+                KEY idx_token (token_hash),
+                KEY idx_user (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             // Invalidate existing unused tokens for this user
             $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0")->execute([$user['id']]);
@@ -1395,7 +1404,7 @@ case 'forgot_password':
                 $reset_url = "{$scheme}://{$host}{$dir}/reset_password.php?token={$raw_token}";
             }
 
-            // Send branded HTML email via send_smtp_mail with 100% inline-styled HTML for email client rendering
+            // Send branded HTML email via send_smtp_mail
             require_once __DIR__ . '/mail_helper.php';
             $user_name = htmlspecialchars($user['name'] ?: 'Ohati User');
             $subject = "Reset your Ohati password";

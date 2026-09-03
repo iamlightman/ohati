@@ -413,7 +413,42 @@ function openBecomeVendorModal() {
                 <div class="form-group mb-12">
                     <label class="form-label">Primary Vendor Category</label>
                     <select class="form-select" id="bv-category" required>
-                        <option value="">Loading categories...</option>
+                        <option value="Photography">Photography</option>
+                        <option value="Videography">Videography</option>
+                        <option value="Makeup Artists">Makeup Artists</option>
+                        <option value="Bridal Shops">Bridal Shops</option>
+                        <option value="Event Planners">Event Planners</option>
+                        <option value="Decorators">Decorators</option>
+                        <option value="Caterers">Caterers</option>
+                        <option value="Cake Designers">Cake Designers</option>
+                        <option value="Event Venues">Event Venues</option>
+                        <option value="DJs">DJs</option>
+                        <option value="MCs">MCs</option>
+                        <option value="Live Bands">Live Bands</option>
+                        <option value="Florists">Florists</option>
+                        <option value="Car Rentals">Car Rentals</option>
+                        <option value="Security Services">Security Services</option>
+                        <option value="Chilling Services">Chilling Services</option>
+                        <option value="Rental Equipment">Rental Equipment</option>
+                        <option value="Cocktail Bars">Cocktail Bars</option>
+                        <option value="Honeymoon Packages">Honeymoon Packages</option>
+                        <option value="Invitation Designers">Invitation Designers</option>
+                        <option value="Jewelers">Jewelers</option>
+                        <option value="Lighting">Lighting</option>
+                        <option value="Printing Services">Printing Services</option>
+                        <option value="Ushers">Ushers</option>
+                        <option value="Content Creators">Content Creators</option>
+                        <option value="Juice Bar">Juice Bar</option>
+                        <option value="Traditional Marriage Services">Traditional Marriage Services</option>
+                        <option value="Dowry Wrapping">Dowry Wrapping</option>
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Coordinators">Coordinators</option>
+                        <option value="Waiters">Waiters</option>
+                        <option value="Portable Washroom">Portable Washroom</option>
+                        <option value="Souvenirs">Souvenirs</option>
+                        <option value="Hairstylists">Hairstylists</option>
+                        <option value="Dowry Bearers">Dowry Bearers</option>
+                        <option value="Local Bar">Local Bar</option>
                     </select>
                 </div>
                 
@@ -437,26 +472,6 @@ function openBecomeVendorModal() {
                     <textarea class="form-textarea" id="bv-desc" style="min-height:70px;" placeholder="Tell clients about your event services..." required></textarea>
                 </div>
 
-                <!-- Identity Verification Section -->
-                <div style="margin: 14px 0; padding-top:12px; border-top:1px solid var(--gray-200);">
-                    <div style="font-size:0.85rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
-                        Identity Verification (KYC)
-                    </div>
-                    <div class="form-group mb-12">
-                        <label class="form-label">Government Issued ID Type</label>
-                        <select class="form-select" id="bv-id-type" required>
-                            <option value="Ghana Card" selected>Ghana Card</option>
-                            <option value="Passport">Passport</option>
-                            <option value="Driver's License">Driver's License</option>
-                            <option value="Voter's ID">Voter's ID</option>
-                        </select>
-                    </div>
-                    <div class="form-group mb-12">
-                        <label class="form-label">ID / National Card Number</label>
-                        <input type="text" class="form-input" id="bv-id-number" placeholder="e.g. GHA-123456789-0" required>
-                    </div>
-                </div>
-
                 <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
                     <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="bv-submit-btn">Activate Vendor Profile</button>
@@ -466,10 +481,14 @@ function openBecomeVendorModal() {
     `;
     openModal(html);
     
-    API.getCategories().then(cats => {
+    API.getCategories().then(res => {
         const select = document.getElementById('bv-category');
-        if (select && Array.isArray(cats)) {
-            select.innerHTML = cats.map(c => `<option value="${typeof c === 'string' ? c : c.name}">${typeof c === 'string' ? c : c.name}</option>`).join('');
+        const cats = Array.isArray(res) ? res : (res && Array.isArray(res.categories) ? res.categories : (res && Array.isArray(res.data) ? res.data : []));
+        if (select && cats && cats.length > 0) {
+            select.innerHTML = cats.map(c => {
+                const val = typeof c === 'string' ? c : (c.name || c.title || '');
+                return `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+            }).join('');
         }
     }).catch(() => {});
 }
@@ -485,10 +504,8 @@ function handleBecomeVendorSubmit(e) {
         experience: parseInt(document.getElementById('bv-experience').value) || 0,
         location: document.getElementById('bv-location').value.trim(),
         phone: document.getElementById('bv-phone').value.trim(),
-        email: state.user?.email || '',
-        description: document.getElementById('bv-desc').value.trim(),
-        kyc_id_type: document.getElementById('bv-id-type') ? document.getElementById('bv-id-type').value : 'Ghana Card',
-        kyc_id_number: document.getElementById('bv-id-number') ? document.getElementById('bv-id-number').value.trim() : ''
+        email: (window.state && window.state.user) ? window.state.user.email || '' : '',
+        description: document.getElementById('bv-desc').value.trim()
     };
     
     API.registerVendor(payload)

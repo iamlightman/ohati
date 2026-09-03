@@ -1680,9 +1680,20 @@ case 'get_kyc_status':
     $uid = intval($_SESSION['user']['id'] ?? 0);
     if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
 
-    $uStmt = $pdo->prepare("SELECT u.id, u.kyc_status, u.kyc_verified_at, u.didit_session_id, u.didit_decision, v.verification_status, v.verification_badge, v.verified FROM users u LEFT JOIN vendors v ON u.id = v.user_id WHERE u.id = ?");
-    $uStmt->execute([$uid]);
-    $user = $uStmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $uStmt = $pdo->prepare("SELECT u.id, u.kyc_status, u.kyc_verified_at, u.didit_session_id, u.didit_decision, v.verification_status, v.verification_badge, v.verified FROM users u LEFT JOIN vendors v ON u.id = v.user_id WHERE u.id = ?");
+        $uStmt->execute([$uid]);
+        $user = $uStmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $eColMissing) {
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN kyc_verified_at VARCHAR(50) DEFAULT ''"); } catch (Throwable $eAdd) {}
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_session_id VARCHAR(255) DEFAULT ''"); } catch (Throwable $eAdd) {}
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_decision VARCHAR(100) DEFAULT ''"); } catch (Throwable $eAdd) {}
+        
+        $uStmt = $pdo->prepare("SELECT u.id, u.kyc_status, u.didit_session_id, u.didit_decision, v.verification_status, v.verification_badge, v.verified FROM users u LEFT JOIN vendors v ON u.id = v.user_id WHERE u.id = ?");
+        $uStmt->execute([$uid]);
+        $user = $uStmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) $user['kyc_verified_at'] = '';
+    }
 
     if (!$user) {
         echo json_encode(['success' => false, 'error' => 'User not found']);
@@ -1698,7 +1709,11 @@ case 'get_kyc_status':
             $dStatus = strtolower($decision['status']);
             $nowStr = date('Y-m-d H:i:s');
             if ($dStatus === 'approved' || $dStatus === 'verified') {
-                $pdo->prepare("UPDATE users SET kyc_status = 'approved', kyc_verified_at = ?, didit_decision = 'Approved' WHERE id = ?")->execute([$nowStr, $uid]);
+                try {
+                    $pdo->prepare("UPDATE users SET kyc_status = 'approved', kyc_verified_at = ?, didit_decision = 'Approved' WHERE id = ?")->execute([$nowStr, $uid]);
+                } catch (Throwable $eUpdCol) {
+                    $pdo->prepare("UPDATE users SET kyc_status = 'approved', didit_decision = 'Approved' WHERE id = ?")->execute([$uid]);
+                }
                 $pdo->prepare("UPDATE vendors SET verification_status = 'verified', verification_badge = CASE WHEN verification_badge = 'gold' THEN 'gold' ELSE 'blue' END, verified = 1 WHERE user_id = ?")->execute([$uid]);
                 $user['kyc_status'] = 'approved';
                 $user['verified'] = 1;

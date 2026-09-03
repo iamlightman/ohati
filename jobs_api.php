@@ -351,6 +351,17 @@ function handle_job_action($action, $pdo) {
             $v_id = $vendor['id'];
             $v_user_id = $vendor['user_id'] ?: $user_id;
 
+            // Prevent self-booking / self-applying on own posted job regardless of active role/account switch
+            $j_owner_stmt = $db_jobs->prepare("SELECT user_id FROM jobs WHERE id = ?");
+            $j_owner_stmt->execute([$job_id]);
+            $job_owner_id = intval($j_owner_stmt->fetchColumn() ?: 0);
+
+            $effective_user_id = intval($user_id ?: ($v_user_id ?? 0));
+            if ($job_owner_id > 0 && ($job_owner_id === $effective_user_id || $job_owner_id === intval($user_id) || $job_owner_id === intval($v_user_id))) {
+                echo json_encode(['error' => 'You cannot apply or submit proposals to your own posted job.']);
+                return;
+            }
+
             // Check if already applied (Database 2)
             $chk = $db_jobs->prepare("SELECT id FROM job_applications WHERE job_id = ? AND vendor_id = ?");
             $chk->execute([$job_id, $v_id]);

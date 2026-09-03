@@ -3040,32 +3040,35 @@ function openNotificationsModal() {
     el.classList.add('active');
 }
 
-function toggleSidebar(show) {
-    const overlay = document.getElementById('sidebar-overlay') || document.getElementById('app-sidebar-overlay');
-    if (!overlay) return;
-    const shouldOpen = (show === undefined) ? (!overlay.classList.contains('open') && !overlay.classList.contains('active')) : !!show;
-    if (shouldOpen) {
-        overlay.classList.add('open');
-        overlay.classList.add('active');
-        overlay.style.visibility = 'visible';
-        overlay.style.pointerEvents = 'auto';
-        if (typeof updateSidebarUI === 'function') updateSidebarUI();
-        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-        document.querySelectorAll('.sidebar-item').forEach(item => {
-            const screen = item.getAttribute('onclick');
-            if (screen && window.state && screen.includes(`navigateTo('${window.state.currentScreen}')`)) {
-                item.classList.add('active');
+function toggleSidebar(open) {
+    try {
+        const overlays = [document.getElementById('sidebar-overlay'), document.getElementById('app-sidebar-overlay')].filter(Boolean);
+        if (overlays.length === 0) return;
+
+        const mainOverlay = overlays[0];
+        const shouldOpen = (open === undefined || open === null) ? (!mainOverlay.classList.contains('open') && !mainOverlay.classList.contains('active')) : !!open;
+
+        overlays.forEach(overlay => {
+            if (shouldOpen) {
+                overlay.classList.add('open', 'active');
+                overlay.style.visibility = 'visible';
+                overlay.style.pointerEvents = 'auto';
             } else {
-                item.classList.remove('active');
+                overlay.classList.remove('open', 'active');
+                overlay.style.visibility = 'hidden';
+                overlay.style.pointerEvents = 'none';
             }
         });
-    } else {
-        overlay.classList.remove('open');
-        overlay.classList.remove('active');
-        overlay.style.visibility = 'hidden';
-        overlay.style.pointerEvents = 'none';
-    }
+
+        if (shouldOpen) {
+            try {
+                if (typeof updateSidebarUI === 'function') updateSidebarUI();
+                if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            } catch (uiErr) {}
+        }
+    } catch (err) {}
 }
+window.toggleSidebar = toggleSidebar;
 
 function updateUserSessionUI() {
     const nameEl = document.getElementById('sidebar-user-name');

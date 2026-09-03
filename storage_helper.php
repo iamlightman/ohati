@@ -222,8 +222,16 @@ function format_full_image_url($url) {
     if (empty($host)) {
         return $url;
     }
+
+    $script_name = $_SERVER['SCRIPT_NAME'] ?? '';
+    $dir = dirname($script_name);
+    if ($dir === '/' || $dir === '\\' || $dir === '.') {
+        $dir = '';
+    } else {
+        $dir = rtrim(str_replace('\\', '/', $dir), '/');
+    }
     
     $clean_path = ltrim($url, '/');
-    return "$scheme://$host/$clean_path";
+    return "$scheme://$host$dir/$clean_path";
 }
 ?>

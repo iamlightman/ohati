@@ -1,4 +1,4 @@
-window.DEFAULT_USER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+window.DEFAULT_USER_AVATAR = "img/default-avatar.png";
 window.DEFAULT_BUSINESS_COVER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><rect width='600' height='400' fill='%23081729'/><g fill='none' stroke='%23F2A735' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'><path d='M220 320 V120 L380 120 V320 Z'/><path d='M250 160 H270 M330 160 H350 M250 200 H270 M330 200 H350 M250 240 H270 M330 240 H350'/><path d='M285 320 V280 H315 V320'/><path d='M140 320 V200 L220 160'/><path d='M380 160 L460 200 V320'/><path d='M100 320 H500'/></g></svg>";
 
 /**
@@ -31,10 +31,12 @@ window.resolveImageUrl = function(url, defaultFallback = null) {
     }
     
     if (!domainPrefix && typeof window.location !== 'undefined' && window.location.origin && window.location.origin !== 'null' && !window.location.origin.includes('capacitor://') && !window.location.origin.includes('file://')) {
-        domainPrefix = window.location.origin;
+        const pathName = window.location.pathname || '';
+        const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
+        domainPrefix = window.location.origin + appDir;
     }
     
-    if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://') || domainPrefix.includes('localhost')) {
+    if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://')) {
         domainPrefix = 'https://ohati.com';
     }
 
@@ -148,36 +150,60 @@ function formatChatDateTime(dateStr) {
     return `${dateStrFormatted}, ${timeStr}`;
 }
 
-/** Format real-time clock timestamp across all screens: "Today, 10:37 PM", "Yesterday, 8:15 AM", or "Jul 29, 2026, 10:37 PM" */
+/** Centralized online presence evaluator: returns true ONLY if real heartbeat / last_active presence is active within 120s */
+window.isUserOnline = function(item) {
+    if (!item) return false;
+    if (typeof item.is_online === 'boolean') return item.is_online;
+    if (item.last_active) {
+        const d = parseAppDate(item.last_active);
+        if (!isNaN(d.getTime())) {
+            const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+            return diffSec >= 0 && diffSec <= 120;
+        }
+    }
+    return false;
+};
+
+/** Format real-time clock timestamp across all screens: "Just now", "10 mins ago", "3 hours ago", "Yesterday", or "Jul 29, 2026" */
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
     const d = parseAppDate(dateStr);
     if (isNaN(d.getTime())) return '';
 
     const now = new Date();
-    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+
+    if (diffSec < 60 && diffSec >= -10) {
+        return 'Just now';
+    }
+
+    if (diffSec < 3600 && diffSec >= 60) {
+        const mins = Math.floor(diffSec / 60);
+        return `${mins} ${mins === 1 ? 'min' : 'mins'} ago`;
+    }
 
     const isToday = d.toDateString() === now.toDateString();
     if (isToday) {
-        let diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-        if (diff >= -5 && diff < 60) {
-            return `Just now (${timeStr})`;
+        const hours = Math.floor(diffSec / 3600);
+        if (hours > 0 && hours < 24) {
+            return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
         }
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
         return `Today, ${timeStr}`;
     }
 
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     if (d.toDateString() === yesterday.toDateString()) {
-        return `Yesterday, ${timeStr}`;
+        return 'Yesterday';
     }
 
     const isSameYear = d.getFullYear() === now.getFullYear();
     if (isSameYear) {
-        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${timeStr}`;
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
-    return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${timeStr}`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 /** Global 30-second ticker to keep live relative timestamps fresh on screen */

@@ -1,13 +1,31 @@
 <?php
 // admin/deleted_accounts.php — Admin Management for Soft-Deleted & Archived User Accounts
+require_once __DIR__ . '/../db.php';
 session_start();
-require_once '../db.php';
-require_once '../storage_helper.php';
+require_once __DIR__ . '/auth_guard.php';
+require_once __DIR__ . '/../storage_helper.php';
 
-// Auth Guard for Admin
-if (empty($_SESSION['admin_logged_in'])) {
-    header("Location: login.php");
-    exit;
+// Ensure deleted_at column exists in users table safely
+try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL");
+} catch (Exception $e) {}
+
+function restoreUserAccountStatus($pdo, $uid) {
+    try {
+        $pdo->prepare("UPDATE users SET status = 'active', is_active = 1, email_verified = 1, phone_verified = 1, deleted_at = NULL WHERE id = ?")->execute([$uid]);
+    } catch (Exception $e) {
+        $pdo->prepare("UPDATE users SET status = 'active', is_active = 1, email_verified = 1, phone_verified = 1 WHERE id = ?")->execute([$uid]);
+    }
+}
+
+function markUserAccountDeleted($pdo, $uid) {
+    try {
+        $pdo->prepare("UPDATE users SET status = 'deleted', is_active = 0, deleted_at = ? WHERE id = ?")
+            ->execute([date('Y-m-d H:i:s'), $uid]);
+    } catch (Exception $e) {
+        $pdo->prepare("UPDATE users SET status = 'deleted', is_active = 0 WHERE id = ?")
+            ->execute([$uid]);
+    }
 }
 
 $msg = '';
@@ -27,8 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 if ($last['type'] === 'restore') {
                     $uid = intval($last['user_id']);
-                    $pdo->prepare("UPDATE users SET status = 'deleted', is_active = 0, deleted_at = ? WHERE id = ?")
-                        ->execute([date('Y-m-d H:i:s'), $uid]);
+                    markUserAccountDeleted($pdo, $uid);
                     $pdo->prepare("UPDATE vendors SET is_active = 0 WHERE user_id = ?")->execute([$uid]);
                     $msg = "Undo successful: Account #{$uid} has been marked as deleted again.";
                 } else if ($last['type'] === 'purge') {
@@ -62,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $chk = $pdo->prepare("SELECT id FROM users WHERE id = ?");
                 $chk->execute([$user_id]);
                 if ($chk->fetch()) {
-                    $pdo->prepare("UPDATE users SET status = 'active', is_active = 1, email_verified = 1, phone_verified = 1, deleted_at = NULL WHERE id = ?")->execute([$user_id]);
+                    restoreUserAccountStatus($pdo, $user_id);
                     $pdo->prepare("UPDATE vendors SET is_active = 1, verification_status = 'approved' WHERE user_id = ?")->execute([$user_id]);
                     $restored_uid = $user_id;
                 }
@@ -84,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $chkU->execute([$uid_target]);
 
                         if ($chkU->fetch()) {
-                            $pdo->prepare("UPDATE users SET status = 'active', is_active = 1, email_verified = 1, phone_verified = 1, deleted_at = NULL WHERE id = ?")->execute([$uid_target]);
+                            restoreUserAccountStatus($pdo, $uid_target);
                             $pdo->prepare("UPDATE vendors SET is_active = 1, verification_status = 'approved' WHERE user_id = ?")->execute([$uid_target]);
                         } else {
                             // Clean keys not present in users schema
@@ -102,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $placeholders = implode(', ', array_fill(0, count($cols), '?'));
                                 $sqlIns = "INSERT INTO users (`{$cols_str}`) VALUES ({$placeholders})";
                                 $pdo->prepare($sqlIns)->execute(array_values($insert_data));
-                                $pdo->prepare("UPDATE users SET status = 'active', is_active = 1, email_verified = 1, phone_verified = 1, deleted_at = NULL WHERE id = ?")->execute([$uid_target]);
+                                restoreUserAccountStatus($pdo, $uid_target);
                             }
                         }
                         $restored_uid = $uid_target;

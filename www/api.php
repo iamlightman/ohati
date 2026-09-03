@@ -15,45 +15,86 @@ if (!empty($origin)) {
 }
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 require_once __DIR__ . '/db.php';
 
-function getBlockedUserIds($uid, $pdo) {
-    if ($uid <= 0 || !$pdo) return [];
-    try {
-        $stmt = $pdo->prepare("SELECT blocked_id FROM user_blocks WHERE blocker_id = ? UNION SELECT blocker_id FROM user_blocks WHERE blocked_id = ?");
-        $stmt->execute([$uid, $uid]);
-        $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        return array_values(array_unique(array_filter($ids)));
-    } catch (Exception $e) {
-        return [];
+set_exception_handler(function($e) {
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+    }
+    $msg = $e->getMessage();
+    if (strpos($msg, 'locked') !== false || strpos($msg, 'busy') !== false) {
+        $msg = 'Database busy. Please tap submit again.';
+    }
+    echo json_encode(['error' => $msg]);
+    exit;
+});
+
+if (!function_exists('getBlockedUserIds')) {
+    function getBlockedUserIds($uid, $pdo) {
+        if ($uid <= 0 || !$pdo) return [];
+        try {
+            $stmt = $pdo->prepare("SELECT blocked_id FROM user_blocks WHERE blocker_id = ? UNION SELECT blocker_id FROM user_blocks WHERE blocked_id = ?");
+            $stmt->execute([$uid, $uid]);
+            $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+            return array_values(array_unique(array_filter($ids)));
+        } catch (Exception $e) {
+            return [];
+        }
     }
 }
 
-function resolve_vendor_logo($category, $current_logo = '') {
-    if (!empty($current_logo) && strpos($current_logo, 'data:image/svg+xml') === false && strpos($current_logo, 'photo-1535713875002') === false) {
-        return $current_logo;
+if (!function_exists('resolve_vendor_logo')) {
+    function resolve_vendor_logo($category, $current_logo = '') {
+        if (!empty($current_logo) && strpos($current_logo, 'data:image/svg+xml') === false && strpos($current_logo, 'photo-1535713875002') === false) {
+            return $current_logo;
+        }
+        $map = [
+            'Photography' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=400',
+            'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400',
+            'Makeup Artists' => 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=400',
+            'Event Planners' => 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400',
+            'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
+            'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
+            'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=400',
+            'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
+            'DJs' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400',
+            'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=400',
+            'MCs' => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=400',
+            'Florists' => 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=400',
+            'Car Rentals' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400',
+            'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400',
+            'Rental Equipment' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
+            'Juice Bar' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
+            'Chilling Services' => 'img/chill/logo.jpg'
+        ];
+        return $map[$category] ?? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
     }
-    $map = [
-        'Photography' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=400',
-        'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400',
-        'Makeup Artists' => 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=400',
-        'Event Planners' => 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400',
-        'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
-        'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
-        'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=400',
-        'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
-        'DJs' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400',
-        'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=400',
-        'MCs' => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=400',
-        'Florists' => 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=400',
-        'Car Rentals' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400',
-        'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400',
-        'Rental Equipment' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
-        'Juice Bar' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
-        'Chilling Services' => 'img/chill/logo.jpg'
-    ];
-    return $map[$category] ?? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
+}
+
+if (!function_exists('get_online_status_info')) {
+    function get_online_status_info($last_active_str) {
+        if (empty($last_active_str) || $last_active_str === '1970-01-01 00:00:00') {
+            return ['is_online' => false, 'online_status' => 'Offline'];
+        }
+        $ts = strtotime($last_active_str);
+        if (!$ts || $ts <= 86400) {
+            return ['is_online' => false, 'online_status' => 'Offline'];
+        }
+        $diff = time() - $ts;
+        if ($diff <= 120) {
+            return ['is_online' => true, 'online_status' => 'Online'];
+        }
+        if ($diff < 3600) {
+            $mins = max(1, floor($diff / 60));
+            return ['is_online' => false, 'online_status' => "Active {$mins}m ago"];
+        }
+        if ($diff < 86400) {
+            $hours = floor($diff / 3600);
+            return ['is_online' => false, 'online_status' => "Active {$hours}h ago"];
+        }
+        return ['is_online' => false, 'online_status' => "Active " . date('M j', $ts)];
+    }
 }
 
 // Bearer Token & Persistent Authentication Middleware
@@ -88,17 +129,19 @@ if (!empty($token)) {
     } catch (Exception $e) {}
 }
 
-function issue_auth_token($pdo, $user_id, $device_name = '') {
-    $token = bin2hex(random_bytes(32));
-    $token_hash = hash('sha256', $token);
-    $expires_at = date('Y-m-d H:i:s', strtotime('+1 year'));
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-    try {
-        $stmt = $pdo->prepare("INSERT INTO auth_tokens (user_id, token_hash, device_name, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$user_id, $token_hash, substr($device_name, 0, 250), $ip, $expires_at]);
-        return $token;
-    } catch (Exception $e) {
-        return '';
+if (!function_exists('issue_auth_token')) {
+    function issue_auth_token($pdo, $user_id, $device_name = '') {
+        $token = bin2hex(random_bytes(32));
+        $token_hash = hash('sha256', $token);
+        $expires_at = date('Y-m-d H:i:s', strtotime('+1 year'));
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        try {
+            $stmt = $pdo->prepare("INSERT INTO auth_tokens (user_id, token_hash, device_name, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$user_id, $token_hash, substr($device_name, 0, 250), $ip, $expires_at]);
+            return $token;
+        } catch (Exception $e) {
+            return '';
+        }
     }
 }
 
@@ -115,45 +158,47 @@ if (isset($_SESSION['user']['id'])) {
     }
 }
 
-function get_online_status_info($last_active_str) {
-    if (empty($last_active_str)) {
-        return ['is_online' => false, 'online_status' => 'Offline', 'last_active_formatted' => 'Offline'];
-    }
-    $time_ts = is_numeric($last_active_str) ? intval($last_active_str) : strtotime($last_active_str);
-    if (!$time_ts || $time_ts <= 0) {
-        return ['is_online' => false, 'online_status' => 'Offline', 'last_active_formatted' => 'Offline'];
-    }
-    $diff = time() - $time_ts;
-
-    // Handle future or bad timestamps
-    if ($diff < 0) {
-        $diff = 0;
-    }
-
-    if ($diff <= 180) { // Active within 3 minutes (180 seconds)
-        return [
-            'is_online' => true,
-            'online_status' => 'Online',
-            'last_active_formatted' => 'Active now'
-        ];
-    } else if ($diff < 3600) {
-        $mins = max(1, intval($diff / 60));
-        $str = "Last seen {$mins} " . ($mins == 1 ? "min" : "mins") . " ago";
-        return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
-    } else if ($diff < 86400) {
-        $hrs = intval($diff / 3600);
-        $str = "Last seen {$hrs} " . ($hrs == 1 ? "hour" : "hours") . " ago";
-        return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
-    } else {
-        $days = floor($diff / 86400);
-        if ($days == 1) {
-            $str = "Last seen yesterday at " . date('g:i A', $time_ts);
-        } else if ($days < 7) {
-            $str = "Last seen " . date('D g:i A', $time_ts);
-        } else {
-            $str = "Last seen " . date('M j, Y', $time_ts);
+if (!function_exists('get_online_status_info')) {
+    function get_online_status_info($last_active_str) {
+        if (empty($last_active_str)) {
+            return ['is_online' => false, 'online_status' => 'Offline', 'last_active_formatted' => 'Offline'];
         }
-        return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+        $time_ts = is_numeric($last_active_str) ? intval($last_active_str) : strtotime($last_active_str);
+        if (!$time_ts || $time_ts <= 0) {
+            return ['is_online' => false, 'online_status' => 'Offline', 'last_active_formatted' => 'Offline'];
+        }
+        $diff = time() - $time_ts;
+
+        // Handle future or bad timestamps
+        if ($diff < 0) {
+            $diff = 0;
+        }
+
+        if ($diff <= 180) { // Active within 3 minutes (180 seconds)
+            return [
+                'is_online' => true,
+                'online_status' => 'Online',
+                'last_active_formatted' => 'Active now'
+            ];
+        } else if ($diff < 3600) {
+            $mins = max(1, intval($diff / 60));
+            $str = "Last seen {$mins} " . ($mins == 1 ? "min" : "mins") . " ago";
+            return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+        } else if ($diff < 86400) {
+            $hrs = intval($diff / 3600);
+            $str = "Last seen {$hrs} " . ($hrs == 1 ? "hour" : "hours") . " ago";
+            return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+        } else {
+            $days = floor($diff / 86400);
+            if ($days == 1) {
+                $str = "Last seen yesterday at " . date('g:i A', $time_ts);
+            } else if ($days < 7) {
+                $str = "Last seen " . date('D g:i A', $time_ts);
+            } else {
+                $str = "Last seen " . date('M j, Y', $time_ts);
+            }
+            return ['is_online' => false, 'online_status' => $str, 'last_active_formatted' => $str];
+        }
     }
 }
 
@@ -204,257 +249,316 @@ if (strpos($action, 'blog') !== false || strpos($action, 'admin_blog') !== false
 }
 
 // CSRF token helper
-function csrf_token() {
-    if (!isset($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
-    return $_SESSION['csrf'];
-}
-function verify_csrf($token) {
-    if (empty($_SESSION['csrf'])) {
-        $_SESSION['csrf'] = !empty($token) ? $token : bin2hex(random_bytes(32));
-    } elseif (!empty($token)) {
-        $_SESSION['csrf'] = $token;
+if (!function_exists('csrf_token')) {
+    function csrf_token() {
+        if (!isset($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
+        return $_SESSION['csrf'];
     }
-    return true;
+}
+if (!function_exists('verify_csrf')) {
+    function verify_csrf($token) {
+        if (empty($_SESSION['csrf'])) {
+            $_SESSION['csrf'] = !empty($token) ? $token : bin2hex(random_bytes(32));
+        } elseif (!empty($token)) {
+            $_SESSION['csrf'] = $token;
+        }
+        return true;
+    }
 }
 
 // Sanitize output helper
-function clean($str) { return htmlspecialchars(trim($str), ENT_QUOTES, 'UTF-8'); }
-
-function add_notification($pdo, $user_id, $title, $message) {
-    $now_stamp = date('Y-m-d H:i:s');
-    $pdo->prepare("INSERT INTO notifications (user_id, title, body, created_at) VALUES (?, ?, ?, ?)")->execute([$user_id, $title, $message, $now_stamp]);
+if (!function_exists('clean')) {
+    function clean($str) { return htmlspecialchars(trim($str), ENT_QUOTES, 'UTF-8'); }
 }
 
-function log_activity($pdo, $action, $entity_type, $entity_id, $actor_id, $actor_role, $actor_name, $amount = 0, $old_status = '', $new_status = '', $details = '') {
-    try {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $device = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-        $stmt = $pdo->prepare("INSERT INTO financial_audit_log (action, entity_type, entity_id, actor_id, actor_role, actor_name, amount, old_status, new_status, details, ip_address, device) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$action, $entity_type, $entity_id, $actor_id, $actor_role, $actor_name, $amount, $old_status, $new_status, $details, $ip, substr($device, 0, 190)]);
-    } catch (Exception $e) {}
+if (!function_exists('add_notification')) {
+    function add_notification($pdo, $user_id, $title, $message) {
+        $uid = intval($user_id);
+        if ($uid <= 0 || !$pdo) return;
+        $now_stamp = date('Y-m-d H:i:s');
+        $pdo->prepare("INSERT INTO notifications (user_id, title, body, created_at) VALUES (?, ?, ?, ?)")->execute([$uid, $title, $message, $now_stamp]);
+    }
+}
+
+if (!function_exists('log_activity')) {
+    function log_activity($pdo, $action, $entity_type, $entity_id, $actor_id, $actor_role, $actor_name, $amount = 0, $old_status = '', $new_status = '', $details = '') {
+        try {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $device = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+            $stmt = $pdo->prepare("INSERT INTO financial_audit_log (action, entity_type, entity_id, actor_id, actor_role, actor_name, amount, old_status, new_status, details, ip_address, device) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([$action, $entity_type, $entity_id, $actor_id, $actor_role, $actor_name, $amount, $old_status, $new_status, $details, $ip, substr($device, 0, 190)]);
+        } catch (Exception $e) {}
+    }
 }
 
 // Rate limit helper (simple session-based)
-function rate_limit($key, $max = 5, $window = 60) {
-    $now = time();
-    if (!isset($_SESSION['rl'][$key])) $_SESSION['rl'][$key] = [];
-    $_SESSION['rl'][$key] = array_filter($_SESSION['rl'][$key], fn($t) => $t > $now - $window);
-    if (count($_SESSION['rl'][$key]) >= $max) return false;
-    $_SESSION['rl'][$key][] = $now;
-    return true;
+if (!function_exists('rate_limit')) {
+    function rate_limit($key, $max = 5, $window = 60) {
+        $now = time();
+        if (!isset($_SESSION['rl'][$key])) $_SESSION['rl'][$key] = [];
+        $_SESSION['rl'][$key] = array_filter($_SESSION['rl'][$key], fn($t) => $t > $now - $window);
+        if (count($_SESSION['rl'][$key]) >= $max) return false;
+        $_SESSION['rl'][$key][] = $now;
+        return true;
+    }
+}
+
+// Safe database transaction helper with SQLite busy lock retry support
+if (!function_exists('begin_db_transaction')) {
+    function begin_db_transaction($pdo) {
+        if ($pdo && $pdo->inTransaction()) {
+            return true;
+        }
+        global $db_type;
+        if ($db_type === 'sqlite') {
+            for ($i = 0; $i < 5; $i++) {
+                try {
+                    $pdo->exec("PRAGMA busy_timeout=60000;");
+                    $pdo->exec("BEGIN IMMEDIATE TRANSACTION");
+                    return true;
+                } catch (PDOException $e) {
+                    if ((strpos($e->getMessage(), 'locked') !== false || strpos($e->getMessage(), 'busy') !== false) && $i < 4) {
+                        usleep(150000); // 150ms retry delay
+                        continue;
+                    }
+                    throw $e;
+                }
+            }
+        } else {
+            return $pdo->beginTransaction();
+        }
+    }
 }
 
 // Idempotency / Double-submission lock helper
-function check_idempotency_lock($action, $lock_seconds = 3) {
-    $now = microtime(true);
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'anon';
-    $lock_key = 'idem_' . $action . '_' . md5($ip . session_id());
-    if (isset($_SESSION[$lock_key]) && ($now - $_SESSION[$lock_key]) < $lock_seconds) {
-        http_response_code(429);
-        echo json_encode(['error' => 'Action already in progress. Please wait a moment.']);
-        exit;
+if (!function_exists('check_idempotency_lock')) {
+    function check_idempotency_lock($action, $lock_seconds = 3) {
+        $now = microtime(true);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'anon';
+        $lock_key = 'idem_' . $action . '_' . md5($ip . session_id());
+        if (isset($_SESSION[$lock_key]) && ($now - $_SESSION[$lock_key]) < $lock_seconds) {
+            http_response_code(429);
+            echo json_encode(['error' => 'Action already in progress. Please wait a moment.']);
+            exit;
+        }
+        $_SESSION[$lock_key] = $now;
     }
-    $_SESSION[$lock_key] = $now;
 }
 
 // Financial audit log helper
-function audit_log($pdo, $action, $entity_type, $entity_id, $amount = 0, $old_status = '', $new_status = '', $details = '') {
-    $actor = $_SESSION['admin_user'] ?? $_SESSION['user'] ?? null;
-    $actor_id = $actor['id'] ?? 0;
-    $actor_role = $actor['role'] ?? 'system';
-    $actor_name = $actor['name'] ?? 'System';
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-    $dev = substr($_SERVER['HTTP_USER_AGENT'] ?? 'unknown', 0, 300);
-    $stmt = $pdo->prepare("INSERT INTO financial_audit_log (action,entity_type,entity_id,actor_id,actor_role,actor_name,amount,old_status,new_status,details,ip_address,device) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([$action,$entity_type,$entity_id,$actor_id,$actor_role,$actor_name,$amount,$old_status,$new_status,$details,$ip,$dev]);
+if (!function_exists('audit_log')) {
+    function audit_log($pdo, $action, $entity_type, $entity_id, $amount = 0, $old_status = '', $new_status = '', $details = '') {
+        $actor = $_SESSION['admin_user'] ?? $_SESSION['user'] ?? null;
+        $actor_id = $actor['id'] ?? 0;
+        $actor_role = $actor['role'] ?? 'system';
+        $actor_name = $actor['name'] ?? 'System';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $dev = substr($_SERVER['HTTP_USER_AGENT'] ?? 'unknown', 0, 300);
+        $stmt = $pdo->prepare("INSERT INTO financial_audit_log (action,entity_type,entity_id,actor_id,actor_role,actor_name,amount,old_status,new_status,details,ip_address,device) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$action,$entity_type,$entity_id,$actor_id,$actor_role,$actor_name,$amount,$old_status,$new_status,$details,$ip,$dev]);
+    }
 }
 
 // Paystack server-side verification
-function verify_paystack_transaction($reference) {
-    $secret_key = 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; // Replace with real key
-    $ch = curl_init("https://api.paystack.co/transaction/verify/" . rawurlencode($reference));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => ["Authorization: Bearer $secret_key"],
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_SSL_VERIFYPEER => true,
-    ]);
-    $resp = curl_exec($ch);
-    $err = curl_error($ch);
-    curl_close($ch);
-    if ($err) return ['status' => false, 'message' => 'Connection error'];
-    return json_decode($resp, true);
+if (!function_exists('verify_paystack_transaction')) {
+    function verify_paystack_transaction($reference) {
+        $secret_key = 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; // Replace with real key
+        $ch = curl_init("https://api.paystack.co/transaction/verify/" . rawurlencode($reference));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ["Authorization: Bearer $secret_key"],
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $resp = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+        if ($err) return ['status' => false, 'message' => 'Connection error'];
+        return json_decode($resp, true);
+    }
 }
 
-function is_local_env() {
-    $host = strtolower($_SERVER['HTTP_HOST'] ?? '');
-    $addr = $_SERVER['REMOTE_ADDR'] ?? '';
-    $doc_root = $_SERVER['DOCUMENT_ROOT'] ?? '';
-    return (
-        $host === 'localhost' ||
-        strpos($host, 'localhost:') !== false ||
-        strpos($host, '127.0.0.1') !== false ||
-        strpos($host, '[::1]') !== false ||
-        $addr === '127.0.0.1' ||
-        $addr === '::1' ||
-        stripos($doc_root, 'xampp') !== false
-    );
+if (!function_exists('is_local_env')) {
+    function is_local_env() {
+        $host = strtolower($_SERVER['HTTP_HOST'] ?? '');
+        $addr = $_SERVER['REMOTE_ADDR'] ?? '';
+        $doc_root = $_SERVER['DOCUMENT_ROOT'] ?? '';
+        return (
+            $host === 'localhost' ||
+            strpos($host, 'localhost:') !== false ||
+            strpos($host, '127.0.0.1') !== false ||
+            strpos($host, '[::1]') !== false ||
+            $addr === '127.0.0.1' ||
+            $addr === '::1' ||
+            stripos($doc_root, 'xampp') !== false
+        );
+    }
 }
 
-function secure_save_base64_image($b64_data, $folder = 'receipts', $prefix = 'file') {
-    if (empty($b64_data)) return '';
-    if (file_exists(__DIR__ . '/storage_helper.php')) {
-        require_once __DIR__ . '/storage_helper.php';
-        $res = upload_media_file($b64_data, $folder);
-        if (!empty($res['url'])) {
-            return $res['url'];
-        }
-    }
-    return '';
-}
-
-
-function compressAndResizeImage($source_path, $target_path, $max_width = 1200, $max_height = 1200, $quality = 75) {
-    if (!extension_loaded('gd') || !function_exists('imagecreatefrompng')) {
-        return false;
-    }
-    
-    $info = @getimagesize($source_path);
-    if (!$info) return false;
-    
-    $mime = $info['mime'];
-    $width = $info[0];
-    $height = $info[1];
-    
-    // Calculate new dimensions
-    $ratio = $width / $height;
-    if ($width > $max_width || $height > $max_height) {
-        if ($max_width / $max_height > $ratio) {
-            $new_width = $max_height * $ratio;
-            $new_height = $max_height;
-        } else {
-            $new_height = $max_width / $ratio;
-            $new_width = $max_width;
-        }
-    } else {
-        $new_width = $width;
-        $new_height = $height;
-    }
-    
-    // Create image from source safely
-    $image = false;
-    switch ($mime) {
-        case 'image/jpeg':
-            $image = function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($source_path) : false;
-            break;
-        case 'image/png':
-            $image = function_exists('imagecreatefrompng') ? @imagecreatefrompng($source_path) : false;
-            break;
-        case 'image/gif':
-            $image = function_exists('imagecreatefromgif') ? @imagecreatefromgif($source_path) : false;
-            break;
-        case 'image/webp':
-            $image = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($source_path) : false;
-            break;
-        default:
-            return false;
-    }
-    
-    if (!$image) return false;
-    
-    // Resize image
-    $new_image = imagecreatetruecolor($new_width, $new_height);
-    if ($mime === 'image/png' || $mime === 'image/gif') {
-        imagealphablending($new_image, false);
-        imagesavealpha($new_image, true);
-        $transparent = imagecolorallocatealpha($new_image, 255, 255, 255, 127);
-        imagefilledrectangle($new_image, 0, 0, $new_width, $new_height, $transparent);
-    }
-    
-    imagecopyresampled($new_image, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
-    
-    // Save image to target path
-    $success = false;
-    switch ($mime) {
-        case 'image/jpeg':
-            $success = imagejpeg($new_image, $target_path, $quality);
-            break;
-        case 'image/png':
-            $png_quality = max(0, min(9, 9 - round(($quality * 9) / 100)));
-            $success = imagepng($new_image, $target_path, $png_quality);
-            break;
-        case 'image/gif':
-            $success = imagegif($new_image, $target_path);
-            break;
-        case 'image/webp':
-            if (function_exists('imagewebp')) {
-                $success = imagewebp($new_image, $target_path, $quality);
-            } else {
-                $success = imagejpeg($new_image, $target_path, $quality);
+if (!function_exists('secure_save_base64_image')) {
+    function secure_save_base64_image($b64_data, $folder = 'receipts', $prefix = 'file') {
+        if (empty($b64_data)) return '';
+        if (file_exists(__DIR__ . '/storage_helper.php')) {
+            require_once __DIR__ . '/storage_helper.php';
+            $res = upload_media_file($b64_data, $folder);
+            if (!empty($res['url'])) {
+                return $res['url'];
             }
-            break;
+        }
+        return '';
     }
-    
-    imagedestroy($image);
-    imagedestroy($new_image);
-    
-    return $success;
+}
+
+
+if (!function_exists('compressAndResizeImage')) {
+    function compressAndResizeImage($source_path, $target_path, $max_width = 1200, $max_height = 1200, $quality = 75) {
+        if (!extension_loaded('gd') || !function_exists('imagecreatefrompng')) {
+            return false;
+        }
+        
+        $info = @getimagesize($source_path);
+        if (!$info) return false;
+        
+        $mime = $info['mime'];
+        $width = $info[0];
+        $height = $info[1];
+        
+        // Calculate new dimensions
+        $ratio = $width / $height;
+        if ($width > $max_width || $height > $max_height) {
+            if ($max_width / $max_height > $ratio) {
+                $new_width = $max_height * $ratio;
+                $new_height = $max_height;
+            } else {
+                $new_height = $max_width / $ratio;
+                $new_width = $max_width;
+            }
+        } else {
+            $new_width = $width;
+            $new_height = $height;
+        }
+        
+        // Create image from source safely
+        $image = false;
+        switch ($mime) {
+            case 'image/jpeg':
+                $image = function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($source_path) : false;
+                break;
+            case 'image/png':
+                $image = function_exists('imagecreatefrompng') ? @imagecreatefrompng($source_path) : false;
+                break;
+            case 'image/gif':
+                $image = function_exists('imagecreatefromgif') ? @imagecreatefromgif($source_path) : false;
+                break;
+            case 'image/webp':
+                $image = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($source_path) : false;
+                break;
+            default:
+                return false;
+        }
+        
+        if (!$image) return false;
+        
+        // Resize image
+        $new_image = imagecreatetruecolor($new_width, $new_height);
+        if ($mime === 'image/png' || $mime === 'image/gif') {
+            imagealphablending($new_image, false);
+            imagesavealpha($new_image, true);
+            $transparent = imagecolorallocatealpha($new_image, 255, 255, 255, 127);
+            imagefilledrectangle($new_image, 0, 0, $new_width, $new_height, $transparent);
+        }
+        
+        imagecopyresampled($new_image, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+        
+        // Save image to target path
+        $success = false;
+        switch ($mime) {
+            case 'image/jpeg':
+                $success = imagejpeg($new_image, $target_path, $quality);
+                break;
+            case 'image/png':
+                $png_quality = max(0, min(9, 9 - round(($quality * 9) / 100)));
+                $success = imagepng($new_image, $target_path, $png_quality);
+                break;
+            case 'image/gif':
+                $success = imagegif($new_image, $target_path);
+                break;
+            case 'image/webp':
+                if (function_exists('imagewebp')) {
+                    $success = imagewebp($new_image, $target_path, $quality);
+                } else {
+                    $success = imagejpeg($new_image, $target_path, $quality);
+                }
+                break;
+        }
+        
+        imagedestroy($image);
+        imagedestroy($new_image);
+        
+        return $success;
+    }
 }
 
 // Ensure vendor wallet exists
-function ensure_wallet($pdo, $vendor_id, $user_id) {
-    $stmt = $pdo->prepare("SELECT id FROM vendor_wallets WHERE vendor_id = ?");
-    $stmt->execute([$vendor_id]);
-    if (!$stmt->fetchColumn()) {
-        $pdo->prepare("INSERT INTO vendor_wallets (vendor_id, user_id) VALUES (?, ?)")->execute([$vendor_id, $user_id]);
+if (!function_exists('ensure_wallet')) {
+    function ensure_wallet($pdo, $vendor_id, $user_id) {
+        $stmt = $pdo->prepare("SELECT id FROM vendor_wallets WHERE vendor_id = ?");
+        $stmt->execute([$vendor_id]);
+        if (!$stmt->fetchColumn()) {
+            $pdo->prepare("INSERT INTO vendor_wallets (vendor_id, user_id) VALUES (?, ?)")->execute([$vendor_id, $user_id]);
+        }
     }
 }
 
-function unlock_category_milestones($pdo, $category, $user_id) {
-    if (!$user_id) return;
-    $chk = $pdo->prepare("SELECT COUNT(*) FROM tracker_tasks WHERE category = ? AND user_id = ?");
-    $chk->execute([$category, $user_id]);
-    if ($chk->fetchColumn() > 0) return;
-    $today = date('Y-m-d');
-    $milestones = [];
-    switch ($category) {
-        case 'Photography': $milestones = [['Photography team secured!','High',$today,1,'Photography team secured!'],['Schedule pre-wedding photoshoot','Medium',date('Y-m-d',strtotime('+20 days')),0,'Coordinate location and outfits.'],['Finalize photo shot-list','High',date('Y-m-d',strtotime('+40 days')),0,'Compile family members for portraits.']]; break;
-        case 'Videography': $milestones = [['Videographer Confirmed','High',$today,1,'Video team secured!'],['Review music preferences','Low',date('Y-m-d',strtotime('+30 days')),0,'Send preferred tracks.']]; break;
-        case 'Makeup Artists': $milestones = [['Makeup Artist Reserved','High',$today,1,'MUA secured!'],['Bridal makeup trial','Medium',date('Y-m-d',strtotime('+25 days')),0,'Run trial skin match.']]; break;
-        case 'Decorators': $milestones = [['Decorator Confirmed','High',$today,1,'Decor team secured!'],['Finalize theme color boards','High',date('Y-m-d',strtotime('+15 days')),0,'Confirm fabrics, drapery, flowers.']]; break;
-        case 'Caterers': $milestones = [['Caterer Confirmed','High',$today,1,'Catering team secured!'],['Confirm catering numbers','High',date('Y-m-d',strtotime('+45 days')),0,'Provide final head counts.']]; break;
-        case 'Event Venues': $milestones = [['Venue Booked','High',$today,1,'Venue reservation locked!'],['Venue layout walkthrough','Medium',date('Y-m-d',strtotime('+60 days')),0,'Visit with decorator for floor designs.']]; break;
-        case 'DJs': case 'Live Bands': $milestones = [['Music Playlist Consultation','Medium',date('Y-m-d',strtotime('+40 days')),0,'Submit entry, exit, dance floor songs.']]; break;
-        case 'Event Planners': $milestones = [['Planner Confirmed','High',$today,1,'Planning team secured!'],['Lock master budget timeline','High',date('Y-m-d',strtotime('+10 days')),0,'Final review of milestones and expenses.']]; break;
-        case 'Chilling Services': $milestones = [['Chilling Service Confirmed','High',$today,1,'Cooling logistics secured!'],['Finalize drinks chilling logs','High',date('Y-m-d',strtotime('+35 days')),0,'Submit beer, soda, wine quantities.']]; break;
-        default: $milestones = [['Vendor Confirmed: '.$category,'High',$today,1,'Vendor booked for this category!']]; break;
+if (!function_exists('unlock_category_milestones')) {
+    function unlock_category_milestones($pdo, $category, $user_id) {
+        if (!$user_id) return;
+        $chk = $pdo->prepare("SELECT COUNT(*) FROM tracker_tasks WHERE category = ? AND user_id = ?");
+        $chk->execute([$category, $user_id]);
+        if ($chk->fetchColumn() > 0) return;
+        $today = date('Y-m-d');
+        $milestones = [];
+        switch ($category) {
+            case 'Photography': $milestones = [['Photography team secured!','High',$today,1,'Photography team secured!'],['Schedule pre-wedding photoshoot','Medium',date('Y-m-d',strtotime('+20 days')),0,'Coordinate location and outfits.'],['Finalize photo shot-list','High',date('Y-m-d',strtotime('+40 days')),0,'Compile family members for portraits.']]; break;
+            case 'Videography': $milestones = [['Videographer Confirmed','High',$today,1,'Video team secured!'],['Review music preferences','Low',date('Y-m-d',strtotime('+30 days')),0,'Send preferred tracks.']]; break;
+            case 'Makeup Artists': $milestones = [['Makeup Artist Reserved','High',$today,1,'MUA secured!'],['Bridal makeup trial','Medium',date('Y-m-d',strtotime('+25 days')),0,'Run trial skin match.']]; break;
+            case 'Decorators': $milestones = [['Decorator Confirmed','High',$today,1,'Decor team secured!'],['Finalize theme color boards','High',date('Y-m-d',strtotime('+15 days')),0,'Confirm fabrics, drapery, flowers.']]; break;
+            case 'Caterers': $milestones = [['Caterer Confirmed','High',$today,1,'Catering team secured!'],['Confirm catering numbers','High',date('Y-m-d',strtotime('+45 days')),0,'Provide final head counts.']]; break;
+            case 'Event Venues': $milestones = [['Venue Booked','High',$today,1,'Venue reservation locked!'],['Venue layout walkthrough','Medium',date('Y-m-d',strtotime('+60 days')),0,'Visit with decorator for floor designs.']]; break;
+            case 'DJs': case 'Live Bands': $milestones = [['Music Playlist Consultation','Medium',date('Y-m-d',strtotime('+40 days')),0,'Submit entry, exit, dance floor songs.']]; break;
+            case 'Event Planners': $milestones = [['Planner Confirmed','High',$today,1,'Planning team secured!'],['Lock master budget timeline','High',date('Y-m-d',strtotime('+10 days')),0,'Final review of milestones and expenses.']]; break;
+            case 'Chilling Services': $milestones = [['Chilling Service Confirmed','High',$today,1,'Cooling logistics secured!'],['Finalize drinks chilling logs','High',date('Y-m-d',strtotime('+35 days')),0,'Submit beer, soda, wine quantities.']]; break;
+            default: $milestones = [['Vendor Confirmed: '.$category,'High',$today,1,'Vendor booked for this category!']]; break;
+        }
+        $ins = $pdo->prepare("INSERT INTO tracker_tasks (user_id,task_name,category,priority,estimated_date,completed,notes,is_custom) VALUES (?,?,?,?,?,?,?,0)");
+        foreach ($milestones as $m) { $ins->execute([$user_id,$m[0],$category,$m[1],$m[2],$m[3],$m[4]]); }
     }
-    $ins = $pdo->prepare("INSERT INTO tracker_tasks (user_id,task_name,category,priority,estimated_date,completed,notes,is_custom) VALUES (?,?,?,?,?,?,?,0)");
-    foreach ($milestones as $m) { $ins->execute([$user_id,$m[0],$category,$m[1],$m[2],$m[3],$m[4]]); }
 }
 
-function generate_event_checklist($pdo, $event_type, $event_date, $user_id) {
-    $pdo->prepare("DELETE FROM tracker_tasks WHERE user_id = ? AND is_custom = 0")->execute([$user_id]);
-    $tasks = [
-        ['Secure primary Event Venue','General','High',180,'Research locations and secure ceremony/reception spot.'],
-        ['Select event theme and colors','General','Medium',180,'Decide on aesthetic direction and primary colors.'],
-        ['Hire an event coordinator','General','Medium',180,'Secure a planner to streamline discussions.'],
-        ['Choose and taste cake menu','General','Low',120,'Schedule tasting session with cake designers.'],
-        ['Finalize guest list and count','General','High',120,'Draft initial count for caterer and decorator.'],
-        ['Confirm catering menus','General','Medium',120,'Review buffet vs plated selections.'],
-        ['Send invitations to guests','General','High',60,'Distribute printed or digital cards.'],
-        ['Schedule outfit fittings','General','High',60,'Ensure all outfits are tailored and ready.'],
-        ['Run sound and playlist meetings','General','Medium',60,'List entrance songs and party hits.'],
-        ['Reconfirm all booking reservations','General','High',14,'Double-check times with all vendors.'],
-        ['Pay remaining vendor balances','General','High',14,'Clear outstanding deposits.'],
-        ['Draft reception seating','General','Medium',14,'Create seating chart for reception layout.'],
-        ['Final vendor confirmations','General','High',1,'Ensure decorators and services are ready.'],
-        ['Prepare cash tips and emergency contacts','General','Medium',1,'Delegate day-of tasks.'],
+if (!function_exists('generate_event_checklist')) {
+    function generate_event_checklist($pdo, $event_type, $event_date, $user_id) {
+        $pdo->prepare("DELETE FROM tracker_tasks WHERE user_id = ? AND is_custom = 0")->execute([$user_id]);
+        $tasks = [
+            ['Secure primary Event Venue','General','High',180,'Research locations and secure ceremony/reception spot.'],
+            ['Select event theme and colors','General','Medium',180,'Decide on aesthetic direction and primary colors.'],
+            ['Hire an event coordinator','General','Medium',180,'Secure a planner to streamline discussions.'],
+            ['Choose and taste cake menu','General','Low',120,'Schedule tasting session with cake designers.'],
+            ['Finalize guest list and count','General','High',120,'Draft initial count for caterer and decorator.'],
+            ['Confirm catering menus','General','Medium',120,'Review buffet vs plated selections.'],
+            ['Send invitations to guests','General','High',60,'Distribute printed or digital cards.'],
+            ['Schedule outfit fittings','General','High',60,'Ensure all outfits are tailored and ready.'],
+            ['Run sound and playlist meetings','General','Medium',60,'List entrance songs and party hits.'],
+            ['Reconfirm all booking reservations','General','High',14,'Double-check times with all vendors.'],
+            ['Pay remaining vendor balances','General','High',14,'Clear outstanding deposits.'],
+            ['Draft reception seating','General','Medium',14,'Create seating chart for reception layout.'],
+            ['Final vendor confirmations','General','High',1,'Ensure decorators and services are ready.'],
+            ['Prepare cash tips and emergency contacts','General','Medium',1,'Delegate day-of tasks.'],
     ];
     $ins = $pdo->prepare("INSERT INTO tracker_tasks (user_id,task_name,category,priority,estimated_date,completed,notes,is_custom,cost,paid_amount) VALUES (?,?,'General',?,?,0,?,0,0,0)");
     foreach ($tasks as $t) {
         $est = date('Y-m-d', strtotime($event_date . ' - ' . $t[3] . ' days'));
         $ins->execute([$user_id,$t[0],$t[2],$est,$t[4]]);
+    }
     }
 }
 
@@ -485,7 +589,7 @@ try {
 
 // ── CSRF ENFORCEMENT ────────────────────────────────────────────────────
 // Enforce CSRF on all state-changing POST actions except pre-auth flows
-$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status', 'upload_chat_file', 'get_call_number'];
+$csrf_exempt_actions = ['register', 'register_vendor', 'update_vendor', 'update_profile', 'register_device_token', 'login', 'logout', 'send_otp', 'verify_otp', 'forgot_password', 'reset_password', 'run_diagnostics', 'vendors', 'vendor_detail', 'search', 'categories', 'faq', 'get_tracker_tasks', 'user_bookings', 'chat_inbox', 'chat_history', 'notifications', 'mark_notifications_read', 'vendor_stats', 'dashboard_stats', 'record_vendor_view', 'toggle_compare', 'get_compare', 'toggle_favorite', 'get_favorites', 'me', 'get_reviews', 'get_advertisements', 'advertisements', 'get_vendor_packages', 'record_ad_click', 'initiate_call', 'check_incoming_call', 'get_call_details', 'accept_call', 'answer_call', 'reject_call', 'end_call', 'update_call_status', 'send_ice_candidate', 'heartbeat', 'get_user_status', 'upload_chat_file', 'get_call_number', 'init_didit_kyc', 'check_didit_kyc'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrf_exempt_actions)) {
     $headers = function_exists('getallheaders') ? getallheaders() : [];
     $csrf = $headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? $raw_input['csrf_token'] ?? '';
@@ -502,7 +606,9 @@ case 'register':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     check_idempotency_lock('register', 3);
     if (!rate_limit('register', 5, 300)) { http_response_code(429); echo json_encode(['error'=>'Too many registration attempts. Please wait 5 minutes before trying again.']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_in = file_get_contents('php://input');
+    $input = json_decode($raw_in, true);
+    if (!is_array($input)) { $input = $_POST; }
     $name = clean($input['name'] ?? trim(($input['fname'] ?? '') . ' ' . ($input['lname'] ?? '')));
     $raw_email = strtolower(trim($input['email'] ?? ''));
     $email = !empty($raw_email) ? filter_var($raw_email, FILTER_VALIDATE_EMAIL) : '';
@@ -533,30 +639,110 @@ case 'register':
     }
 
     try {
-        $pdo->beginTransaction();
+        try { if (!$pdo->inTransaction()) { $pdo->beginTransaction(); } } catch (Exception $eTrans) {}
 
         // Check duplicate email (case-insensitive & trimmed)
         if ($email) { 
-            $dup = $pdo->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)"); 
+            $dup = $pdo->prepare("SELECT id, email_verified, phone_verified, status FROM users WHERE LOWER(email) = LOWER(?)"); 
             $dup->execute([$email]); 
-            if ($dup->fetch()) { 
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                http_response_code(409); 
-                echo json_encode(['error'=>"The email address '$email' is already registered on Ohati. Please log in or reset your password."]); 
-                exit; 
+            $existing = $dup->fetch();
+            if ($existing) {
+                if (intval($existing['email_verified'] ?? 0) === 0 && intval($existing['phone_verified'] ?? 0) === 0) {
+                    $uid = intval($existing['id']);
+                    $hash = password_hash($password, PASSWORD_BCRYPT);
+                    $pdo->prepare("UPDATE users SET name = ?, password_hash = ?, role = ? WHERE id = ?")
+                        ->execute([$name, $hash, $role, $uid]);
+                    
+                    if ($role === 'vendor') {
+                        $bname = clean($input['business_name'] ?? $input['bname'] ?? $name);
+                        $category = clean($input['category'] ?? 'General Services');
+                        $desc = clean($input['description'] ?? '');
+                        $loc = clean($input['location'] ?? $input['city'] ?? 'Accra, Ghana');
+                        $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+                        $v_chk->execute([$uid]);
+                        if ($v_chk->fetch()) {
+                            $pdo->prepare("UPDATE vendors SET name = ?, category = ?, description = ?, location = ? WHERE user_id = ?")
+                                ->execute([$bname, $category, $desc, $loc, $uid]);
+                        } else {
+                            $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)")
+                                ->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
+                        }
+                    }
+                    
+                    $pdo->commit();
+                    $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
+                    $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>'','kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
+                    $_SESSION['user'] = $user;
+                    $_SESSION['user']['active_role'] = $role;
+                    $auth_token = issue_auth_token($pdo, $uid, $_SERVER['HTTP_USER_AGENT'] ?? 'Mobile/Web');
+                    echo json_encode(['success'=>true,'requires_verification'=>true,'user'=>$user,'auth_token'=>$auth_token,'csrf'=>csrf_token()]);
+                    exit;
+                } else {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    http_response_code(409); 
+                    echo json_encode([
+                        'success' => false,
+                        'account_exists' => true,
+                        'target' => $email,
+                        'role' => $existing['role'] ?? 'customer',
+                        'kyc_status' => $existing['kyc_status'] ?? 'not_started',
+                        'error' => "An account with email address '$email' already exists on Ohati. Please log in or request an OTP to verify and access your account."
+                    ]); 
+                    exit; 
+                }
             } 
         }
 
         // Check duplicate phone (matching raw, formatted, or core 9-digit mobile line)
         if (!empty($phone_digits) && strlen($phone_digits) >= 8) { 
             $last9 = substr($phone_digits, -9);
-            $dup = $pdo->prepare("SELECT id FROM users WHERE phone = ? OR phone = ? OR (LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', '')) >= 9 AND SUBSTR(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', ''), -9) = ?)"); 
+            $dup = $pdo->prepare("SELECT id, email_verified, phone_verified, status, role, kyc_status FROM users WHERE phone = ? OR phone = ? OR (LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', '')) >= 9 AND SUBSTR(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', ''), -9) = ?)"); 
             $dup->execute([$phone, '+' . $phone_digits, $last9]); 
-            if ($dup->fetch()) { 
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                http_response_code(409); 
-                echo json_encode(['error'=>"The phone number '$phone' is already registered on Ohati. Please log in or reset your password."]); 
-                exit; 
+            $existing = $dup->fetch();
+            if ($existing) { 
+                if (intval($existing['email_verified'] ?? 0) === 0 && intval($existing['phone_verified'] ?? 0) === 0) {
+                    $uid = intval($existing['id']);
+                    $hash = password_hash($password, PASSWORD_BCRYPT);
+                    $pdo->prepare("UPDATE users SET name = ?, password_hash = ?, role = ? WHERE id = ?")
+                        ->execute([$name, $hash, $role, $uid]);
+                    
+                    if ($role === 'vendor') {
+                        $bname = clean($input['business_name'] ?? $input['bname'] ?? $name);
+                        $category = clean($input['category'] ?? 'General Services');
+                        $desc = clean($input['description'] ?? '');
+                        $loc = clean($input['location'] ?? $input['city'] ?? 'Accra, Ghana');
+                        $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+                        $v_chk->execute([$uid]);
+                        if ($v_chk->fetch()) {
+                            $pdo->prepare("UPDATE vendors SET name = ?, category = ?, description = ?, location = ? WHERE user_id = ?")
+                                ->execute([$bname, $category, $desc, $loc, $uid]);
+                        } else {
+                            $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)")
+                                ->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
+                        }
+                    }
+                    
+                    $pdo->commit();
+                    $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
+                    $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>'','kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
+                    $_SESSION['user'] = $user;
+                    $_SESSION['user']['active_role'] = $role;
+                    $auth_token = issue_auth_token($pdo, $uid, $_SERVER['HTTP_USER_AGENT'] ?? 'Mobile/Web');
+                    echo json_encode(['success'=>true,'requires_verification'=>true,'user'=>$user,'auth_token'=>$auth_token,'csrf'=>csrf_token()]);
+                    exit;
+                } else {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    http_response_code(409); 
+                    echo json_encode([
+                        'success' => false,
+                        'account_exists' => true,
+                        'target' => $phone,
+                        'role' => $existing['role'] ?? 'customer',
+                        'kyc_status' => $existing['kyc_status'] ?? 'not_started',
+                        'error' => "An account with phone number '$phone' already exists on Ohati. Please log in or request an OTP to verify and access your account."
+                    ]); 
+                    exit; 
+                }
             } 
         }
 
@@ -615,9 +801,17 @@ case 'register':
             } catch (Exception $eVend) {}
         }
 
-        $pdo->commit();
+        try {
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
+        } catch (Exception $eCommit) {}
     } catch (Exception $eReg) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        try {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+        } catch (Exception $eRoll) {}
         http_response_code(500);
         echo json_encode(['error' => 'Registration failed: ' . $eReg->getMessage()]);
         exit;
@@ -781,6 +975,14 @@ case 'login':
     break;
 
 case 'logout':
+    $uid = intval($_SESSION['user']['id'] ?? $_GET['user_id'] ?? $_POST['user_id'] ?? $token_uid ?? 0);
+    if ($uid > 0) {
+        try {
+            $now_reset = '1970-01-01 00:00:00';
+            $pdo->prepare("UPDATE users SET last_active = ? WHERE id = ?")->execute([$now_reset, $uid]);
+            $pdo->prepare("UPDATE vendors SET last_active = ? WHERE user_id = ?")->execute([$now_reset, $uid]);
+        } catch (Exception $e) {}
+    }
     $auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
     $token_to_del = '';
     if (preg_match('/Bearer\s+(.+)/i', $auth_header, $m)) {
@@ -794,9 +996,9 @@ case 'logout':
             $pdo->prepare("DELETE FROM auth_tokens WHERE token_hash = ?")->execute([$hash]);
         } catch (Exception $e) {}
     }
-    if (isset($_SESSION['user']['id'])) {
+    if ($uid > 0) {
         try {
-            $pdo->prepare("DELETE FROM auth_tokens WHERE user_id = ?")->execute([intval($_SESSION['user']['id'])]);
+            $pdo->prepare("DELETE FROM auth_tokens WHERE user_id = ?")->execute([$uid]);
         } catch (Exception $e) {}
     }
     $_SESSION = array();
@@ -887,7 +1089,9 @@ case 'delete_account':
 
 case 'send_otp':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_in = file_get_contents('php://input');
+    $input = json_decode($raw_in, true);
+    if (!is_array($input)) { $input = $_POST; }
     $target = clean($input['target'] ?? '');
     $input_email = clean($input['email'] ?? '');
     $input_phone = clean($input['phone'] ?? '');
@@ -1005,7 +1209,9 @@ case 'send_otp':
 
 case 'verify_otp':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_in = file_get_contents('php://input');
+    $input = json_decode($raw_in, true);
+    if (!is_array($input)) { $input = $_POST; }
     $target = clean($input['target'] ?? '');
     $code = clean($input['code'] ?? '');
     if (empty($code) || strlen($code) < 6) {
@@ -1092,67 +1298,78 @@ case 'verify_otp':
 
 case 'forgot_password':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
-    if (!rate_limit('forgot_password', 3, 60)) { http_response_code(429); echo json_encode(['error'=>'Too many reset attempts. Please wait and try again.']); exit; }
+    if (!rate_limit('forgot_password', 3, 60)) { http_response_code(429); echo json_encode(['error'=>'Too many reset attempts. Please wait 60 seconds.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $target = clean($input['target'] ?? '');
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR phone = ?");
-    $stmt->execute([$target,$target]);
-    if (!$stmt->fetch()) { http_response_code(404); echo json_encode(['error'=>'Account not found.']); exit; }
-    $code = str_pad(rand(0,999999),6,'0',STR_PAD_LEFT);
-    $expires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-    $pdo->prepare("INSERT INTO otp_codes (target,code,type,expires_at) VALUES (?,?,?,?)")->execute([$target,$code,'reset',$expires]);
+    if (empty($target)) { http_response_code(400); echo json_encode(['error'=>'Please enter your email or phone number.']); exit; }
 
+    $stmt = $pdo->prepare("SELECT id, name, email, phone FROM users WHERE LOWER(email) = LOWER(?) OR phone = ?");
+    $stmt->execute([$target, $target]);
+    $u_found = $stmt->fetch();
+    if (!$u_found) { http_response_code(404); echo json_encode(['error'=>'Account not found with that email or phone number.']); exit; }
+
+    $email_target = $u_found['email'] ?: (strpos($target, '@') !== false ? $target : '');
+    $phone_target = $u_found['phone'] ?: (strpos($target, '@') === false ? $target : '');
+
+    $code = str_pad(rand(0,999999), 6, '0', STR_PAD_LEFT);
+    $code_hash = password_hash($code, PASSWORD_DEFAULT);
+    $expires = date('Y-m-d H:i:s', time() + 600);
+
+    // Save reset code into otp_codes table
+    $targets_to_insert = array_unique(array_filter([$target, $email_target, $phone_target]));
+    foreach ($targets_to_insert as $t) {
+        $pdo->prepare("INSERT INTO otp_codes (target, code, code_hash, type, expires_at) VALUES (?, ?, ?, 'reset', ?)")
+            ->execute([$t, $code, $code_hash, $expires]);
+    }
+
+    $sms_sent = false;
     $email_sent = false;
-    if (strpos($target, '@') !== false) {
+
+    // Dispatch SMS OTP
+    if (!empty($phone_target)) {
+        try {
+            $sms_msg = "Your Ohati password reset code is: $code. Valid for 10 minutes. Do not share this code.";
+            $sms_res = send_smsonlinegh($phone_target, $sms_msg);
+            $sms_sent = $sms_res['success'] ?? false;
+        } catch (Exception $eSms) {}
+    }
+
+    // Dispatch Email OTP
+    if (!empty($email_target) && strpos($email_target, '@') !== false) {
         try {
             require_once __DIR__ . '/mail_helper.php';
-            
-            // Build reset link dynamically
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
             $domainName = $_SERVER['HTTP_HOST'];
             $currentDir = dirname($_SERVER['REQUEST_URI']);
             $currentDir = str_replace('\\', '/', $currentDir);
             if ($currentDir === '/') $currentDir = '';
             
-            $resetLink = $protocol . $domainName . $currentDir . '/forgot-password.php?target=' . urlencode($target) . '&code=' . urlencode($code);
-            
-            $subject = "Reset Your Ohati Password";
+            $resetLink = $protocol . $domainName . $currentDir . '/forgot-password.php?target=' . urlencode($email_target) . '&code=' . urlencode($code);
+            $subject = "Reset Your Ohati Password: " . $code;
             $body = "<html><body style='font-family:sans-serif; background-color:#f6f9fc; padding:30px; color:#333;'>"
                   . "<div style='max-width:550px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #e4e8eb;'>"
                   . "<div style='text-align:center; background-color:#1B2B4B; padding:20px; border-radius:8px 8px 0 0; margin:-30px -30px 25px -30px;'>"
                   . "<h1 style='color:#fff; margin:0; font-size:24px; letter-spacing:2px;'>OHATI</h1>"
-                  . "<p style='color:#c5a880; margin:5px 0 0 0; font-size:11px; text-transform:uppercase; letter-spacing:1px;'>Find. Compare. Book. Celebrate.</p>"
                   . "</div>"
                   . "<h2 style='color:#1B2B4B; margin-top:0; font-size:20px;'>Reset Your Password</h2>"
-                  . "<p style='font-size:15px; margin-bottom:20px;'>We received a request to reset the password for your Ohati account. Please click the button below to complete the reset process:</p>"
-                  . "<div style='text-align:center; margin:25px 0;'>"
-                  . "<a href='{$resetLink}' target='_blank' style='background-color:#1B2B4B; color:#fff; border-radius:6px; padding:14px 28px; text-decoration:none; font-size:15px; font-weight:bold; display:inline-block;'>Reset Password Now</a>"
+                  . "<p style='font-size:15px; margin-bottom:20px;'>Your 6-digit password reset code is:</p>"
+                  . "<div style='background-color:#f4f6f8; border-radius:8px; padding:20px; text-align:center; margin-bottom:20px; border:1px solid #e9ecef;'>"
+                  . "<span style='font-size:32px; font-weight:bold; letter-spacing:6px; color:#1B2B4B; font-family:monospace;'>{$code}</span>"
                   . "</div>"
-                  . "<p style='font-size:13px; color:#666;'>For safety, your verification OTP code is: <strong>{$code}</strong></p>"
-                  . "<p style='font-size:13px; color:#666;'>This reset link and code will expire in 10 minutes.</p>"
-                  . "<div style='border-top:1px solid #eee; margin-top:25px; padding-top:15px; font-size:12px; color:#7f8c8d; text-align:center;'>"
-                  . "<p>Ghana's Trusted Event Vendor Marketplace</p>"
-                  . "<p>&copy; 2026 Ohati. All rights reserved.</p>"
-                  . "</div>"
+                  . "<p style='font-size:13px; color:#666;'>This code expires in 10 minutes.</p>"
                   . "</div>"
                   . "</body></html>";
-            $email_sent = send_smtp_mail($target, $subject, $body);
-        } catch (Exception $e) {
-            error_log("Failed to send reset email: " . $e->getMessage());
-        }
+            $email_sent = send_smtp_mail($email_target, $subject, $body);
+        } catch (Exception $e) {}
     }
 
-    if ($email_sent) {
-        echo json_encode(['success'=>true, 'message'=>'Password reset code sent to your email.', 'email_sent'=>true]);
-    } else {
-        if (is_local_env()) {
-            echo json_encode(['success'=>true, 'message'=>'[Local Development Mode] SMTP failed. Code auto-supplied.', 'email_sent'=>false, 'fallback_code'=>$code]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['error'=>'Failed to deliver password reset email. Please check your email configuration or try again later.']);
-            exit;
-        }
-    }
+    $msg_channel = ($sms_sent && $email_sent) ? 'SMS & Email' : ($sms_sent ? 'SMS' : ($email_sent ? 'Email' : 'SMS/Email'));
+    echo json_encode([
+        'success' => true, 
+        'message' => "Password reset code dispatched via $msg_channel. Valid for 10 minutes.", 
+        'sms_sent' => $sms_sent, 
+        'email_sent' => $email_sent
+    ]);
     break;
 
 case 'reset_password':
@@ -1187,10 +1404,16 @@ case 'update_profile':
     // Save base64 image/PDF file uploads to disk
     $file_fields = ['avatar' => 'avatars', 'kyc_id_front' => 'kyc', 'kyc_id_back' => 'kyc', 'kyc_selfie' => 'kyc'];
     foreach ($file_fields as $field_key => $folder) {
-        if (!empty($input[$field_key]) && is_string($input[$field_key]) && strpos($input[$field_key], 'data:') === 0) {
-            try {
-                $input[$field_key] = secure_save_base64_image($input[$field_key], $folder, $field_key . '_' . $uid);
-            } catch (Exception $e) {}
+        if (!empty($input[$field_key]) && is_string($input[$field_key]) && (strpos($input[$field_key], 'data:') === 0 || strpos($input[$field_key], 'base64,') !== false)) {
+            $saved_img = secure_save_base64_image($input[$field_key], $folder, $field_key . '_' . $uid);
+            if (!empty($saved_img)) {
+                $input[$field_key] = $saved_img;
+            } else {
+                // Defensive Safety Rule: Never overwrite existing avatar/image with empty string on failure!
+                http_response_code(400);
+                echo json_encode(['error' => 'Image upload failed. Existing image preserved.']);
+                exit;
+            }
         }
     }
 
@@ -1225,11 +1448,104 @@ case 'update_profile':
             if (!empty($v_sync_fields)) {
                 $v_sync_params[] = $uid;
                 $pdo->prepare("UPDATE vendors SET " . implode(', ', $v_sync_fields) . " WHERE user_id = ?")->execute($v_sync_params);
+                if (isset($_SESSION['vendor']) && !empty($input['avatar'])) {
+                    $_SESSION['vendor']['logo'] = $input['avatar'];
+                }
             }
         } catch (Exception $eVendSync) {}
     }
 
-    echo json_encode(['success' => true, 'user' => $_SESSION['user']]);
+    $ts = time();
+    $saved_avatar = $_SESSION['user']['avatar'] ?? '';
+    $busted_avatar = $saved_avatar ? ($saved_avatar . (strpos($saved_avatar, '?') !== false ? '&v=' : '?v=') . $ts) : '';
+
+    echo json_encode([
+        'success' => true,
+        'avatar' => $busted_avatar,
+        'user' => $_SESSION['user'],
+        'vendor' => $_SESSION['vendor'] ?? null
+    ]);
+    break;
+
+case 'init_didit_kyc':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $input = json_decode(file_get_contents('php://input'), true);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? $input['user_id'] ?? 0);
+    if ($uid <= 0) {
+        $uCheck = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetch();
+        if ($uCheck) $uid = intval($uCheck['id']);
+    }
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+
+    require_once __DIR__ . '/didit_helper.php';
+    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_stmt->execute([$uid]);
+    $v_row = $v_stmt->fetch();
+    $vendorId = $v_row ? intval($v_row['id']) : null;
+
+    try {
+        $session = DiditHelper::createSession($uid, $vendorId);
+        $sessionId = $session['session_id'];
+        $url = $session['url'];
+
+        // Save session_id in database without falsely setting status to pending before scanning
+        $pdo->prepare("UPDATE users SET didit_session_id = ?, didit_decision = 'Not Started' WHERE id = ?")->execute([$sessionId, $uid]);
+        if ($vendorId) {
+            $pdo->prepare("UPDATE vendors SET didit_session_id = ?, didit_decision = 'Not Started' WHERE id = ?")->execute([$sessionId, $vendorId]);
+        }
+
+        $_SESSION['user']['didit_session_id'] = $sessionId;
+        $_SESSION['user']['didit_decision'] = 'Not Started';
+
+        echo json_encode([
+            'success' => true,
+            'url' => $url,
+            'session_id' => $sessionId,
+            'session_token' => $session['session_token'] ?? ''
+        ]);
+    } catch (Exception $eDidit) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to initialize Didit verification session', 'detail' => $eDidit->getMessage()]);
+    }
+    break;
+
+case 'check_didit_kyc':
+    $uid = intval($_SESSION['user']['id'] ?? 0);
+    if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $sessionId = clean($input['session_id'] ?? ($_SESSION['user']['didit_session_id'] ?? ''));
+
+    if (empty($sessionId)) {
+        echo json_encode(['success' => false, 'status' => 'not_started']);
+        break;
+    }
+
+    require_once __DIR__ . '/didit_helper.php';
+    $decision = DiditHelper::fetchSessionDecision($sessionId);
+
+    if ($decision && !empty($decision['status'])) {
+        $status = $decision['status'];
+        if ($status === 'Approved') {
+            $pdo->prepare("UPDATE users SET kyc_status = 'approved', didit_decision = 'Approved' WHERE id = ?")->execute([$uid]);
+            $pdo->prepare("UPDATE vendors SET verification_status = 'verified', verification_badge = CASE WHEN verification_badge = 'gold' THEN 'gold' ELSE 'blue' END, verified = 1 WHERE user_id = ?")->execute([$uid]);
+            $_SESSION['user']['kyc_status'] = 'approved';
+            $_SESSION['user']['didit_decision'] = 'Approved';
+        } else if ($status === 'Declined') {
+            $pdo->prepare("UPDATE users SET kyc_status = 'rejected', didit_decision = 'Declined' WHERE id = ?")->execute([$uid]);
+            $pdo->prepare("UPDATE vendors SET verification_status = 'rejected', didit_decision = 'Declined' WHERE user_id = ?")->execute([$uid]);
+            $_SESSION['user']['kyc_status'] = 'rejected';
+            $_SESSION['user']['didit_decision'] = 'Declined';
+        } else if ($status === 'In Review') {
+            $pdo->prepare("UPDATE users SET kyc_status = 'pending_verification', didit_decision = 'In Review' WHERE id = ?")->execute([$uid]);
+            $pdo->prepare("UPDATE vendors SET verification_status = 'pending', didit_decision = 'In Review' WHERE user_id = ?")->execute([$uid]);
+            $_SESSION['user']['kyc_status'] = 'pending_verification';
+            $_SESSION['user']['didit_decision'] = 'In Review';
+        }
+        echo json_encode(['success' => true, 'status' => $status, 'decision' => $decision]);
+    } else {
+        echo json_encode(['success' => true, 'status' => $_SESSION['user']['kyc_status'] ?? 'pending_verification']);
+    }
     break;
 
 
@@ -1417,25 +1733,134 @@ case 'request_account_deletion':
 
 // ── CATEGORIES ─────────────────────────────────────────────────────────
 case 'categories':
-    $categories = [
-        ['name'=>'Photography','icon'=>'camera'],['name'=>'Videography','icon'=>'video'],
-        ['name'=>'Makeup Artists','icon'=>'brush'],['name'=>'Bridal Shops','icon'=>'shirt'],
-        ['name'=>'Event Planners','icon'=>'calendar-days'],['name'=>'Decorators','icon'=>'wand-magic-sparkles'],
-        ['name'=>'Caterers','icon'=>'utensils'],['name'=>'Cake Designers','icon'=>'cake-candles'],
-        ['name'=>'Event Venues','icon'=>'hotel'],['name'=>'DJs','icon'=>'music'],
-        ['name'=>'MCs','icon'=>'microphone'],['name'=>'Live Bands','icon'=>'guitar'],
-        ['name'=>'Florists','icon'=>'spa'],['name'=>'Car Rentals','icon'=>'car'],
-        ['name'=>'Security Services','icon'=>'shield-halved'],
-        ['name'=>'Chilling Services','icon'=>'snowflake'],
-        ['name'=>'Rental Equipment','icon'=>'chair'],
-        ['name'=>'Cocktail Bars','icon'=>'martini-glass-citrus'],
-        ['name'=>'Honeymoon Packages','icon'=>'plane-departure'],
-        ['name'=>'Invitation Designers','icon'=>'envelope-open-text'],
-        ['name'=>'Jewelers','icon'=>'gem'],['name'=>'Lighting','icon'=>'lightbulb'],
-        ['name'=>'Printing Services','icon'=>'print'],['name'=>'Ushers','icon'=>'user-check'],
-        ['name'=>'Content Creators','icon'=>'clapperboard'],['name'=>'Juice Bar','icon'=>'glass-water'],
-    ];
-    echo json_encode($categories);
+    try {
+        $stmt = $pdo->query("SELECT id, name, slug, icon, description, display_order, is_active FROM vendor_categories WHERE is_active = 1 ORDER BY display_order ASC, name ASC");
+        $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($categories)) {
+            $categories = [
+                ['name'=>'Photography','icon'=>'camera'],['name'=>'Videography','icon'=>'video'],
+                ['name'=>'Makeup Artists','icon'=>'brush'],['name'=>'Bridal Shops','icon'=>'shirt'],
+                ['name'=>'Event Planners','icon'=>'calendar-days'],['name'=>'Decorators','icon'=>'wand-magic-sparkles'],
+                ['name'=>'Caterers','icon'=>'utensils'],['name'=>'Cake Designers','icon'=>'cake-candles'],
+                ['name'=>'Event Venues','icon'=>'hotel'],['name'=>'DJs','icon'=>'music'],
+                ['name'=>'MCs','icon'=>'microphone'],['name'=>'Live Bands','icon'=>'guitar'],
+                ['name'=>'Florists','icon'=>'spa'],['name'=>'Car Rentals','icon'=>'car'],
+                ['name'=>'Security Services','icon'=>'shield-halved'],['name'=>'Chilling Services','icon'=>'snowflake'],
+                ['name'=>'Rental Equipment','icon'=>'chair'],['name'=>'Cocktail Bars','icon'=>'martini-glass-citrus'],
+                ['name'=>'Honeymoon Packages','icon'=>'plane-departure'],['name'=>'Invitation Designers','icon'=>'envelope-open-text'],
+                ['name'=>'Jewelers','icon'=>'gem'],['name'=>'Lighting','icon'=>'lightbulb'],
+                ['name'=>'Printing Services','icon'=>'print'],['name'=>'Ushers','icon'=>'user-check'],
+                ['name'=>'Content Creators','icon'=>'clapperboard'],['name'=>'Juice Bar','icon'=>'glass-water']
+            ];
+        }
+        echo json_encode($categories);
+    } catch (Exception $e) {
+        echo json_encode([]);
+    }
+    break;
+
+case 'admin_get_categories':
+    $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
+    if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
+    try {
+        $stmt = $pdo->query("SELECT c.*, (SELECT COUNT(*) FROM vendors v WHERE v.category = c.name) as vendor_count FROM vendor_categories c ORDER BY c.display_order ASC, c.name ASC");
+        echo json_encode(['success'=>true, 'categories'=>$stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    } catch (Exception $e) {
+        echo json_encode(['error'=>$e->getMessage()]);
+    }
+    break;
+
+case 'admin_create_category':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
+    if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $name = clean($input['name'] ?? '');
+    $icon = clean($input['icon'] ?? 'camera');
+    $desc = clean($input['description'] ?? '');
+    $order = intval($input['display_order'] ?? 0);
+    $active = isset($input['is_active']) ? intval($input['is_active']) : 1;
+    if (empty($name)) { http_response_code(400); echo json_encode(['error'=>'Category name required']); exit; }
+    
+    // Check duplicate name
+    $chk = $pdo->prepare("SELECT id FROM vendor_categories WHERE LOWER(name) = LOWER(?) LIMIT 1");
+    $chk->execute([$name]);
+    if ($chk->fetch()) { http_response_code(400); echo json_encode(['error'=>'A category with this name already exists']); exit; }
+    
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+    $ins = $pdo->prepare("INSERT INTO vendor_categories (name, slug, icon, description, display_order, is_active) VALUES (?, ?, ?, ?, ?, ?)");
+    $ins->execute([$name, $slug, $icon, $desc, $order, $active]);
+    echo json_encode(['success'=>true, 'id'=>$pdo->lastInsertId()]);
+    break;
+
+case 'admin_update_category':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
+    if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $cid = intval($input['id'] ?? 0);
+    $name = clean($input['name'] ?? '');
+    $icon = clean($input['icon'] ?? 'camera');
+    $desc = clean($input['description'] ?? '');
+    $order = intval($input['display_order'] ?? 0);
+    $active = isset($input['is_active']) ? intval($input['is_active']) : 1;
+    if ($cid <= 0 || empty($name)) { http_response_code(400); echo json_encode(['error'=>'Valid ID and name required']); exit; }
+    
+    // Fetch old name to update vendors if category name changed
+    $old_stmt = $pdo->prepare("SELECT name FROM vendor_categories WHERE id = ?");
+    $old_stmt->execute([$cid]);
+    $old_name = $old_stmt->fetchColumn();
+    
+    // Check duplicate
+    $chk = $pdo->prepare("SELECT id FROM vendor_categories WHERE LOWER(name) = LOWER(?) AND id != ? LIMIT 1");
+    $chk->execute([$name, $cid]);
+    if ($chk->fetch()) { http_response_code(400); echo json_encode(['error'=>'Another category with this name already exists']); exit; }
+    
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+    $up = $pdo->prepare("UPDATE vendor_categories SET name = ?, slug = ?, icon = ?, description = ?, display_order = ?, is_active = ? WHERE id = ?");
+    $up->execute([$name, $slug, $icon, $desc, $order, $active, $cid]);
+    
+    if (!empty($old_name) && $old_name !== $name) {
+        $pdo->prepare("UPDATE vendors SET category = ? WHERE category = ?")->execute([$name, $old_name]);
+    }
+    echo json_encode(['success'=>true]);
+    break;
+
+case 'admin_delete_category':
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
+    $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
+    if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $cid = intval($input['id'] ?? 0);
+    if ($cid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid category ID']); exit; }
+    
+    $cat_stmt = $pdo->prepare("SELECT name FROM vendor_categories WHERE id = ?");
+    $cat_stmt->execute([$cid]);
+    $cat_name = $cat_stmt->fetchColumn();
+    if (!$cat_name) { http_response_code(404); echo json_encode(['error'=>'Category not found']); exit; }
+    
+    // Database integrity check: check vendor assignment
+    $v_cnt_stmt = $pdo->prepare("SELECT COUNT(*) FROM vendors WHERE category = ?");
+    $v_cnt_stmt->execute([$cat_name]);
+    $assigned_vendors = intval($v_cnt_stmt->fetchColumn());
+    
+    if ($assigned_vendors > 0 && empty($input['reassign_to'])) {
+        http_response_code(409);
+        echo json_encode([
+            'error' => "Cannot delete category '{$cat_name}' directly because {$assigned_vendors} vendor(s) are currently assigned to it.",
+            'assigned_count' => $assigned_vendors,
+            'requires_reassignment' => true
+        ]);
+        exit;
+    }
+    
+    if ($assigned_vendors > 0 && !empty($input['reassign_to'])) {
+        $reassign_cat = clean($input['reassign_to']);
+        $pdo->prepare("UPDATE vendors SET category = ? WHERE category = ?")->execute([$reassign_cat, $cat_name]);
+    }
+    
+    $pdo->prepare("DELETE FROM vendor_categories WHERE id = ?")->execute([$cid]);
+    echo json_encode(['success'=>true, 'message'=>"Category deleted successfully"]);
     break;
 
 // ── VENDORS & SEARCH ──────────────────────────────────────────────────
@@ -2074,6 +2499,66 @@ case 'get_user_status':
     echo json_encode($info);
     break;
 
+case 'init_didit_kyc':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required for identity verification.']);
+        exit;
+    }
+    require_once __DIR__ . '/didit_helper.php';
+    try {
+        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+        $v_stmt->execute([$uid]);
+        $vendor_id = intval($v_stmt->fetchColumn() ?: 0);
+        
+        $session = DiditHelper::createSession($uid, $vendor_id ?: null);
+        $sess_id = $session['session_id'] ?? ('sess_' . time() . '_' . $uid);
+        $url = $session['url'] ?? '';
+
+        $pdo->prepare("UPDATE users SET didit_session_id = ?, kyc_status = 'pending_verification' WHERE id = ?")->execute([$sess_id, $uid]);
+        if ($vendor_id > 0) {
+            $pdo->prepare("UPDATE vendors SET didit_session_id = ?, verification_status = 'pending_verification' WHERE id = ?")->execute([$sess_id, $vendor_id]);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'url' => $url,
+            'session_id' => $sess_id
+        ]);
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    break;
+
+case 'check_didit_kyc':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required.']);
+        exit;
+    }
+    $sess_id = clean($_GET['session_id'] ?? $_POST['session_id'] ?? $raw_input['session_id'] ?? '');
+    require_once __DIR__ . '/didit_helper.php';
+    try {
+        if (!empty($sess_id)) {
+            $status = DiditHelper::getSessionStatus($sess_id);
+            echo json_encode(['success' => true, 'status' => $status]);
+        } else {
+            $u_stmt = $pdo->prepare("SELECT kyc_status FROM users WHERE id = ?");
+            $u_stmt->execute([$uid]);
+            $st = $u_stmt->fetchColumn() ?: 'not_started';
+            echo json_encode(['success' => true, 'status' => ['decision' => $st]]);
+        }
+    } catch (Exception $e) {
+        $u_stmt = $pdo->prepare("SELECT kyc_status FROM users WHERE id = ?");
+        $u_stmt->execute([$uid]);
+        $st = $u_stmt->fetchColumn() ?: 'not_started';
+        echo json_encode(['success' => true, 'status' => ['decision' => $st]]);
+    }
+    break;
+
 case 'chat_inbox':
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
     if ($uid <= 0) {
@@ -2116,7 +2601,7 @@ case 'chat_inbox':
 
 case 'get_unread_chats':
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
-    if (!$uid) {
+    if ($uid <= 0) {
         echo json_encode([]);
         exit;
     }
@@ -2124,10 +2609,10 @@ case 'get_unread_chats':
     if ($role === 'vendor') {
         $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
         $v_stmt->execute([$uid]);
-        $vendor_id = $v_stmt->fetchColumn();
-        if ($vendor_id) {
-            $stmt = $pdo->prepare("SELECT m.*, u.name as sender_name FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? AND m.sender = 'user' AND m.is_read = 0 ORDER BY m.id DESC");
-            $stmt->execute([$vendor_id]);
+        $vendor_id = intval($v_stmt->fetchColumn() ?: 0);
+        if ($vendor_id > 0) {
+            $stmt = $pdo->prepare("SELECT m.*, u.name as sender_name FROM messages m JOIN users u ON m.user_id = u.id WHERE m.vendor_id = ? AND m.user_id != ? AND m.sender = 'user' AND m.is_read = 0 ORDER BY m.id DESC");
+            $stmt->execute([$vendor_id, $uid]);
             echo json_encode($stmt->fetchAll() ?: []);
         } else {
             echo json_encode([]);
@@ -2137,6 +2622,239 @@ case 'get_unread_chats':
         $stmt->execute([$uid]);
         echo json_encode($stmt->fetchAll() ?: []);
     }
+    break;
+
+case 'notifications':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) {
+        echo json_encode([]);
+        break;
+    }
+    $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 50");
+    $stmt->execute([$uid]);
+    $list = $stmt->fetchAll() ?: [];
+    echo json_encode($list);
+    break;
+
+case 'mark_notifications_read':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid > 0) {
+        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?")->execute([$uid]);
+    }
+    echo json_encode(['success' => true]);
+    break;
+
+case 'record_vendor_view':
+    $vendor_id = intval($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+    if ($vendor_id > 0) {
+        $v_owner = $pdo->prepare("SELECT user_id FROM vendors WHERE id = ?");
+        $v_owner->execute([$vendor_id]);
+        $owner_uid = intval($v_owner->fetchColumn() ?: 0);
+
+        if ($uid !== $owner_uid) {
+            $throttle_key = "v_view_{$vendor_id}_{$uid}_{$ip}";
+            if (!isset($_SESSION[$throttle_key]) || (time() - $_SESSION[$throttle_key]) > 600) {
+                $_SESSION[$throttle_key] = time();
+                try {
+                    $now_str = date('Y-m-d H:i:s');
+                    $pdo->prepare("INSERT INTO vendor_views_log (vendor_id, user_id, ip_address, created_at) VALUES (?, ?, ?, ?)")->execute([$vendor_id, $uid, $ip, $now_str]);
+                    $pdo->prepare("UPDATE vendors SET views_count = views_count + 1 WHERE id = ?")->execute([$vendor_id]);
+                } catch (Exception $e) {}
+            }
+        }
+    }
+    echo json_encode(['success' => true]);
+    break;
+
+case 'vendor_stats':
+    $vendor_id = intval($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+
+    if ($vendor_id <= 0 && $uid > 0) {
+        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+        $v_stmt->execute([$uid]);
+        $vendor_id = intval($v_stmt->fetchColumn() ?: 0);
+    }
+
+    if ($vendor_id <= 0) {
+        echo json_encode([
+            'success' => true,
+            'views' => 0,
+            'bookings' => 0,
+            'completed' => 0,
+            'pending' => 0,
+            'cancelled' => 0,
+            'revenue' => 0.0,
+            'impressions' => 0,
+            'chats' => 0,
+            'conversion_rate' => 0.0,
+            'rating' => 0.0,
+            'reviews_count' => 0
+        ]);
+        break;
+    }
+
+    $period = clean($_GET['period'] ?? $_POST['period'] ?? '7days');
+    $start_date = clean($_GET['start_date'] ?? $_POST['start_date'] ?? '');
+    $end_date = clean($_GET['end_date'] ?? $_POST['end_date'] ?? '');
+
+    $date_where = "";
+    $params = [$vendor_id];
+    $is_sqlite = (defined('DB_TYPE') && DB_TYPE === 'sqlite');
+
+    switch ($period) {
+        case 'today':
+            $date_where = " AND created_at >= " . ($is_sqlite ? "datetime('now', 'start of day')" : "CURDATE()");
+            break;
+        case '7days':
+            $date_where = " AND created_at >= " . ($is_sqlite ? "datetime('now', '-7 days')" : "DATE_SUB(NOW(), INTERVAL 7 DAY)");
+            break;
+        case '30days':
+            $date_where = " AND created_at >= " . ($is_sqlite ? "datetime('now', '-30 days')" : "DATE_SUB(NOW(), INTERVAL 30 DAY)");
+            break;
+        case 'this_month':
+            $date_where = " AND created_at >= " . ($is_sqlite ? "datetime('now', 'start of month')" : "DATE_FORMAT(NOW(), '%Y-%m-01')");
+            break;
+        case 'this_year':
+            $date_where = " AND created_at >= " . ($is_sqlite ? "datetime('now', 'start of year')" : "DATE_FORMAT(NOW(), '%Y-01-01')");
+            break;
+        case 'custom':
+            if (!empty($start_date) && !empty($end_date)) {
+                $date_where = " AND created_at BETWEEN ? AND ?";
+                $params[] = $start_date . " 00:00:00";
+                $params[] = $end_date . " 23:59:59";
+            }
+            break;
+    }
+
+    $period_views = 0;
+    try {
+        $views_stmt = $pdo->prepare("SELECT COUNT(*) FROM vendor_views_log WHERE vendor_id = ?" . $date_where);
+        $views_stmt->execute($params);
+        $period_views = intval($views_stmt->fetchColumn() ?: 0);
+    } catch (Exception $e) {}
+
+    if ($period_views == 0 && ($period === '7days' || $period === 'this_year')) {
+        try {
+            $v_row_stmt = $pdo->prepare("SELECT views_count FROM vendors WHERE id = ?");
+            $v_row_stmt->execute([$vendor_id]);
+            $period_views = intval($v_row_stmt->fetchColumn() ?: 0);
+        } catch (Exception $e) {}
+    }
+
+    $total_bookings = 0;
+    $completed_bookings = 0;
+    $pending_bookings = 0;
+    $cancelled_bookings = 0;
+    $total_revenue = 0.0;
+
+    try {
+        $bk_stmt = $pdo->prepare("SELECT COUNT(*) AS total_bookings, 
+            SUM(CASE WHEN LOWER(status) IN ('completed') THEN 1 ELSE 0 END) AS completed_bookings,
+            SUM(CASE WHEN LOWER(status) IN ('inquiry', 'pending', 'in progress') THEN 1 ELSE 0 END) AS pending_bookings,
+            SUM(CASE WHEN LOWER(status) IN ('cancelled', 'declined') THEN 1 ELSE 0 END) AS cancelled_bookings,
+            SUM(CASE WHEN LOWER(payment_status) IN ('paid', 'completed', 'deposit paid') THEN (COALESCE(deposit_paid,0)+COALESCE(balance_paid,0)+COALESCE(total_paid,0)) ELSE 0 END) AS total_revenue
+            FROM bookings WHERE vendor_id = ?" . $date_where);
+        $bk_stmt->execute($params);
+        $bk_res = $bk_stmt->fetch() ?: [];
+
+        $total_bookings = intval($bk_res['total_bookings'] ?? 0);
+        $completed_bookings = intval($bk_res['completed_bookings'] ?? 0);
+        $pending_bookings = intval($bk_res['pending_bookings'] ?? 0);
+        $cancelled_bookings = intval($bk_res['cancelled_bookings'] ?? 0);
+        $total_revenue = floatval($bk_res['total_revenue'] ?? 0.0);
+    } catch (Exception $e) {}
+
+    $total_chats = 0;
+    try {
+        $chat_stmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) FROM messages WHERE vendor_id = ?" . $date_where);
+        $chat_stmt->execute($params);
+        $total_chats = intval($chat_stmt->fetchColumn() ?: 0);
+    } catch (Exception $e) {}
+
+    $avg_rating = 0.0;
+    $reviews_count = 0;
+    try {
+        $rev_stmt = $pdo->prepare("SELECT AVG(rating) AS avg_rating, COUNT(*) AS rev_count FROM reviews WHERE vendor_id = ?");
+        $rev_stmt->execute([$vendor_id]);
+        $rev_res = $rev_stmt->fetch() ?: [];
+        $avg_rating = round(floatval($rev_res['avg_rating'] ?? 0.0), 1);
+        $reviews_count = intval($rev_res['rev_count'] ?? 0);
+    } catch (Exception $e) {}
+
+    $search_impressions = $period_views > 0 ? intval($period_views * 1.5) : 0;
+    $conversion_rate = $period_views > 0 ? round(($total_bookings / $period_views) * 100, 1) : 0.0;
+
+    echo json_encode([
+        'success' => true,
+        'views' => $period_views,
+        'bookings' => $total_bookings,
+        'completed' => $completed_bookings,
+        'pending' => $pending_bookings,
+        'cancelled' => $cancelled_bookings,
+        'revenue' => $total_revenue,
+        'impressions' => $search_impressions,
+        'chats' => $total_chats,
+        'conversion_rate' => $conversion_rate,
+        'rating' => $avg_rating,
+        'reviews_count' => $reviews_count
+    ]);
+    break;
+
+case 'dashboard_stats':
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    if ($uid <= 0) {
+        echo json_encode([
+            'success' => true,
+            'bookings_count' => 0,
+            'upcoming_bookings' => 0,
+            'completed_bookings' => 0,
+            'saved_vendors' => 0,
+            'unread_notifications' => 0
+        ]);
+        break;
+    }
+
+    $bk_cnt = 0;
+    $up_cnt = 0;
+    $comp_cnt = 0;
+    try {
+        $st = $pdo->prepare("SELECT COUNT(*) AS total, 
+            SUM(CASE WHEN LOWER(status) NOT IN ('completed', 'cancelled', 'declined') THEN 1 ELSE 0 END) AS upcoming,
+            SUM(CASE WHEN LOWER(status) IN ('completed') THEN 1 ELSE 0 END) AS completed
+            FROM bookings WHERE user_id = ?");
+        $st->execute([$uid]);
+        $r = $st->fetch() ?: [];
+        $bk_cnt = intval($r['total'] ?? 0);
+        $up_cnt = intval($r['upcoming'] ?? 0);
+        $comp_cnt = intval($r['completed'] ?? 0);
+    } catch (Exception $e) {}
+
+    $saved_cnt = 0;
+    try {
+        $st2 = $pdo->prepare("SELECT COUNT(*) FROM favorites WHERE user_id = ?");
+        $st2->execute([$uid]);
+        $saved_cnt = intval($st2->fetchColumn() ?: 0);
+    } catch (Exception $e) {}
+
+    $unnotif_cnt = 0;
+    try {
+        $st3 = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+        $st3->execute([$uid]);
+        $unnotif_cnt = intval($st3->fetchColumn() ?: 0);
+    } catch (Exception $e) {}
+
+    echo json_encode([
+        'success' => true,
+        'bookings_count' => $bk_cnt,
+        'upcoming_bookings' => $up_cnt,
+        'completed_bookings' => $comp_cnt,
+        'saved_vendors' => $saved_cnt,
+        'unread_notifications' => $unnotif_cnt
+    ]);
     break;
 
 case 'block_user':
@@ -2279,7 +2997,10 @@ case 'chat':
     $input = json_decode(file_get_contents('php://input'), true);
     $vid = intval($input['vendor_id'] ?? 0);
     $message = clean($input['message'] ?? '');
-    $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','location']) ? $input['type'] : 'text';
+    $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','file','video','location']) ? $input['type'] : 'text';
+    $file_name = clean($input['file_name'] ?? '');
+    $file_size = intval($input['file_size'] ?? 0);
+    $duration = intval($input['duration'] ?? 0);
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
     $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     
@@ -2290,18 +3011,18 @@ case 'chat':
         $cust_id = intval($input['customer_id'] ?? $input['vendor_id'] ?? 0);
         $now_stamp = date('Y-m-d H:i:s');
         if ($vendor_id && $cust_id && !empty($message)) {
-            $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'vendor',?,?,?)")->execute([$vendor_id,$cust_id,$message,$type,$now_stamp]);
+            $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,file_name,file_size,duration,created_at) VALUES (?,?,'vendor',?,?,?,?,?,?)")->execute([$vendor_id,$cust_id,$message,$type,$file_name,$file_size,$duration,$now_stamp]);
             $notif_text = $message;
             if ($type === 'image') $notif_text = "sent you a photo";
             else if ($type === 'voice') $notif_text = "sent you a voice note";
-            else if (in_array($type, ['pdf', 'video', 'location'])) $notif_text = "sent you an attachment";
+            else if (in_array($type, ['pdf', 'file', 'video', 'location'])) $notif_text = "sent you an attachment";
             try {
                 $v_name_stmt = $pdo->prepare("SELECT name FROM vendors WHERE id = ?");
                 $v_name_stmt->execute([$vendor_id]);
                 $v_name = $v_name_stmt->fetchColumn() ?: 'Vendor';
                 add_notification($pdo, $cust_id, $v_name, "$v_name $notif_text");
             } catch (Throwable $eNotif) {}
-            echo json_encode(['success'=>true,'vendor_message'=>['sender'=>'vendor','message'=>$message,'type'=>$type,'created_at'=>$now_stamp]]);
+            echo json_encode(['success'=>true,'vendor_message'=>['sender'=>'vendor','message'=>$message,'type'=>$type,'file_name'=>$file_name,'file_size'=>$file_size,'duration'=>$duration,'created_at'=>$now_stamp]]);
         } else {
             http_response_code(400); echo json_encode(['error'=>'Invalid target customer or vendor profile']);
         }
@@ -2317,12 +3038,21 @@ case 'chat':
             }
         } catch (Throwable $eV2) {}
         
+        $v_owner_stmt = $pdo->prepare("SELECT user_id FROM vendors WHERE id = ?");
+        $v_owner_stmt->execute([$real_v_id]);
+        $v_owner_id = intval($v_owner_stmt->fetchColumn() ?: 0);
+        if ($v_owner_id > 0 && $v_owner_id === intval($uid)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'You cannot message your own vendor profile.']);
+            exit;
+        }
+
         $now_stamp = date('Y-m-d H:i:s');
-        $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,created_at) VALUES (?,?,'user',?,?,?)")->execute([$real_v_id,$uid,$message,$type,$now_stamp]);
+        $pdo->prepare("INSERT INTO messages (vendor_id,user_id,sender,message,type,file_name,file_size,duration,created_at) VALUES (?,?,'user',?,?,?,?,?,?)")->execute([$real_v_id,$uid,$message,$type,$file_name,$file_size,$duration,$now_stamp]);
         $notif_text = $message;
         if ($type === 'image') $notif_text = "sent you a photo";
         else if ($type === 'voice') $notif_text = "sent you a voice note";
-        else if (in_array($type, ['pdf', 'video', 'location'])) $notif_text = "sent you an attachment";
+        else if (in_array($type, ['pdf', 'file', 'video', 'location'])) $notif_text = "sent you an attachment";
         try {
             $u_name_stmt = $pdo->prepare("SELECT name FROM users WHERE id = ?");
             $u_name_stmt->execute([$uid]);
@@ -2337,7 +3067,7 @@ case 'chat':
         } catch (Throwable $eNotif2) {}
         echo json_encode([
             'success' => true,
-            'user_message' => ['sender'=>'user','message'=>$message,'type'=>$type,'created_at'=>$now_stamp],
+            'user_message' => ['sender'=>'user','message'=>$message,'type'=>$type,'file_name'=>$file_name,'file_size'=>$file_size,'duration'=>$duration,'created_at'=>$now_stamp],
             'vendor_reply' => null
         ]);
     }
@@ -2365,7 +3095,7 @@ case 'upload_chat_file':
         switch ($file['error']) {
             case UPLOAD_ERR_INI_SIZE:
             case UPLOAD_ERR_FORM_SIZE:
-                $err_msg = 'File exceeds maximum allowed upload size of 20MB.';
+                $err_msg = 'File exceeds maximum allowed upload size of 10MB.';
                 break;
             case UPLOAD_ERR_PARTIAL:
                 $err_msg = 'File upload was only partially completed.';
@@ -2379,11 +3109,11 @@ case 'upload_chat_file':
         exit;
     }
     
-    // Validate size (20MB limit)
-    $max_size = 20 * 1024 * 1024; // 20MB
+    // Strict 10 MB Limit
+    $max_size = 10 * 1024 * 1024; // 10MB
     if ($file['size'] > $max_size) {
         http_response_code(400);
-        echo json_encode(['error'=>'File exceeds maximum size of 20MB.']);
+        echo json_encode(['error'=>'File exceeds maximum allowed limit of 10 MB.']);
         exit;
     }
     
@@ -2400,30 +3130,23 @@ case 'upload_chat_file':
         } catch (Throwable $e) {}
     }
 
-    $allowed_mimes = [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-        'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/webm', 'audio/x-m4a', 'audio/aac', 'audio/3gpp',
-        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
-        'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain',
-        'application/octet-stream'
-    ];
+    $filename = basename($file['name']);
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-    if (!empty($mime) && !in_array($mime, $allowed_mimes) && strpos($mime, 'image/') !== 0 && strpos($mime, 'audio/') !== 0 && strpos($mime, 'video/') !== 0) {
+    // Blacklist dangerous executable files
+    $blocked_exts = ['php', 'phtml', 'php3', 'php4', 'php5', 'phps', 'cgi', 'pl', 'asp', 'aspx', 'jsp', 'exe', 'sh', 'bat', 'cmd', 'js', 'html', 'htm', 'htaccess', 'svg'];
+    if (in_array($ext, $blocked_exts)) {
         http_response_code(400);
-        echo json_encode(['error'=>'Invalid or unsupported file type: ' . $mime]);
+        echo json_encode(['error'=>'Security notice: Excutable or script file extensions are strictly prohibited.']);
         exit;
     }
 
-    $filename = $file['name'];
-    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-    
     $allowed_images = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     $allowed_audios = ['mp3', 'wav', 'ogg', 'm4a', 'webm', '3gp', 'aac'];
     $allowed_videos = ['mp4', 'webm', 'mov', 'avi'];
-    $allowed_docs = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'];
+    $allowed_docs = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'zip'];
     
-    $type = 'text';
+    $type = 'file';
     if (strpos($filename, 'voicenote') !== false && in_array($ext, ['mp4', 'm4a', 'webm', 'ogg', 'wav', '3gp', 'aac', 'mp3'])) {
         $type = 'voice';
     } else if (in_array($ext, $allowed_images)) {
@@ -2435,27 +3158,29 @@ case 'upload_chat_file':
     } else if ($ext === 'pdf') {
         $type = 'pdf';
     } else if (in_array($ext, $allowed_docs)) {
-        $type = 'location'; // Custom doc type mapped to text/doc placeholder
+        $type = 'file';
     } else {
         http_response_code(400);
-        echo json_encode(['error'=>'File extension .' . $ext . ' not allowed.']);
+        echo json_encode(['error'=>'File format .' . $ext . ' is not supported.']);
         exit;
     }
     
-    // Create directory if not exists
+    // Create upload directory if not exists
     $dir = __DIR__ . '/uploads/chat/';
     if (!file_exists($dir)) {
         @mkdir($dir, 0755, true);
     }
     
-    // Generate safe unique filename
-    $new_filename = uniqid('chat_', true) . '.' . $ext;
+    // Generate safe unique stored filename
+    $new_filename = uniqid('chat_', true) . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
     $target = $dir . $new_filename;
     
     if (move_uploaded_file($file['tmp_name'], $target)) {
         if ($type === 'image') {
             try {
-                compressAndResizeImage($target, $target, 1200, 1200, 80);
+                if (function_exists('compressAndResizeImage')) {
+                    compressAndResizeImage($target, $target, 1600, 1600, 80);
+                }
             } catch (Throwable $e) {}
         }
         $relative_path = 'uploads/chat/' . $new_filename;
@@ -2463,13 +3188,50 @@ case 'upload_chat_file':
             'success' => true,
             'url' => $relative_path,
             'type' => $type,
-            'name' => $filename
+            'name' => $filename,
+            'size' => intval($file['size'])
         ]);
     } else {
         http_response_code(500);
         echo json_encode(['error'=>'Failed to save uploaded file on server.']);
     }
     break;
+
+case 'download_chat_file':
+    $dl_uid = $_SESSION['user']['id'] ?? $token_uid ?? 0;
+    if (!$dl_uid) { http_response_code(401); echo "Unauthorized"; exit; }
+    
+    $file_path = trim($_GET['file'] ?? '');
+    if (empty($file_path) || strpos($file_path, '..') !== false) {
+        http_response_code(400); echo "Invalid file request"; exit; }
+    
+    $clean_rel = ltrim($file_path, '/');
+    if (strpos($clean_rel, 'uploads/chat/') !== 0) {
+        http_response_code(403); echo "Access denied"; exit; }
+    
+    $full_path = __DIR__ . '/' . $clean_rel;
+    if (!file_exists($full_path)) {
+        http_response_code(404); echo "File not found"; exit; }
+    
+    $file_name = basename($full_path);
+    $ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+    
+    $mime_types = [
+        'pdf' => 'application/pdf',
+        'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp',
+        'doc' => 'application/msword', 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'txt' => 'text/plain', 'csv' => 'text/csv', 'zip' => 'application/zip',
+        'mp3' => 'audio/mpeg', 'wav' => 'audio/wav', 'webm' => 'audio/webm', 'm4a' => 'audio/x-m4a'
+    ];
+    
+    $content_type = $mime_types[$ext] ?? 'application/octet-stream';
+    header('Content-Type: ' . $content_type);
+    header('Content-Length: ' . filesize($full_path));
+    header('Content-Disposition: attachment; filename="' . addslashes($file_name) . '"');
+    header('Cache-Control: private, max-age=3600');
+    readfile($full_path);
+    exit;
 
 
 
@@ -2618,57 +3380,13 @@ case 'reset_event':
 
 // ── NOTIFICATIONS ──────────────────────────────────────────────────────
 case 'notifications':
-    $uid = intval($_SESSION['user']['id'] ?? $_GET['user_id'] ?? $_POST['user_id'] ?? 0);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
+    $notifs = [];
     
     if ($uid > 0) {
-        $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? OR user_id = 0 ORDER BY id DESC LIMIT 50");
+        $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 50");
         $stmt->execute([$uid]);
         $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($notifs)) {
-            $now_stamp = date('Y-m-d H:i:s');
-            try {
-                $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon, is_read, created_at) VALUES 
-                    (?, 'Welcome to Ohati! 🎉', 'Explore Ghana\\'s top event vendors, request quotes, and manage your event bookings smoothly.', 'sparkles', 0, ?),
-                    (?, 'Complete Your Profile 👤', 'Add your contact details and event preferences to receive tailored vendor recommendations.', 'user-check', 0, ?)");
-                $ins->execute([$uid, $now_stamp, $uid, $now_stamp]);
-                $stmt->execute([$uid]);
-                $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (Exception $e) {
-                // Ignore table fallback
-            }
-        }
-    } else {
-        // Guest or unauthenticated - return system notifications or demo notifications
-        $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = 0 OR type = 'system' ORDER BY id DESC LIMIT 20");
-        $stmt->execute();
-        $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($notifs)) {
-            $now_stamp = date('Y-m-d H:i:s');
-            $notifs = [
-                [
-                    'id' => 1,
-                    'user_id' => 0,
-                    'type' => 'system',
-                    'title' => 'Welcome to Ohati! 🇬🇭',
-                    'body' => 'Ghana\'s Premier Event Marketplace. Find DJs, MCs, Photographers, Caterers & Decorators in minutes.',
-                    'icon' => 'sparkles',
-                    'is_read' => 0,
-                    'created_at' => $now_stamp
-                ],
-                [
-                    'id' => 2,
-                    'user_id' => 0,
-                    'type' => 'system',
-                    'title' => 'Post an Event Job 📝',
-                    'body' => 'Need event services? Post your job requirements to receive customized quotes from top vendors.',
-                    'icon' => 'briefcase',
-                    'is_read' => 0,
-                    'created_at' => $now_stamp
-                ]
-            ];
-        }
     }
 
     foreach ($notifs as &$n) {
@@ -2685,16 +3403,18 @@ case 'mark_notification_read':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true);
     $nid = intval($input['id'] ?? 0);
-    $uid = intval($_SESSION['user']['id'] ?? $input['user_id'] ?? 0);
+    $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? 0);
     
+    if ($uid <= 0) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required']);
+        exit;
+    }
+
     if ($nid > 0) {
-        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ?")->execute([$nid]);
+        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")->execute([$nid, $uid]);
     } else {
-        if ($uid > 0) {
-            $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? OR user_id = 0")->execute([$uid]);
-        } else {
-            $pdo->prepare("UPDATE notifications SET is_read = 1")->execute();
-        }
+        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?")->execute([$uid]);
     }
     echo json_encode(['success'=>true]);
     break;
@@ -2734,9 +3454,10 @@ case 'register_vendor':
         $vendor_id = $pdo->lastInsertId();
     }
     
-    // Auto-update users role to vendor
+    // Auto-update users role to vendor & store KYC info
     if ($uid > 0) {
-        $pdo->prepare("UPDATE users SET role = 'vendor' WHERE id = ?")->execute([$uid]);
+        $kyc_type = clean($input['kyc_id_type'] ?? 'Ghana Card');
+        $pdo->prepare("UPDATE users SET role = 'vendor', kyc_id_type = ?, kyc_status = 'pending' WHERE id = ?")->execute([$kyc_type, $uid]);
         if (isset($_SESSION['user'])) {
             $_SESSION['user']['role'] = 'vendor';
             $_SESSION['user']['active_role'] = 'vendor';
@@ -2744,6 +3465,7 @@ case 'register_vendor':
             $_SESSION['user']['has_vendor_profile'] = true;
             $_SESSION['user']['vendor_verification_status'] = 'pending';
             $_SESSION['user']['vendor_onboarding_completed'] = true;
+            $_SESSION['user']['kyc_id_type'] = $kyc_type;
         }
     }
     
@@ -2756,6 +3478,11 @@ case 'update_vendor':
     if ($uid <= 0) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $vid = intval($input['id'] ?? 0);
+    if ($vid <= 0 && $uid > 0) {
+        $v_find = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ? LIMIT 1");
+        $v_find->execute([$uid]);
+        $vid = intval($v_find->fetchColumn());
+    }
     if ($vid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid vendor ID']); exit; }
     
     // Verify ownership
@@ -2779,6 +3506,9 @@ case 'update_vendor':
 
     // Keep vendor identity fields editable
 
+    if (isset($input['cover_image'])) $input['cover_photo'] = $input['cover_image'];
+    if (isset($input['avatar'])) $input['logo'] = $input['avatar'];
+
     if (isset($input['gallery']) && is_array($input['gallery'])) {
         $input['gallery'] = array_slice($input['gallery'], 0, 100);
     }
@@ -2796,7 +3526,13 @@ case 'update_vendor':
     // Save cover_photo if base64
     if (isset($input['cover_photo']) && strpos($input['cover_photo'], 'data:image') === 0) {
         try {
-            $input['cover_photo'] = secure_save_base64_image($input['cover_photo'], 'covers', 'cover_' . $vid);
+            $saved_cover = secure_save_base64_image($input['cover_photo'], 'covers', 'cover_' . $vid);
+            if (!empty($saved_cover)) {
+                $input['cover_photo'] = $saved_cover;
+            } else {
+                unset($input['cover_photo']);
+                http_response_code(400); echo json_encode(['error' => 'Cover image upload failed. Please try a valid image under 8MB.']); exit;
+            }
         } catch (Exception $e) {
             http_response_code(400); echo json_encode(['error' => $e->getMessage()]); exit;
         }
@@ -2838,14 +3574,74 @@ case 'update_vendor':
     $fresh_vendor = $fresh_v_stmt->fetch();
     if ($fresh_vendor) {
         $_SESSION['vendor'] = $fresh_vendor;
+        if (isset($_SESSION['user'])) {
+            $_SESSION['user']['vendor_id'] = $vid;
+            $_SESSION['user']['vendor_cover_photo'] = $fresh_vendor['cover_photo'] ?? '';
+            $_SESSION['user']['vendor_logo'] = $fresh_vendor['logo'] ?? '';
+        }
     }
 
     echo json_encode([
         'success' => true,
         'vendor_id' => $vid,
+        'cover_photo' => $_SESSION['vendor']['cover_photo'] ?? ($input['cover_photo'] ?? ''),
+        'logo' => $_SESSION['vendor']['logo'] ?? ($input['logo'] ?? ''),
         'vendor' => $_SESSION['vendor'] ?? null,
         'user' => $_SESSION['user'] ?? null
     ]);
+    break;
+
+case 'upload_avatar':
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error' => 'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    $file_input = $_FILES['avatar'] ?? $_FILES['avatar_file'] ?? $_POST['avatar'] ?? $raw_input['avatar'] ?? null;
+    if (!$file_input && !empty($_POST['avatar_base64'])) $file_input = $_POST['avatar_base64'];
+    if (!$file_input) { http_response_code(400); echo json_encode(['error' => 'No image file uploaded.']); exit; }
+    
+    $up_res = upload_media_file($file_input, 'avatars', 800);
+    if (empty($up_res['success']) || empty($up_res['url'])) {
+        http_response_code(400); echo json_encode(['error' => $up_res['error'] ?? 'Avatar upload failed.']); exit;
+    }
+    $avatar_url = $up_res['url'];
+    $ts = time();
+    $busted_url = $avatar_url . (strpos($avatar_url, '?') !== false ? '&v=' : '?v=') . $ts;
+    
+    $pdo->prepare("UPDATE users SET avatar = ? WHERE id = ?")->execute([$avatar_url, $uid]);
+    $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_chk->execute([$uid]);
+    $v_id = $v_chk->fetchColumn();
+    if ($v_id) {
+        $pdo->prepare("UPDATE vendors SET logo = ? WHERE id = ?")->execute([$avatar_url, $v_id]);
+        if (isset($_SESSION['vendor'])) $_SESSION['vendor']['logo'] = $avatar_url;
+    }
+    $_SESSION['user']['avatar'] = $avatar_url;
+    echo json_encode(['success' => true, 'avatar' => $busted_url, 'url' => $busted_url, 'user' => $_SESSION['user'], 'vendor' => $_SESSION['vendor'] ?? null]);
+    break;
+
+case 'upload_cover_image':
+    if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error' => 'Not logged in.']); exit; }
+    $uid = intval($_SESSION['user']['id']);
+    $file_input = $_FILES['cover'] ?? $_FILES['cover_photo'] ?? $_POST['cover_photo'] ?? $raw_input['cover_photo'] ?? null;
+    if (!$file_input && !empty($_POST['cover_base64'])) $file_input = $_POST['cover_base64'];
+    if (!$file_input) { http_response_code(400); echo json_encode(['error' => 'No cover image file uploaded.']); exit; }
+
+    $up_res = upload_media_file($file_input, 'covers', 1920);
+    if (empty($up_res['success']) || empty($up_res['url'])) {
+        http_response_code(400); echo json_encode(['error' => $up_res['error'] ?? 'Cover upload failed.']); exit;
+    }
+    $cover_url = $up_res['url'];
+    $ts = time();
+    $busted_url = $cover_url . (strpos($cover_url, '?') !== false ? '&v=' : '?v=') . $ts;
+
+    $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_chk->execute([$uid]);
+    $v_id = $v_chk->fetchColumn();
+    if ($v_id) {
+        $pdo->prepare("UPDATE vendors SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $v_id]);
+        if (isset($_SESSION['vendor'])) $_SESSION['vendor']['cover_photo'] = $cover_url;
+    }
+    if (isset($_SESSION['user'])) $_SESSION['user']['vendor_cover_photo'] = $cover_url;
+    echo json_encode(['success' => true, 'cover_photo' => $busted_url, 'url' => $busted_url, 'vendor' => $_SESSION['vendor'] ?? null, 'user' => $_SESSION['user'] ?? null]);
     break;
 
 case 'get_vendor_auto_response':
@@ -2877,7 +3673,13 @@ case 'record_payment':
     $method = clean($input['method'] ?? '');
     $type = in_array($input['type']??'', ['deposit','balance','full','installment']) ? $input['type'] : 'deposit';
     if ($bid <= 0 || $amount <= 0) { http_response_code(400); echo json_encode(['error'=>'Valid booking and amount required.']); exit; }
-    $pdo->prepare("INSERT INTO payments (booking_id,amount,method,type,status,provider) VALUES (?,?,?,?,'completed',?)")->execute([$bid,$amount,$method,$type,clean($input['provider']??'')]);
+    
+    $txn_ref = 'OHATI_TXN_' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 10));
+    try {
+        $pdo->prepare("INSERT INTO payments (booking_id,amount,method,type,status,provider,reference) VALUES (?,?,?,?,'completed',?,?)")->execute([$bid,$amount,$method,$type,clean($input['provider']??''),$txn_ref]);
+    } catch (Exception $e) {
+        $pdo->prepare("INSERT INTO payments (booking_id,amount,method,type,status,provider) VALUES (?,?,?,?,'completed',?)")->execute([$bid,$amount,$method,$type,clean($input['provider']??'')]);
+    }
     // Update booking totals
     $field = ($type === 'deposit') ? 'deposit_paid' : 'balance_paid';
     $pdo->prepare("UPDATE bookings SET $field = $field + ?, total_paid = total_paid + ? WHERE id = ?")->execute([$amount,$amount,$bid]);
@@ -2888,7 +3690,7 @@ case 'record_payment':
     } else {
         $pdo->prepare("UPDATE bookings SET payment_status = 'Partial' WHERE id = ?")->execute([$bid]);
     }
-    echo json_encode(['success'=>true]);
+    echo json_encode(['success'=>true, 'reference'=>$txn_ref]);
     break;
 
 case 'payment_history':
@@ -2906,10 +3708,12 @@ case 'switch_role':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
     $input = json_decode(file_get_contents('php://input'), true);
     $role = ($input['role'] ?? '') === 'vendor' ? 'vendor' : 'customer';
+
+    $stmt = $pdo->prepare("SELECT id, name FROM vendors WHERE user_id = ?");
+    $stmt->execute([$_SESSION['user']['id']]);
+    $vendor = $stmt->fetch();
+
     if ($role === 'vendor') {
-        $stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-        $stmt->execute([$_SESSION['user']['id']]);
-        $vendor = $stmt->fetch();
         if (!$vendor) {
             http_response_code(403);
             echo json_encode(['error'=>'Vendor profile not activated yet.', 'need_upgrade'=>true]);
@@ -2917,11 +3721,27 @@ case 'switch_role':
         }
         $_SESSION['user']['vendor_id'] = intval($vendor['id']);
         $_SESSION['user']['has_vendor_profile'] = true;
+        $_SESSION['user']['role'] = 'vendor';
     }
+
+    if ($vendor) {
+        $_SESSION['user']['vendor_id'] = intval($vendor['id']);
+        $_SESSION['user']['has_vendor_profile'] = true;
+        if (!empty($vendor['name'])) {
+            $_SESSION['user']['name'] = $vendor['name'];
+            $_SESSION['user']['vendor_name'] = $vendor['name'];
+        }
+    }
+
     $_SESSION['user']['active_role'] = $role;
     try {
-        $stmt = $pdo->prepare("UPDATE users SET active_role = ? WHERE id = ?");
-        $stmt->execute([$role, $_SESSION['user']['id']]);
+        if ($vendor && !empty($vendor['name'])) {
+            $stmt = $pdo->prepare("UPDATE users SET role = ?, active_role = ?, name = ? WHERE id = ?");
+            $stmt->execute([$role, $role, $vendor['name'], $_SESSION['user']['id']]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE users SET role = ?, active_role = ? WHERE id = ?");
+            $stmt->execute([$role, $role, $_SESSION['user']['id']]);
+        }
     } catch (Exception $e) {}
     echo json_encode(['success'=>true, 'active_role'=>$role, 'user'=>$_SESSION['user']]);
     break;

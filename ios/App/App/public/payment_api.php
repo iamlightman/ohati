@@ -133,8 +133,12 @@ function handle_payment_action($action, $pdo) {
                 audit_log($pdo, 'payment_submitted', 'escrow_transactions', $escrow['id'], $escrow['amount'], 'pending_submission', 'pending_verification', "Customer submitted TxID: $tx_id for Admin verification.");
 
                 // Notify admin via system notification
-                $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (1, 'New Payment Submission', ?, 'money-bill-wave')");
-                $stmt->execute(["Payment of GH₵ " . number_format($escrow['amount'], 2) . " submitted for Booking #" . $escrow['booking_id'] . " (TxID: $tx_id). Awaiting Admin approval."]);
+                $admin_ids = $pdo->query("SELECT id FROM users WHERE role = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
+                if (empty($admin_ids)) $admin_ids = [1];
+                foreach ($admin_ids as $aid) {
+                    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'New Payment Submission', ?, 'money-bill-wave')");
+                    $stmt->execute([$aid, "Payment of GH₵ " . number_format($escrow['amount'], 2) . " submitted for Booking #" . $escrow['booking_id'] . " (TxID: $tx_id). Awaiting Admin approval."]);
+                }
 
                 $pdo->commit();
                 echo json_encode([

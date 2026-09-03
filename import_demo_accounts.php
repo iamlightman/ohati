@@ -59,13 +59,13 @@ try {
     $v_profile_id = $v_stmt->fetchColumn();
 
     if (!$v_profile_id) {
-        $ins_v = $pdo->prepare("INSERT INTO vendors (user_id, name, category, location, rating, reviews_count, verified, verification_status, verification_badge, is_active) VALUES (?, 'App Review Event Services', 'Photography', 'Accra, Ghana', 5.0, 12, 1, 'verified', 'gold', 1)");
+        $ins_v = $pdo->prepare("INSERT INTO vendors (user_id, name, category, location, rating, reviews_count, verified, verification_status, verification_badge, is_active) VALUES (?, 'App Review Event Services', 'Photography', 'Accra, Ghana', 5.0, 12, 0, 'unverified', 'grey', 1)");
         $ins_v->execute([$vnd_id]);
         echo "<p style='color:#10B981;'><strong>✔ Vendor Profile Linked:</strong> App Review Event Services</p>";
     } else {
-        $upd_v = $pdo->prepare("UPDATE vendors SET verified = 1, verification_status = 'verified', verification_badge = 'gold', is_active = 1 WHERE id = ?");
+        $upd_v = $pdo->prepare("UPDATE vendors SET verified = 0, verification_status = 'unverified', verification_badge = 'grey', is_active = 1 WHERE id = ?");
         $upd_v->execute([$v_profile_id]);
-        echo "<p style='color:#3B82F6;'><strong>✔ Vendor Profile Verified:</strong> App Review Event Services</p>";
+        echo "<p style='color:#3B82F6;'><strong>✔ Vendor Profile Updated:</strong> App Review Event Services</p>";
     }
 
     // 3. SAFELY UNLOCK ALL EXISTING ACCOUNTS IN DB (No Reset, No Data Overwrite)

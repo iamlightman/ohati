@@ -36,8 +36,8 @@ try {
 <body>
     <div class="help-wrapper">
         <header class="app-header" style="position: sticky; top:0; z-index:100;">
-            <button class="chat-back-btn" onclick="window.history.back()" style="border:none; background:none; font-size:1.1rem; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>
-            <h2 style="font-family:'Fraunces',serif; font-size:1.15rem; margin-left:12px; color:var(--primary);">Help Center</h2>
+            <button class="chat-back-btn" onclick="if (window.history.length > 1 && document.referrer) { window.history.back(); } else { window.location.href = 'index.php'; }" style="border:none; background:none; font-size:1.1rem; cursor:pointer; padding:8px 12px; color:var(--primary);" aria-label="Go Back"><i class="fa-solid fa-chevron-left"></i></button>
+            <h2 style="font-family:'Fraunces',serif; font-size:1.15rem; margin-left:8px; color:var(--primary); display:inline-block;">Help Center</h2>
         </header>
 
         <div class="help-hero">
@@ -45,7 +45,7 @@ try {
             <p style="font-size:0.75rem; color:rgba(255,255,255,0.85); margin-bottom:12px;">Search Ohati support articles and FAQs</p>
             <div class="help-search">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input placeholder="Search keywords..." style="border:none; outline:none; background:none; width:100%; font-size:0.8rem;">
+                <input placeholder="Search keywords..." id="help-search-input" style="border:none; outline:none; background:none; width:100%; font-size:0.8rem; color:#fff;">
             </div>
         </div>
 
@@ -85,39 +85,42 @@ try {
 
     <script>
         function toggleFaq(el) {
-            const item = el.parentElement;
-            item.classList.toggle('open');
+            const item = el.closest ? el.closest('.faq-item') : el.parentElement;
+            if (item) item.classList.toggle('open');
         }
 
         // Live Search Filtering
-        document.querySelector('.help-search input').addEventListener('input', function(e) {
-            const query = e.target.value.toLowerCase().trim();
-            const items = document.querySelectorAll('.faq-item');
-            const categories = document.querySelectorAll('.faq-category-title');
-            
-            items.forEach(item => {
-                const question = item.querySelector('.faq-question').textContent.toLowerCase();
-                const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
-                if (question.includes(query) || answer.includes(query)) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-
-            // Hide categories if all items in that category are hidden
-            categories.forEach(cat => {
-                let next = cat.nextElementSibling;
-                let hasVisible = false;
-                while (next && next.classList.contains('faq-item')) {
-                    if (next.style.display !== 'none') {
-                        hasVisible = true;
+        const searchInput = document.getElementById('help-search-input') || document.querySelector('.help-search input');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase().trim();
+                const items = document.querySelectorAll('.faq-item');
+                const categories = document.querySelectorAll('.faq-category-title');
+                
+                items.forEach(item => {
+                    const question = item.querySelector('.faq-question').textContent.toLowerCase();
+                    const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+                    if (question.includes(query) || answer.includes(query)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
                     }
-                    next = next.nextElementSibling;
-                }
-                cat.style.display = hasVisible ? 'block' : 'none';
+                });
+
+                // Hide categories if all items in that category are hidden
+                categories.forEach(cat => {
+                    let next = cat.nextElementSibling;
+                    let hasVisible = false;
+                    while (next && next.classList.contains('faq-item')) {
+                        if (next.style.display !== 'none') {
+                            hasVisible = true;
+                        }
+                        next = next.nextElementSibling;
+                    }
+                    cat.style.display = hasVisible ? 'block' : 'none';
+                });
             });
-        });
+        }
     </script>
 </body>
 </html>

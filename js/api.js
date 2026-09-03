@@ -167,7 +167,7 @@ const API = {
     getChatInbox() { return this.get('chat_inbox'); },
     getUnreadChats() { return this.get('get_unread_chats'); },
     getChatHistory(vendorId) { return this.get('chat_history', { vendor_id: vendorId }); },
-    sendMessage(vendorId, message, type = 'text') { return this.post('chat', { vendor_id: vendorId, message, type }); },
+    sendMessage(vendorId, message, type = 'text', fileName = '', fileSize = 0, duration = 0) { return this.post('chat', { vendor_id: vendorId, message, type, file_name: fileName, file_size: fileSize, duration: duration }); },
     blockUser(targetUserId, reason = '') { return this.post('block_user', { target_user_id: targetUserId, reason }); },
     unblockUser(targetUserId) { return this.post('unblock_user', { target_user_id: targetUserId }); },
     reportUser(targetUserId, reason, details = '') { return this.post('report_user', { target_user_id: targetUserId, reason, details }); },
@@ -216,6 +216,10 @@ const API = {
     recordAdClick(id) { return this.post('record_ad_click', { id }); },
     adminReviewCampaign(data) { return this.post('admin_review_campaign', data); },
     adminUpdateVendorPremium(data) { return this.post('admin_update_vendor_premium', data); },
+
+    // ── Didit Automated KYC ──
+    initDiditKyc() { return this.post('init_didit_kyc', {}); },
+    checkDiditKyc(sessionId) { return this.post('check_didit_kyc', { session_id: sessionId || '' }); },
 
     // ── Recommendations & Toggles ──
     getRecommendedVendors(categoryId, excludeId) { return this.get('get_recommended_vendors', { category: categoryId || '', exclude_id: excludeId || 0 }); },

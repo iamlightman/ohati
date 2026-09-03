@@ -97,7 +97,6 @@ function upload_media_file($file_input, $folder = 'general', $max_width = 1920) 
     $is_base64 = false;
 
     // Handle Base64 Data String (images, PDFs, documents)
-
     if (is_string($file_input) && (strpos($file_input, 'data:') === 0 || strpos($file_input, 'base64,') !== false)) {
         $is_base64 = true;
         $base64_str = preg_replace('#^data:[^;]+;base64,#i', '', $file_input);
@@ -223,8 +222,16 @@ function format_full_image_url($url) {
     if (empty($host)) {
         return $url;
     }
+
+    $script_name = $_SERVER['SCRIPT_NAME'] ?? '';
+    $dir = dirname($script_name);
+    if ($dir === '/' || $dir === '\\' || $dir === '.') {
+        $dir = '';
+    } else {
+        $dir = rtrim(str_replace('\\', '/', $dir), '/');
+    }
     
     $clean_path = ltrim($url, '/');
-    return "$scheme://$host/$clean_path";
+    return "$scheme://$host$dir/$clean_path";
 }
 ?>

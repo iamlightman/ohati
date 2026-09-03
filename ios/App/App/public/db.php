@@ -7,25 +7,27 @@ if (file_exists(__DIR__ . '/ohati_config.php')) {
     require_once __DIR__ . '/ohati_config.php';
 }
 
-function create_pdo_conn($dbname, $dbuser, $dbpass, $host = 'localhost') {
-    try {
-        $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-        ]);
-        $conn->exec("SET time_zone = '+00:00'");
-        return $conn;
-    } catch (PDOException $e) {
+if (!function_exists('create_pdo_conn')) {
+    function create_pdo_conn($dbname, $dbuser, $dbpass, $host = 'localhost') {
         try {
-            $conn = new PDO("mysql:host=$host", $dbuser, $dbpass, [
+            $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
             ]);
-            $conn->exec("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            $conn->exec("USE `$dbname`");
+            $conn->exec("SET time_zone = '+00:00'");
             return $conn;
-        } catch (PDOException $e2) {
-            return null;
+        } catch (PDOException $e) {
+            try {
+                $conn = new PDO("mysql:host=$host", $dbuser, $dbpass, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                ]);
+                $conn->exec("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                $conn->exec("USE `$dbname`");
+                return $conn;
+            } catch (PDOException $e2) {
+                return null;
+            }
         }
     }
 }
@@ -47,10 +49,10 @@ if (!$pdo) {
         $pdo = new PDO("sqlite:$db_path", null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_TIMEOUT => 30
+            PDO::ATTR_TIMEOUT => 60
         ]);
         $pdo->exec("PRAGMA journal_mode=WAL");
-        $pdo->exec("PRAGMA busy_timeout=30000");
+        $pdo->exec("PRAGMA busy_timeout=60000");
         $pdo->exec("PRAGMA synchronous=NORMAL");
         $db_type = 'sqlite';
     } catch (PDOException $e) {
@@ -78,6 +80,37 @@ $db_name_4 = defined('DB_NAME_4') ? DB_NAME_4 : 'ohaticom_4';
 $pdo_payments = ($db_type === 'mysql') ? (create_pdo_conn($db_name_4, $db_user_4, $db_pass, $host) ?: $pdo) : $pdo;
 $pdo_4 = $pdo_payments;
 
+// Auto-migrate Didit Verification schema columns & processed webhooks table (only if needed)
+$didit_schema_done = false;
+try {
+    if ($db_type === 'sqlite') {
+        $chk = $pdo->query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='processed_didit_webhooks' LIMIT 1");
+        if ($chk && $chk->fetch()) $didit_schema_done = true;
+    } else {
+        $chk = $pdo->query("SHOW TABLES LIKE 'processed_didit_webhooks'");
+        if ($chk && $chk->fetch()) $didit_schema_done = true;
+    }
+} catch (Exception $eDidit) {}
+
+if (!$didit_schema_done) {
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_session_id VARCHAR(255) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_decision VARCHAR(50) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $eCol) {}
+
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_session_id VARCHAR(255) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_decision VARCHAR(50) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $eCol) {}
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS processed_didit_webhooks (
+            event_id VARCHAR(255) PRIMARY KEY,
+            session_id VARCHAR(255) DEFAULT NULL,
+            status VARCHAR(50) DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+    } catch (Exception $eTable) {}
+}
+
 // 5. Database 5: Analytics & Logs ($pdo_logs / $pdo_5) -> ohaticom_5
 $db_user_5 = defined('DB_USER_5') ? DB_USER_5 : $db_user_1;
 $db_name_5 = defined('DB_NAME_5') ? DB_NAME_5 : 'ohaticom_5';
@@ -87,9 +120,22 @@ $pdo_5 = $pdo_logs;
 $AI  = ($db_type === 'mysql') ? "INT AUTO_INCREMENT PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
 $NOW = ($db_type === 'mysql') ? "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" : "TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
 
-// ── USERS ──────────────────────────────────────────────────────────────────
-$pdo->exec("CREATE TABLE IF NOT EXISTS users (
-    id $AI,
+$tables_exist = false;
+try {
+    if ($db_type === 'sqlite') {
+        $chk = $pdo->query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users' LIMIT 1");
+        if ($chk && $chk->fetch()) $tables_exist = true;
+    } else {
+        $chk = $pdo->query("SHOW TABLES LIKE 'users'");
+        if ($chk && $chk->fetch()) $tables_exist = true;
+    }
+} catch (Exception $eCheck) {}
+
+if (!$tables_exist) {
+    try {
+        // ── USERS ──────────────────────────────────────────────────────────────────
+        $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+            id $AI,
     name VARCHAR(200) NOT NULL,
     email VARCHAR(200),
     phone VARCHAR(50),
@@ -632,9 +678,16 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS messages (
     type VARCHAR(20) DEFAULT 'text',
     message TEXT NOT NULL,
     media_url VARCHAR(500) DEFAULT '',
+    file_name VARCHAR(255) DEFAULT '',
+    file_size INT DEFAULT 0,
+    duration INT DEFAULT 0,
     is_read INT DEFAULT 0,
     created_at $NOW
 )");
+
+try { $pdo->exec("ALTER TABLE messages ADD COLUMN file_name VARCHAR(255) DEFAULT ''"); } catch (Throwable $e) {}
+try { $pdo->exec("ALTER TABLE messages ADD COLUMN file_size INT DEFAULT 0"); } catch (Throwable $e) {}
+try { $pdo->exec("ALTER TABLE messages ADD COLUMN duration INT DEFAULT 0"); } catch (Throwable $e) {}
 
 $pdo->exec("CREATE TABLE IF NOT EXISTS user_blocks (
     id $AI,
@@ -759,6 +812,23 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
     icon VARCHAR(50) DEFAULT 'bell',
     link VARCHAR(500) DEFAULT '',
     is_read INT DEFAULT 0,
+    created_at $NOW
+)");
+
+// ── ASYNCHRONOUS NOTIFICATION QUEUE ────────────────────────────────────────
+$pdo->exec("CREATE TABLE IF NOT EXISTS notification_queue (
+    id $AI,
+    recipient_email VARCHAR(200) DEFAULT '',
+    recipient_phone VARCHAR(50) DEFAULT '',
+    title VARCHAR(200) NOT NULL,
+    sms_message TEXT,
+    email_subject VARCHAR(255) DEFAULT '',
+    email_body TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    attempts INT DEFAULT 0,
+    max_attempts INT DEFAULT 3,
+    last_error TEXT,
+    processed_at VARCHAR(50) DEFAULT '',
     created_at $NOW
 )");
 
@@ -1039,9 +1109,13 @@ $migrations = [
     "ALTER TABLE messages ADD COLUMN type VARCHAR(20) DEFAULT 'text'",
     "ALTER TABLE messages ADD COLUMN media_url VARCHAR(500) DEFAULT ''",
     "ALTER TABLE messages ADD COLUMN is_read INT DEFAULT 0",
+    "ALTER TABLE messages ADD COLUMN file_name VARCHAR(255) DEFAULT ''",
+    "ALTER TABLE messages ADD COLUMN file_size INT DEFAULT 0",
+    "ALTER TABLE messages ADD COLUMN duration INT DEFAULT 0",
     "ALTER TABLE vendors ADD COLUMN auto_response TEXT DEFAULT ''",
     "ALTER TABLE vendors ADD COLUMN views_count INT DEFAULT 0",
     "ALTER TABLE vendors ADD COLUMN followers_count INT DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL",
 ];
 foreach ($migrations as $m) {
     try { $pdo->exec($m); } catch (Exception $e) {}
@@ -1091,6 +1165,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS deleted_records (
     deleted_by INT DEFAULT 0,
     deleted_at $NOW
 )");
+} catch (Exception $e) {}
 
 
 // ── ENSURE ADMIN ACCOUNT & TABLES EXIST SAFELY (NO DATA LOSS) ──────────
@@ -1136,6 +1211,38 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS vendors (id $AI, user_id INT DEFAULT 0, name VARCHAR(255) NOT NULL, category VARCHAR(100) NOT NULL, logo VARCHAR(500) NOT NULL DEFAULT '', cover_photo VARCHAR(500) NOT NULL DEFAULT '', description TEXT, experience INT DEFAULT 0, packages_pricing TEXT, location VARCHAR(255) DEFAULT '', gps_lat FLOAT DEFAULT 0, gps_lng FLOAT DEFAULT 0, phone VARCHAR(50) DEFAULT '', whatsapp VARCHAR(50) DEFAULT '', email VARCHAR(255) DEFAULT '', website VARCHAR(500) DEFAULT '', social_links TEXT, rating FLOAT DEFAULT 0, reviews_count INT DEFAULT 0, verified INT DEFAULT 0, verification_status VARCHAR(30) DEFAULT 'pending', verification_badge VARCHAR(30) DEFAULT 'grey', premium INT DEFAULT 0, has_insurance INT DEFAULT 0, service_radius VARCHAR(50) DEFAULT 'Nationwide', response_time VARCHAR(100) DEFAULT 'Within 24 hours', availability VARCHAR(50) DEFAULT 'Available', working_hours TEXT, gallery TEXT, intro_video VARCHAR(500) DEFAULT '', team_members TEXT, faqs TEXT, languages TEXT, certifications TEXT, awards TEXT, completed_jobs INT DEFAULT 0, repeat_customer_pct INT DEFAULT 0, instant_booking INT DEFAULT 0, is_active INT DEFAULT 1, business_reg VARCHAR(200) DEFAULT '', tax_number VARCHAR(100) DEFAULT '', bank_name VARCHAR(200) DEFAULT '', account_name VARCHAR(200) DEFAULT '', account_number VARCHAR(100) DEFAULT '', momo_number VARCHAR(50) DEFAULT '', momo_provider VARCHAR(50) DEFAULT '', payout_method VARCHAR(50) DEFAULT '', commission_rate FLOAT DEFAULT 10.0, featured INT DEFAULT 0, feature_expires_at VARCHAR(50) DEFAULT '', last_active $NOW, created_at $NOW)");
     $pdo->exec("CREATE TABLE IF NOT EXISTS reviews (id $AI, vendor_id INT NOT NULL, user_id INT DEFAULT 0, user_name VARCHAR(100) NOT NULL, user_avatar VARCHAR(500) DEFAULT '', rating INT NOT NULL, comment TEXT NOT NULL, photos TEXT, helpful_votes INT DEFAULT 0, vendor_response TEXT, vendor_response_at VARCHAR(50) DEFAULT '', verified_booking INT DEFAULT 0, date VARCHAR(50) NOT NULL, created_at $NOW)");
     $pdo->exec("CREATE TABLE IF NOT EXISTS tracker_tasks (id $AI, user_id INT DEFAULT 0, task_name VARCHAR(255) NOT NULL, category VARCHAR(100) DEFAULT 'General', priority VARCHAR(50) DEFAULT 'Medium', estimated_date VARCHAR(50) DEFAULT '', due_date VARCHAR(50) DEFAULT '', completed INT DEFAULT 0, notes TEXT, is_custom INT DEFAULT 0, cost FLOAT DEFAULT 0, paid_amount FLOAT DEFAULT 0)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS vendor_categories (id $AI, name VARCHAR(100) NOT NULL, slug VARCHAR(100) NOT NULL, icon VARCHAR(100) DEFAULT 'camera', description TEXT, display_order INT DEFAULT 0, is_active INT DEFAULT 1, created_at $NOW, updated_at $NOW)");
+    
+    // Seed vendor categories if empty
+    $cat_count = $pdo->query("SELECT COUNT(*) FROM vendor_categories")->fetchColumn();
+    if ($cat_count == 0) {
+        $initial_categories = [
+            ['name'=>'Photography','icon'=>'camera'],['name'=>'Videography','icon'=>'video'],
+            ['name'=>'Makeup Artists','icon'=>'brush'],['name'=>'Bridal Shops','icon'=>'shirt'],
+            ['name'=>'Event Planners','icon'=>'calendar-days'],['name'=>'Decorators','icon'=>'wand-magic-sparkles'],
+            ['name'=>'Caterers','icon'=>'utensils'],['name'=>'Cake Designers','icon'=>'cake-candles'],
+            ['name'=>'Event Venues','icon'=>'hotel'],['name'=>'DJs','icon'=>'music'],
+            ['name'=>'MCs','icon'=>'microphone'],['name'=>'Live Bands','icon'=>'guitar'],
+            ['name'=>'Florists','icon'=>'spa'],['name'=>'Car Rentals','icon'=>'car'],
+            ['name'=>'Security Services','icon'=>'shield-halved'],
+            ['name'=>'Chilling Services','icon'=>'snowflake'],
+            ['name'=>'Rental Equipment','icon'=>'chair'],
+            ['name'=>'Cocktail Bars','icon'=>'martini-glass-citrus'],
+            ['name'=>'Honeymoon Packages','icon'=>'plane-departure'],
+            ['name'=>'Invitation Designers','icon'=>'envelope-open-text'],
+            ['name'=>'Jewelers','icon'=>'gem'],['name'=>'Lighting','icon'=>'lightbulb'],
+            ['name'=>'Printing Services','icon'=>'print'],['name'=>'Ushers','icon'=>'user-check'],
+            ['name'=>'Content Creators','icon'=>'clapperboard'],['name'=>'Juice Bar','icon'=>'glass-water'],
+            ['name'=>'Traditional Marriage Services','icon'=>'hands-holding']
+        ];
+        $c_stmt = $pdo->prepare("INSERT INTO vendor_categories (name, slug, icon, display_order, is_active) VALUES (?, ?, ?, ?, 1)");
+        $order = 1;
+        foreach ($initial_categories as $c) {
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $c['name']), '-'));
+            $c_stmt->execute([$c['name'], $slug, $c['icon'], $order]);
+            $order++;
+        }
+    }
     
     // Performance indexes
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_bk_vendor ON bookings(vendor_id)");
@@ -1143,7 +1250,9 @@ try {
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_msg_vid_uid ON messages(vendor_id, user_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_vnd_cat ON vendors(category)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_vcat_active ON vendor_categories(is_active, display_order)");
 } catch (Exception $e) {}
+}
 
 // Safe column migrations for pre-existing tables
 try { $pdo->exec("ALTER TABLE otp_codes ADD COLUMN code_hash VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
@@ -1466,4 +1575,22 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
+
+    // Auto-migrate Didit Verification schema columns & processed webhooks table
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_session_id VARCHAR(255) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_decision VARCHAR(50) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $eCol) {}
+
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_session_id VARCHAR(255) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_decision VARCHAR(50) DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $eCol) {}
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS processed_didit_webhooks (
+            event_id VARCHAR(255) PRIMARY KEY,
+            session_id VARCHAR(255) DEFAULT NULL,
+            status VARCHAR(50) DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+    } catch (Exception $eTable) {}
 } catch (Exception $e) {}

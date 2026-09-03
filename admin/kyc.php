@@ -52,13 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch pending verifications
 $stmt = $pdo->query("
     SELECT u.id as user_id, u.name as user_name, u.email as user_email, u.phone as user_phone, u.kyc_status, 
-           u.kyc_id_type as id_type, u.kyc_submitted_at as submitted_at,
+           u.kyc_id_type as id_type, u.kyc_submitted_at as submitted_at, u.didit_session_id, u.didit_decision,
            v.id as vendor_id, v.name as biz_name, v.category, v.location, v.experience, v.logo, 
            u.kyc_id_front as id_front, u.kyc_selfie as selfie 
     FROM users u 
     JOIN vendors v ON u.id = v.user_id 
-    WHERE (u.kyc_status = 'pending_verification' OR u.kyc_status = 'pending')
-      AND (u.kyc_id_front != '' OR u.kyc_selfie != '' OR u.kyc_id_back != '')
+    WHERE (u.kyc_status = 'pending_verification' OR u.kyc_status = 'pending' OR (u.didit_session_id IS NOT NULL AND u.kyc_status NOT IN ('approved', 'verified', 'rejected')))
     ORDER BY u.id DESC
 ");
 $pending = $stmt->fetchAll();
@@ -340,6 +339,10 @@ $pending_kyc = count($pending);
                                 <div><span class="info-label">Experience:</span> <?= htmlspecialchars($v['experience']) ?> Years</div>
                                 <div><span class="info-label">ID Type:</span> <?= htmlspecialchars($v['id_type'] ?: 'Not specified') ?></div>
                                 <div><span class="info-label">Submitted:</span> <?= htmlspecialchars($v['submitted_at'] ?: 'Not yet') ?></div>
+                                <?php if (!empty($v['didit_decision'])): ?>
+                                    <div><span class="info-label">Didit Status:</span> <span style="font-weight:700; color:var(--accent);"><?= htmlspecialchars($v['didit_decision']) ?></span></div>
+                                <?php endif; ?>
+                            </div>
                             </div>
 
                             <div>

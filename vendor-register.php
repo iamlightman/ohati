@@ -54,13 +54,13 @@ session_start();
                     <div style="margin: -5px 0 15px 0; padding: 10px 14px; border-radius: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent); font-size: 0.82rem; color: var(--primary); text-align: center;">
                         <i class="fa-solid fa-envelope-open-text" style="color:var(--accent); margin-right:6px;"></i> Check your email inbox or SMS for your verification code.
                     </div>
-                    <div class="otp-inputs" style="display:flex; justify-content:center; gap:8px; margin-bottom:16px;">
-                        <input type="text" maxlength="1" class="otp-input" id="v-otp-1" oninput="vOtpMove(1)" onkeyup="vOtpKey(1, event)">
-                        <input type="text" maxlength="1" class="otp-input" id="v-otp-2" oninput="vOtpMove(2)" onkeyup="vOtpKey(2, event)">
-                        <input type="text" maxlength="1" class="otp-input" id="v-otp-3" oninput="vOtpMove(3)" onkeyup="vOtpKey(3, event)">
-                        <input type="text" maxlength="1" class="otp-input" id="v-otp-4" oninput="vOtpMove(4)" onkeyup="vOtpKey(4, event)">
-                        <input type="text" maxlength="1" class="otp-input" id="v-otp-5" oninput="vOtpMove(5)" onkeyup="vOtpKey(5, event)">
-                        <input type="text" maxlength="1" class="otp-input" id="v-otp-6" oninput="vOtpMove(6)" onkeyup="vOtpKey(6, event)">
+                    <div class="otp-inputs" style="display:flex; justify-content:center; gap:8px; margin-bottom:16px;" onpaste="handleVOtpPaste(event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); vOtpMove(1)" onkeyup="vOtpKey(1, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-2" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); vOtpMove(2)" onkeyup="vOtpKey(2, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-3" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); vOtpMove(3)" onkeyup="vOtpKey(3, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); vOtpMove(4)" onkeyup="vOtpKey(4, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-5" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); vOtpMove(5)" onkeyup="vOtpKey(5, event)">
+                        <input type="text" maxlength="1" class="otp-input" id="v-otp-6" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); vOtpMove(6)" onkeyup="vOtpKey(6, event)">
                     </div>
                     <div id="v-otp-error" class="form-error mb-12" style="display:none;"></div>
                     <button class="btn btn-primary btn-full" onclick="verifyStep1Otp()">Verify Code & Continue</button>
@@ -135,11 +135,17 @@ session_start();
                         </div>
                         <div class="form-group">
                             <label class="form-label">Password</label>
-                            <input type="password" class="form-input" id="v-reg-pass" placeholder="Minimum 8 characters">
+                            <div class="input-group">
+                                <input type="password" class="form-input" id="v-reg-pass" placeholder="Minimum 8 characters">
+                                <span class="input-suffix" onclick="togglePasswordVisibility('v-reg-pass')"><i class="fa-solid fa-eye" id="v-reg-pass-eye"></i></span>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Confirm Password</label>
-                            <input type="password" class="form-input" id="v-reg-confirm" placeholder="Confirm your password">
+                            <div class="input-group">
+                                <input type="password" class="form-input" id="v-reg-confirm" placeholder="Confirm your password">
+                                <span class="input-suffix" onclick="togglePasswordVisibility('v-reg-confirm')"><i class="fa-solid fa-eye" id="v-reg-confirm-eye"></i></span>
+                            </div>
                         </div>
                         <div id="v-step1-error" class="form-error mb-12" style="display:none;"></div>
                         <button class="btn btn-primary btn-full mt-12" onclick="saveStep1Guest()">Create Account & Next Steps</button>
@@ -409,9 +415,32 @@ session_start();
             });
         }
 
+        function handleVOtpPaste(e) {
+            const paste = (e.clipboardData || window.clipboardData)?.getData('text')?.trim();
+            if (paste && /^\d{6}$/.test(paste)) {
+                e.preventDefault();
+                for (let i = 1; i <= 6; i++) {
+                    const el = document.getElementById('v-otp-' + i);
+                    if (el) el.value = paste[i - 1];
+                }
+                document.getElementById('v-otp-6')?.focus();
+            }
+        }
         function vOtpMove(idx) {
             const curr = document.getElementById('v-otp-' + idx);
-            if (curr && curr.value.length === 1 && idx < 6) {
+            if (!curr) return;
+            curr.value = curr.value.replace(/\D/g, '');
+            if (curr.value.length >= 1 && idx < 6) {
+                if (curr.value.length > 1 && /^\d{6}$/.test(curr.value.trim())) {
+                    const val = curr.value.trim();
+                    for (let i = 1; i <= 6; i++) {
+                        const el = document.getElementById('v-otp-' + i);
+                        if (el) el.value = val[i - 1];
+                    }
+                    document.getElementById('v-otp-6')?.focus();
+                    return;
+                }
+                curr.value = curr.value.slice(-1);
                 document.getElementById('v-otp-' + (idx + 1))?.focus();
             }
         }

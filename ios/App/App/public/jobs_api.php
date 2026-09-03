@@ -7,7 +7,7 @@ if (file_exists(__DIR__ . '/mail_helper.php')) { require_once __DIR__ . '/mail_h
 if (file_exists(__DIR__ . '/storage_helper.php')) { require_once __DIR__ . '/storage_helper.php'; }
 
 /**
- * Dispatch Multi-Channel Notifications (In-App, Push, SMS, Email) across multi-DB architecture
+ * Dispatch Multi-Channel Notifications (In-App Bell + Non-Blocking Asynchronous Queue)
  */
 function send_job_multichannel_notification($pdo_main, $recipient_user_id, $type, $job_id, $app_id, $title, $message) {
     global $pdo_comms;
@@ -15,43 +15,46 @@ function send_job_multichannel_notification($pdo_main, $recipient_user_id, $type
 
     if (!$recipient_user_id) return;
 
-    // 1. In-App Notification (Database 3: ohaticom_3)
+    // 1. In-App Notification (Database 3: ohaticom_3 & Database 1: ohaticom_1 for bell UI)
     try {
         $n_stmt = $db_comms->prepare("INSERT INTO job_notifications (user_id, type, job_id, application_id, title, message) VALUES (?, ?, ?, ?, ?, ?)");
         $n_stmt->execute([$recipient_user_id, $type, $job_id, $app_id, $title, $message]);
     } catch (Exception $e) {}
 
-    // 2. Fetch User Contact Details & Notification Preferences (Database 1: ohaticom_1)
+    try {
+        $n_main = $pdo_main->prepare("INSERT INTO notifications (user_id, type, title, body, icon) VALUES (?, ?, ?, ?, 'bell')");
+        $n_main->execute([$recipient_user_id, $type, $title, $message]);
+    } catch (Exception $e) {}
+
+    // 2. Queue Email & SMS Notifications Asynchronously into notification_queue (~1ms DB insert, 0 network latency)
     try {
         $u_stmt = $pdo_main->prepare("SELECT email, phone, name, COALESCE(pref_sms, 1) as pref_sms, COALESCE(pref_email, 1) as pref_email FROM users WHERE id = ?");
         $u_stmt->execute([$recipient_user_id]);
         $user = $u_stmt->fetch();
 
         if ($user) {
-            // SMS Channel
-            if (function_exists('send_smsonlinegh') && !empty($user['phone']) && ($user['pref_sms'] ?? 1) == 1) {
-                send_smsonlinegh($user['phone'], "Ohati: $title - $message");
-            }
-
-            // Email Channel
-            if (function_exists('send_smtp_mail') && !empty($user['email']) && ($user['pref_email'] ?? 1) == 1) {
-                $email_html = "
-                    <div style='font-family: Arial, sans-serif; padding: 24px; color: #1B2B4B; background: #F8FAFC; border-radius: 12px;'>
-                        <div style='text-align: center; margin-bottom: 20px;'>
-                            <h2 style='color: #F2A735; margin: 0;'>Ohati Event Jobs</h2>
-                            <span style='font-size: 0.85rem; color: #64748B;'>Ghana's Premier Event Marketplace</span>
-                        </div>
-                        <div style='background: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>
-                            <h3 style='color: #1B2B4B; margin-top: 0;'>" . htmlspecialchars($title) . "</h3>
-                            <p>Hi " . htmlspecialchars($user['name'] ?: 'there') . ",</p>
-                            <p style='font-size: 0.95rem; line-height: 1.5; color: #334155;'>" . htmlspecialchars($message) . "</p>
-                        </div>
-                        <div style='text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94A3B8;'>
-                            Log in to your Ohati dashboard to manage your jobs and proposals.
-                        </div>
+            $phone = (($user['pref_sms'] ?? 1) == 1) ? ($user['phone'] ?? '') : '';
+            $email = (($user['pref_email'] ?? 1) == 1) ? ($user['email'] ?? '') : '';
+            
+            $email_html = "
+                <div style='font-family: Arial, sans-serif; padding: 24px; color: #1B2B4B; background: #F8FAFC; border-radius: 12px;'>
+                    <div style='text-align: center; margin-bottom: 20px;'>
+                        <h2 style='color: #F2A735; margin: 0;'>Ohati Event Jobs</h2>
+                        <span style='font-size: 0.85rem; color: #64748B;'>Ghana's Premier Event Marketplace</span>
                     </div>
-                ";
-                send_smtp_mail($user['email'], "Ohati Event Jobs: $title", $email_html, "Ohati Jobs");
+                    <div style='background: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>
+                        <h3 style='color: #1B2B4B; margin-top: 0;'>" . htmlspecialchars($title) . "</h3>
+                        <p>Hi " . htmlspecialchars($user['name'] ?: 'there') . ",</p>
+                        <p style='font-size: 0.95rem; line-height: 1.5; color: #334155;'>" . htmlspecialchars($message) . "</p>
+                    </div>
+                    <div style='text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94A3B8;'>
+                        Log in to your Ohati dashboard to manage your jobs and proposals.
+                    </div>
+                </div>
+            ";
+
+            if (function_exists('queue_dual_notification')) {
+                queue_dual_notification($phone, $email, $title, $message, "Ohati Event Jobs: $title", $email_html);
             }
         }
     } catch (Exception $e) {}
@@ -347,6 +350,17 @@ function handle_job_action($action, $pdo) {
 
             $v_id = $vendor['id'];
             $v_user_id = $vendor['user_id'] ?: $user_id;
+
+            // Prevent self-booking / self-applying on own posted job regardless of active role/account switch
+            $j_owner_stmt = $db_jobs->prepare("SELECT user_id FROM jobs WHERE id = ?");
+            $j_owner_stmt->execute([$job_id]);
+            $job_owner_id = intval($j_owner_stmt->fetchColumn() ?: 0);
+
+            $effective_user_id = intval($user_id ?: ($v_user_id ?? 0));
+            if ($job_owner_id > 0 && ($job_owner_id === $effective_user_id || $job_owner_id === intval($user_id) || $job_owner_id === intval($v_user_id))) {
+                echo json_encode(['error' => 'You cannot apply or submit proposals to your own posted job.']);
+                return;
+            }
 
             // Check if already applied (Database 2)
             $chk = $db_jobs->prepare("SELECT id FROM job_applications WHERE job_id = ? AND vendor_id = ?");

@@ -157,12 +157,12 @@ function updateSidebarUI() {
             authLink.onclick = () => { handleLogout(); toggleSidebar(false); };
         }
 
-        const activeRole = state.user.active_role || 'customer';
+        const activeRole = state.user.active_role || state.user.role || ((state.user.vendor_id && parseInt(state.user.vendor_id) > 0) ? 'vendor' : 'customer');
 
         if (navContainer) {
             if (activeRole === 'vendor') {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-dash', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('dashboard', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-chart-pie"></i><span>Vendor Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-jobs', {}, { force: true }); toggleSidebar(false)">
@@ -219,6 +219,12 @@ function updateSidebarUI() {
                 `;
             } else {
                 navContainer.innerHTML = `
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('dashboard', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+                    </a>
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
+                    </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('profile', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-user-gear"></i><span>My Profile</span>
                     </a>
@@ -237,14 +243,14 @@ function updateSidebarUI() {
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('favorites', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-heart"></i><span>Saved Vendors</span>
                     </a>
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
-                        <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
-                    </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('notifications', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-bell"></i><span>Notifications</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('compare', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-scale-balanced"></i><span>Compare Vendors</span>
+                    </a>
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('vendor-ads', {}, { force: true }); toggleSidebar(false)">
+                        <i class="fa-solid fa-rectangle-ad"></i><span>Promotions Hub</span>
                     </a>
                     ${state.user.has_vendor_profile ? `
                         <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="switchAccountType('vendor'); toggleSidebar(false)" style="background:var(--gray-100); border-radius:8px; margin-top:10px;">
@@ -297,7 +303,10 @@ function updateSidebarUI() {
         if (navContainer) {
             navContainer.innerHTML = `
                 <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('home', {}, { force: true }); toggleSidebar(false)">
-                    <i class="fa-solid fa-house"></i><span>Home</span>
+                    <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+                </a>
+                <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
+                    <i class="fa-solid fa-calendar-check"></i><span>My Bookings</span>
                 </a>
                 <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('search', {}, { force: true }); toggleSidebar(false)">
                     <i class="fa-solid fa-magnifying-glass"></i><span>Find Vendors</span>
@@ -357,12 +366,130 @@ function switchAccountType(targetRole) {
         }
     }).catch(err => {
         if (err.need_upgrade || (err.message && err.message.includes('not activated'))) {
-            showPushNotification('Upgrade Required', 'Please complete vendor registration first.');
-            openPremiumModal();
+            openBecomeVendorModal();
         } else {
             showPushNotification('Error', err.message || err);
         }
     });
+}
+
+function openBecomeVendorModal() {
+    const html = `
+        <div class="auth-modal-content p-24" style="max-width:520px; width:100%; border-radius:20px; background:var(--white);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div>
+                    <h3 style="margin:0; font-weight:700;">Become an Ohati Vendor</h3>
+                    <p style="margin:4px 0 0 0; font-size:0.78rem; color:var(--gray-500);">Activate your vendor business profile on your account.</p>
+                </div>
+                <button onclick="closeModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--gray-400);"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form onsubmit="handleBecomeVendorSubmit(event)">
+                <div class="form-group mb-12">
+                    <label class="form-label">Business / Brand Name</label>
+                    <input type="text" class="form-input" id="bv-bizname" placeholder="e.g. Royal Crown Photography" required>
+                </div>
+                
+                <div class="form-group mb-12">
+                    <label class="form-label">Primary Vendor Category</label>
+                    <select class="form-select" id="bv-category" required>
+                        <option value="">Loading categories...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mb-12">
+                    <label class="form-label">Years of Experience</label>
+                    <input type="number" class="form-input" id="bv-experience" value="3" min="0" required>
+                </div>
+
+                <div class="form-group mb-12">
+                    <label class="form-label">Business Location (City / Region)</label>
+                    <input type="text" class="form-input" id="bv-location" placeholder="e.g. East Legon, Accra" required>
+                </div>
+                
+                <div class="form-group mb-12">
+                    <label class="form-label">Business Phone Number</label>
+                    <input type="text" class="form-input" id="bv-phone" placeholder="e.g. +233 24 123 4567" value="${state.user?.phone || ''}" required>
+                </div>
+
+                <div class="form-group mb-12">
+                    <label class="form-label">About Your Services</label>
+                    <textarea class="form-textarea" id="bv-desc" style="min-height:70px;" placeholder="Tell clients about your event services..." required></textarea>
+                </div>
+
+                <!-- Identity Verification Section -->
+                <div style="margin: 14px 0; padding-top:12px; border-top:1px solid var(--gray-200);">
+                    <div style="font-size:0.85rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+                        Identity Verification (KYC)
+                    </div>
+                    <div class="form-group mb-12">
+                        <label class="form-label">Government Issued ID Type</label>
+                        <select class="form-select" id="bv-id-type" required>
+                            <option value="Ghana Card" selected>Ghana Card</option>
+                            <option value="Passport">Passport</option>
+                            <option value="Driver's License">Driver's License</option>
+                            <option value="Voter's ID">Voter's ID</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-12">
+                        <label class="form-label">ID / National Card Number</label>
+                        <input type="text" class="form-input" id="bv-id-number" placeholder="e.g. GHA-123456789-0" required>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="bv-submit-btn">Activate Vendor Profile</button>
+                </div>
+            </form>
+        </div>
+    `;
+    openModal(html);
+    
+    API.getCategories().then(cats => {
+        const select = document.getElementById('bv-category');
+        if (select && Array.isArray(cats)) {
+            select.innerHTML = cats.map(c => `<option value="${typeof c === 'string' ? c : c.name}">${typeof c === 'string' ? c : c.name}</option>`).join('');
+        }
+    }).catch(() => {});
+}
+
+function handleBecomeVendorSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('bv-submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Activating...'; }
+    
+    const payload = {
+        business_name: document.getElementById('bv-bizname').value.trim(),
+        category: document.getElementById('bv-category').value,
+        experience: parseInt(document.getElementById('bv-experience').value) || 0,
+        location: document.getElementById('bv-location').value.trim(),
+        phone: document.getElementById('bv-phone').value.trim(),
+        email: state.user?.email || '',
+        description: document.getElementById('bv-desc').value.trim(),
+        kyc_id_type: document.getElementById('bv-id-type') ? document.getElementById('bv-id-type').value : 'Ghana Card',
+        kyc_id_number: document.getElementById('bv-id-number') ? document.getElementById('bv-id-number').value.trim() : ''
+    };
+    
+    API.registerVendor(payload)
+        .then(res => {
+            return API.getSession();
+        })
+        .then(res => {
+            if (res && res.user) {
+                state.user = res.user;
+                if (res.vendor) state.vendor = res.vendor;
+                localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+            }
+            closeModal();
+            showPushNotification('Vendor Profile Activated', 'Welcome to Ohati Vendor Mode!');
+            updateSidebarUI();
+            navigateTo('vendor-dash', {}, { force: true });
+        })
+        .catch(err => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Activate Vendor Profile'; }
+            showPushNotification('Activation Error', err.message || 'Could not activate vendor profile.');
+        });
 }
 
 // ── Unified Global Modal System ───────────────────────────────────────────
@@ -660,17 +787,18 @@ function openSignUpModal() {
 
 
 function openPremiumModal() {
-    state.authMode = 'vendor-register';
-    state.authStep = 1;
-    state.authData = {};
-    renderAuthModal();
+    if (window.state && window.state.user && window.state.user.id) {
+        openBecomeVendorModal();
+    } else {
+        openSignUpModal();
+    }
 }
 
 function openSettingsModal() {
     openModal(`
         <div class="auth-modal-header"><h2 class="auth-modal-title">Settings</h2></div>
         <div class="profile-menu-section" style="padding:0;">
-            <div class="profile-menu-item" onclick="document.getElementById('theme-toggle-btn').click(); closeModal();">
+            <div class="profile-menu-item" onclick="if(typeof window.toggleAppTheme==='function') window.toggleAppTheme(); closeModal();">
                 <div class="profile-menu-icon"><i class="fa-solid fa-moon"></i></div>
                 <span class="profile-menu-label">Toggle Dark Mode</span>
                 <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
@@ -1172,4 +1300,78 @@ window.submitReportCommentAction = function (event, commentId) {
         closeModal();
         showPushNotification('Comment Flagged', 'Thank you. Comment reported for moderation.');
     });
+};
+
+window.openDesktopPopupModal = function(screenId, params = {}) {
+    if (screenId === 'post-job') {
+        if (window.JobsModule && typeof window.JobsModule.openCreateJobModal === 'function') {
+            window.JobsModule.openCreateJobModal();
+            return;
+        }
+    }
+
+    const titles = {
+        'notifications': 'Notifications',
+        'post-job': 'Post an Event Job',
+        'user-jobs': 'My Posted Jobs',
+        'vendor-jobs': 'Browse Event Jobs',
+        'compare': 'Compare Vendors',
+        'favorites': 'Saved Vendors',
+        'blog': 'Blog & Guides',
+        'blog-detail': 'Blog Article',
+        'report-issue': 'Report an Issue',
+        'help': 'Help Center',
+        'about': 'About Ohati'
+    };
+
+    const title = titles[screenId] || 'Ohati';
+    const containerId = 'desktop-modal-content-' + Date.now();
+
+    const modalHtml = `
+        <div class="desktop-popup-wrapper" style="width:94vw; max-width:1260px; height:88vh; max-height:90vh; display:flex; flex-direction:column; background:var(--card-bg, #ffffff); border-radius:20px; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.38); border:1px solid var(--gray-200, rgba(255,255,255,0.12)); position:relative; margin:auto;">
+            <div class="desktop-popup-header" style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px; background:var(--card-header-bg, #f8fafc); border-bottom:1px solid var(--gray-200, #e2e8f0);">
+                <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--gray-900, #0f172a); display:flex; align-items:center; gap:12px;">
+                    <i class="fa-solid fa-layer-group" style="color:var(--accent, #F2A735);"></i> ${escapeHtml(title)}
+                </h3>
+                <button onclick="closeModal()" style="background:rgba(0,0,0,0.06); border:none; color:var(--gray-600, #64748b); width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'; this.style.color='#EF4444';" onmouseout="this.style.background='rgba(0,0,0,0.06)'; this.style.color='var(--gray-600, #64748b)';">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="${containerId}" class="desktop-popup-body scrollable-y" style="padding:24px; overflow-y:auto; flex:1; height:calc(100% - 65px);">
+                <div style="text-align:center; padding:60px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:2.2rem; color:var(--accent, #F2A735);"></i></div>
+            </div>
+        </div>
+    `;
+
+    openModal(modalHtml);
+
+    setTimeout(() => {
+        const popupBody = document.getElementById(containerId);
+        if (!popupBody) return;
+
+        try {
+            if (screenId === 'notifications') {
+                if (typeof renderNotificationsScreen === 'function') popupBody.innerHTML = renderNotificationsScreen(params);
+                else if (typeof initNotificationsScreen === 'function') initNotificationsScreen(params, popupBody);
+            } else if (screenId === 'user-jobs') {
+                if (typeof initUserJobsScreen === 'function') initUserJobsScreen(params, popupBody);
+            } else if (screenId === 'vendor-jobs') {
+                if (typeof initVendorJobsScreen === 'function') initVendorJobsScreen(params, popupBody);
+            } else if (screenId === 'compare') {
+                if (typeof initCompareScreen === 'function') initCompareScreen(params, popupBody);
+            } else if (screenId === 'favorites') {
+                if (typeof initFavoritesScreen === 'function') initFavoritesScreen(params, popupBody);
+            } else if (screenId === 'blog' || screenId === 'blog-detail') {
+                if (typeof initBlogScreen === 'function') initBlogScreen(params, popupBody);
+            } else if (screenId === 'report-issue') {
+                if (typeof initReportIssueScreen === 'function') initReportIssueScreen(params, popupBody);
+            } else if (screenId === 'help') {
+                if (typeof initHelpScreen === 'function') initHelpScreen(params, popupBody);
+            } else if (screenId === 'about') {
+                if (typeof initAboutScreen === 'function') initAboutScreen(params, popupBody);
+            }
+        } catch (err) {
+            console.error("Desktop popup render error:", err);
+        }
+    }, 50);
 };

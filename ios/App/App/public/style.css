@@ -43,7 +43,16 @@
 }
 
 /* ===== FONTAWESOME ICON FONT GUARANTEE ===== */
-i.fa, i.fas, i.far, i.fal, i.fab, i.fa-solid, i.fa-regular, i.fa-light, i.fa-brands, [class*="fa-"] {
+i.fa,
+i.fas,
+i.far,
+i.fal,
+i.fab,
+i.fa-solid,
+i.fa-regular,
+i.fa-light,
+i.fa-brands,
+[class*="fa-"] {
     font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
     display: inline-block;
     font-style: normal;
@@ -53,17 +62,26 @@ i.fa, i.fas, i.far, i.fal, i.fab, i.fa-solid, i.fa-regular, i.fa-light, i.fa-bra
     -webkit-font-smoothing: antialiased;
 }
 
-i.fa-solid, i.fas, .fa-solid, .fas {
+i.fa-solid,
+i.fas,
+.fa-solid,
+.fas {
     font-family: "Font Awesome 6 Free" !important;
     font-weight: 900 !important;
 }
 
-i.fa-regular, i.far, .fa-regular, .far {
+i.fa-regular,
+i.far,
+.fa-regular,
+.far {
     font-family: "Font Awesome 6 Free" !important;
     font-weight: 400 !important;
 }
 
-i.fa-brands, i.fab, .fa-brands, .fab {
+i.fa-brands,
+i.fab,
+.fa-brands,
+.fab {
     font-family: "Font Awesome 6 Brands" !important;
     font-weight: 400 !important;
 }
@@ -73,6 +91,7 @@ i.fa-brands, i.fab, .fa-brands, .fab {
     0% {
         background-position: -200% 0;
     }
+
     100% {
         background-position: 200% 0;
     }
@@ -99,7 +118,7 @@ body.dark-theme .skeleton {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
 }
 
 body.dark-theme .skeleton-card {
@@ -825,6 +844,131 @@ body.dark-theme .desktop-nav-item.active {
 
 body.dark-theme .desktop-nav-item.active i {
     color: #0F1923 !important;
+}
+
+/* Premium Desktop Sidebar Toggle Button */
+.sidebar-toggle-btn {
+    display: none !important;
+}
+
+@media (min-width: 768px) {
+    .sidebar-toggle-btn {
+        display: inline-flex !important;
+    }
+}
+
+.desktop-nav-item.sidebar-toggle-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0 !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid var(--gray-200, #E2E8F0);
+    background: var(--white, #FFFFFF);
+    color: var(--primary, #0F1923);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    margin-left: 4px;
+}
+
+.desktop-nav-item.sidebar-toggle-btn i,
+.desktop-nav-item.sidebar-toggle-btn svg {
+    font-size: 1.05rem;
+    width: 18px;
+    height: 18px;
+    color: var(--primary, #0F1923);
+    stroke: currentColor;
+    transition: color 0.2s ease, stroke 0.2s ease, transform 0.2s ease;
+}
+
+.desktop-nav-item.sidebar-toggle-btn:hover {
+    background: var(--primary, #0F1923);
+    border-color: var(--primary, #0F1923);
+    color: var(--accent, #F2A735);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 25, 35, 0.15);
+}
+
+.desktop-nav-item.sidebar-toggle-btn:hover i,
+.desktop-nav-item.sidebar-toggle-btn:hover svg {
+    color: var(--accent, #F2A735);
+    stroke: currentColor;
+    transform: scale(1.08);
+}
+
+.desktop-nav-item.sidebar-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+body.dark-theme .desktop-nav-item.sidebar-toggle-btn {
+    background: var(--gray-800, #1E293B);
+    border-color: var(--gray-700, #334155);
+    color: var(--white, #F8FAFC);
+}
+
+body.dark-theme .desktop-nav-item.sidebar-toggle-btn i,
+body.dark-theme .desktop-nav-item.sidebar-toggle-btn svg {
+    color: var(--white, #F8FAFC);
+    stroke: currentColor;
+}
+
+body.dark-theme .desktop-nav-item.sidebar-toggle-btn:hover {
+    background: var(--accent, #F2A735);
+    border-color: var(--accent, #F2A735);
+    color: #0F1923;
+}
+
+body.dark-theme .desktop-nav-item.sidebar-toggle-btn:hover i,
+body.dark-theme .desktop-nav-item.sidebar-toggle-btn:hover svg {
+    color: #0F1923;
+    stroke: currentColor;
+}
+
+/* Dashboard Interactive Select Dropdown */
+.dashboard-filter-select {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 32px 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: var(--gray-50, #F8FAFC);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border: 1.5px solid var(--gray-300, #CBD5E1);
+    color: var(--primary, #1B2B4B);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.dashboard-filter-select:hover {
+    border-color: var(--primary, #1B2B4B);
+    background-color: var(--white, #FFFFFF);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.dashboard-filter-select:focus {
+    outline: none;
+    border-color: var(--accent, #F2A735);
+    box-shadow: 0 0 0 3px rgba(242, 167, 53, 0.2);
+}
+
+body.dark-theme .dashboard-filter-select {
+    background-color: var(--gray-800, #1E293B);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    border-color: var(--gray-700, #334155);
+    color: var(--white, #F8FAFC);
+}
+
+body.dark-theme .dashboard-filter-select:hover {
+    border-color: var(--accent, #F2A735);
+    background-color: var(--gray-700, #334155);
 }
 
 /* Scrollable Viewport */
@@ -7668,6 +7812,60 @@ body.dark-theme .handpicked-card-location {
         border-color: var(--gray-200) !important;
     }
 
+    /* Desktop Chat Modal Popup Overlay */
+    .desktop-chat-modal-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(11, 31, 58, 0.75) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        z-index: 999999 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px !important;
+    }
+
+    .desktop-chat-modal-card {
+        width: 92% !important;
+        max-width: 1140px !important;
+        height: 84vh !important;
+        max-height: 820px !important;
+        background: var(--white) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .desktop-chat-modal-close {
+        position: absolute !important;
+        top: 14px !important;
+        right: 16px !important;
+        z-index: 1010 !important;
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 50% !important;
+        background: var(--gray-100) !important;
+        border: none !important;
+        color: var(--gray-700) !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.1rem !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .desktop-chat-modal-close:hover {
+        background: rgba(239, 68, 68, 0.15) !important;
+        color: #EF4444 !important;
+    }
+
     /* 11. WhatsApp style split layout for Chat */
     .chat-desktop-layout {
         display: flex !important;
@@ -7752,10 +7950,14 @@ body.dark-theme .handpicked-card-location {
 
     .chat-desktop-content .chat-screen {
         height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     .chat-desktop-content .chat-messages {
-        height: calc(100% - 130px) !important;
+        flex: 1 !important;
+        height: auto !important;
+        overflow-y: auto !important;
     }
 
     #screen-vendor-dash:not([style*="display: none"]) {
@@ -7943,7 +8145,7 @@ body.dark-theme .analytics-executive-card {
     }
 }
 
-/* Vendor Dashboard Desktop Layout Optimization */
+/* Vendor Dashboard & Campaign Desktop Layout Optimization */
 @media (min-width: 768px) {
 
     #screen-vendor-dash .p-section,
@@ -7955,10 +8157,44 @@ body.dark-theme .analytics-executive-card {
         margin-right: auto !important;
     }
 
+    #screen-vendor-ads,
+    #screen-vendor-ads .p-section {
+        max-width: 1000px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
     .membership-section-container .card,
     .membership-section-container .premium-gradient-card {
         margin-left: auto !important;
         margin-right: auto !important;
+    }
+
+    /* Desktop Campaign Spacious Grid Layout */
+    .promo-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)) !important;
+        gap: 18px !important;
+        max-width: 1000px !important;
+        margin: 0 auto !important;
+    }
+
+    .promo-packages-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 14px !important;
+        max-width: 1000px !important;
+        margin: 0 auto !important;
+    }
+
+    .promo-nav-tabs-desktop {
+        max-width: 600px !important;
+        margin: 12px auto 20px auto !important;
+        background: #F1F5F9 !important;
+        padding: 4px !important;
+        border-radius: 14px !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
     }
 }
 
@@ -10459,313 +10695,317 @@ body.dark-theme .reply-header {
             background: #334155 !important;
         }
 
-/* ==========================================================================
+        /* ==========================================================================
    COMPREHENSIVE DARK THEME DESIGN SYSTEM & HIGH CONTRAST AUDIT RULES
    ========================================================================== */
 
-/* 1. Cards, Containers, Sheets & Modals */
-body.dark-theme .card,
-body.dark-theme .vendor-card,
-body.dark-theme .vendor-card-h,
-body.dark-theme .vendor-list-item,
-body.dark-theme .package-card,
-body.dark-theme .booking-card,
-body.dark-theme .fav-card,
-body.dark-theme .review-card,
-body.dark-theme .trust-item,
-body.dark-theme .profile-menu-item,
-body.dark-theme .chat-inbox-item,
-body.dark-theme .profile-section-card,
-body.dark-theme .edit-profile-card,
-body.dark-theme .job-card,
-body.dark-theme .job-step-pane,
-body.dark-theme .modal-content,
-body.dark-theme .modal-sheet,
-body.dark-theme .auth-modal-content,
-body.dark-theme .empty-state,
-body.dark-theme .no-results-card,
-body.dark-theme .filter-bar,
-body.dark-theme .search-results-container {
-    background-color: #152238 !important;
-    background: #152238 !important;
-    border-color: #334155 !important;
-    color: #F8FAFC !important;
-}
+        /* 1. Cards, Containers, Sheets & Modals */
+        body.dark-theme .card,
+        body.dark-theme .vendor-card,
+        body.dark-theme .vendor-card-h,
+        body.dark-theme .vendor-list-item,
+        body.dark-theme .package-card,
+        body.dark-theme .booking-card,
+        body.dark-theme .fav-card,
+        body.dark-theme .review-card,
+        body.dark-theme .trust-item,
+        body.dark-theme .profile-menu-item,
+        body.dark-theme .chat-inbox-item,
+        body.dark-theme .profile-section-card,
+        body.dark-theme .edit-profile-card,
+        body.dark-theme .job-card,
+        body.dark-theme .job-step-pane,
+        body.dark-theme .modal-content,
+        body.dark-theme .modal-sheet,
+        body.dark-theme .auth-modal-content,
+        body.dark-theme .empty-state,
+        body.dark-theme .no-results-card,
+        body.dark-theme .filter-bar,
+        body.dark-theme .search-results-container {
+            background-color: #152238 !important;
+            background: #152238 !important;
+            border-color: #334155 !important;
+            color: #F8FAFC !important;
+        }
 
-/* 2. Primary Headings, Titles & Names */
-body.dark-theme .vendor-card-name,
-body.dark-theme .vendor-name,
-body.dark-theme .vendor-title,
-body.dark-theme .vendor-list-name,
-body.dark-theme .card-title,
-body.dark-theme .section-title,
-body.dark-theme .section-header h2,
-body.dark-theme .section-header h3,
-body.dark-theme .section-header h4,
-body.dark-theme .detail-title,
-body.dark-theme .package-title,
-body.dark-theme .review-author,
-body.dark-theme .profile-menu-title,
-body.dark-theme .chat-inbox-name,
-body.dark-theme .chat-header-title,
-body.dark-theme .category-name,
-body.dark-theme .empty-state-title,
-body.dark-theme .modal-title,
-body.dark-theme .auth-modal-title,
-body.dark-theme h1:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme h2:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme h3:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme h4:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme h5:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme h6:not(#screen-blog *):not(#screen-blog-detail *) {
-    color: #FFFFFF !important;
-}
+        /* 2. Primary Headings, Titles & Names */
+        body.dark-theme .vendor-card-name,
+        body.dark-theme .vendor-name,
+        body.dark-theme .vendor-title,
+        body.dark-theme .vendor-list-name,
+        body.dark-theme .card-title,
+        body.dark-theme .section-title,
+        body.dark-theme .section-header h2,
+        body.dark-theme .section-header h3,
+        body.dark-theme .section-header h4,
+        body.dark-theme .detail-title,
+        body.dark-theme .package-title,
+        body.dark-theme .review-author,
+        body.dark-theme .profile-menu-title,
+        body.dark-theme .chat-inbox-name,
+        body.dark-theme .chat-header-title,
+        body.dark-theme .category-name,
+        body.dark-theme .empty-state-title,
+        body.dark-theme .modal-title,
+        body.dark-theme .auth-modal-title,
+        body.dark-theme h1:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme h2:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme h3:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme h4:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme h5:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme h6:not(#screen-blog *):not(#screen-blog-detail *) {
+            color: #FFFFFF !important;
+        }
 
-/* 3. Secondary Text, Descriptions, Subtitles & Helper Text */
-body.dark-theme .vendor-card-cat,
-body.dark-theme .vendor-list-cat,
-body.dark-theme .vendor-card-meta,
-body.dark-theme .vendor-list-meta,
-body.dark-theme .vendor-card-description,
-body.dark-theme .vendor-bio,
-body.dark-theme .package-desc,
-body.dark-theme .review-comment,
-body.dark-theme .section-subtitle,
-body.dark-theme .chat-inbox-preview,
-body.dark-theme .chat-inbox-time,
-body.dark-theme .chat-header-status,
-body.dark-theme .profile-menu-desc,
-body.dark-theme .empty-state-desc,
-body.dark-theme .form-hint,
-body.dark-theme .form-text,
-body.dark-theme .help-text,
-body.dark-theme .text-muted,
-body.dark-theme p:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme span:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme label:not(#screen-blog *):not(#screen-blog-detail *),
-body.dark-theme small {
-    color: #CBD5E1 !important;
-}
+        /* 3. Secondary Text, Descriptions, Subtitles & Helper Text */
+        body.dark-theme .vendor-card-cat,
+        body.dark-theme .vendor-list-cat,
+        body.dark-theme .vendor-card-meta,
+        body.dark-theme .vendor-list-meta,
+        body.dark-theme .vendor-card-description,
+        body.dark-theme .vendor-bio,
+        body.dark-theme .package-desc,
+        body.dark-theme .review-comment,
+        body.dark-theme .section-subtitle,
+        body.dark-theme .chat-inbox-preview,
+        body.dark-theme .chat-inbox-time,
+        body.dark-theme .chat-header-status,
+        body.dark-theme .profile-menu-desc,
+        body.dark-theme .empty-state-desc,
+        body.dark-theme .form-hint,
+        body.dark-theme .form-text,
+        body.dark-theme .help-text,
+        body.dark-theme .text-muted,
+        body.dark-theme p:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme span:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme label:not(#screen-blog *):not(#screen-blog-detail *),
+        body.dark-theme small {
+            color: #CBD5E1 !important;
+        }
 
-/* 4. Locations, Addresses & Pin Icons */
-body.dark-theme .vendor-location,
-body.dark-theme .location-text,
-body.dark-theme .vendor-address,
-body.dark-theme .vendor-card-location,
-body.dark-theme .vendor-list-location,
-body.dark-theme .vendor-meta-location,
-body.dark-theme .location-label,
-body.dark-theme .contact-item {
-    color: #E2E8F0 !important;
-}
+        /* 4. Locations, Addresses & Pin Icons */
+        body.dark-theme .vendor-location,
+        body.dark-theme .location-text,
+        body.dark-theme .vendor-address,
+        body.dark-theme .vendor-card-location,
+        body.dark-theme .vendor-list-location,
+        body.dark-theme .vendor-meta-location,
+        body.dark-theme .location-label,
+        body.dark-theme .contact-item {
+            color: #E2E8F0 !important;
+        }
 
-body.dark-theme .vendor-location i,
-body.dark-theme .location-text i,
-body.dark-theme .vendor-address i,
-body.dark-theme .fa-location-dot,
-body.dark-theme .fa-map-pin {
-    color: #F2A735 !important;
-}
+        body.dark-theme .vendor-location i,
+        body.dark-theme .location-text i,
+        body.dark-theme .vendor-address i,
+        body.dark-theme .fa-location-dot,
+        body.dark-theme .fa-map-pin {
+            color: #F2A735 !important;
+        }
 
-/* 5. Pricing, Rates & "Ask for Price" Texts */
-body.dark-theme .vendor-price,
-body.dark-theme .vendor-card-price,
-body.dark-theme .vendor-list-price,
-body.dark-theme .price-tag,
-body.dark-theme .price-amount,
-body.dark-theme .starting-price,
-body.dark-theme .package-price,
-body.dark-theme .ask-price-text,
-body.dark-theme .job-price,
-body.dark-theme .job-budget-value {
-    color: #38BDF8 !important;
-    font-weight: 800 !important;
-}
+        /* 5. Pricing, Rates & "Ask for Price" Texts */
+        body.dark-theme .vendor-price,
+        body.dark-theme .vendor-card-price,
+        body.dark-theme .vendor-list-price,
+        body.dark-theme .price-tag,
+        body.dark-theme .price-amount,
+        body.dark-theme .starting-price,
+        body.dark-theme .package-price,
+        body.dark-theme .ask-price-text,
+        body.dark-theme .job-price,
+        body.dark-theme .job-budget-value {
+            color: #38BDF8 !important;
+            font-weight: 800 !important;
+        }
 
-/* 6. Links, CTAs, "View All", "View Profile", "Ask for Price" */
-body.dark-theme .see-all,
-body.dark-theme .view-all-link,
-body.dark-theme .section-link,
-body.dark-theme a.see-all,
-body.dark-theme .btn-view-profile,
-body.dark-theme .btn-ask-price,
-body.dark-theme .view-profile-btn,
-body.dark-theme .ask-price-btn,
-body.dark-theme .btn-quote,
-body.dark-theme .btn-chat {
-    color: #F2A735 !important;
-}
+        /* 6. Links, CTAs, "View All", "View Profile", "Ask for Price" */
+        body.dark-theme .see-all,
+        body.dark-theme .view-all-link,
+        body.dark-theme .section-link,
+        body.dark-theme a.see-all,
+        body.dark-theme .btn-view-profile,
+        body.dark-theme .btn-ask-price,
+        body.dark-theme .view-profile-btn,
+        body.dark-theme .ask-price-btn,
+        body.dark-theme .btn-quote,
+        body.dark-theme .btn-chat {
+            color: #F2A735 !important;
+        }
 
-body.dark-theme .btn-view-profile:hover,
-body.dark-theme .btn-ask-price:hover,
-body.dark-theme .see-all:hover {
-    color: #FFC107 !important;
-}
+        body.dark-theme .btn-view-profile:hover,
+        body.dark-theme .btn-ask-price:hover,
+        body.dark-theme .see-all:hover {
+            color: #FFC107 !important;
+        }
 
-/* 7. Badges, Sponsored Labels & Status Indicators */
-body.dark-theme .badge-sponsored,
-body.dark-theme .sponsored-badge,
-body.dark-theme .sponsored-tag,
-body.dark-theme .ad-badge,
-body.dark-theme .badge-featured,
-body.dark-theme .featured-tag,
-body.dark-theme .badge-gold,
-body.dark-theme .badge-verified,
-body.dark-theme .vendor-badge {
-    background: rgba(242, 167, 53, 0.2) !important;
-    color: #F2A735 !important;
-    border: 1px solid rgba(242, 167, 53, 0.4) !important;
-}
+        /* 7. Badges, Sponsored Labels & Status Indicators */
+        body.dark-theme .badge-sponsored,
+        body.dark-theme .sponsored-badge,
+        body.dark-theme .sponsored-tag,
+        body.dark-theme .ad-badge,
+        body.dark-theme .badge-featured,
+        body.dark-theme .featured-tag,
+        body.dark-theme .badge-gold,
+        body.dark-theme .badge-verified,
+        body.dark-theme .vendor-badge {
+            background: rgba(242, 167, 53, 0.2) !important;
+            color: #F2A735 !important;
+            border: 1px solid rgba(242, 167, 53, 0.4) !important;
+        }
 
-/* 8. Buttons & Action Labels */
-body.dark-theme .btn-primary {
-    background-color: #F2A735 !important;
-    color: #081729 !important;
-    font-weight: 800 !important;
-    border-color: #F2A735 !important;
-}
+        /* 8. Buttons & Action Labels */
+        body.dark-theme .btn-primary {
+            background-color: #F2A735 !important;
+            color: #081729 !important;
+            font-weight: 800 !important;
+            border-color: #F2A735 !important;
+        }
 
-body.dark-theme .btn-secondary,
-body.dark-theme .btn-outline {
-    background-color: #1E293B !important;
-    color: #F8FAFC !important;
-    border-color: #334155 !important;
-}
+        body.dark-theme .btn-secondary,
+        body.dark-theme .btn-outline {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+            border-color: #334155 !important;
+        }
 
-/* 9. Form Inputs, Textareas, Selects & Placeholders */
-body.dark-theme input,
-body.dark-theme select,
-body.dark-theme textarea,
-body.dark-theme .form-control,
-body.dark-theme .form-input,
-body.dark-theme .form-select,
-body.dark-theme .search-bar input {
-    background-color: #1E293B !important;
-    color: #F8FAFC !important;
-    border-color: #475569 !important;
-}
+        /* 9. Form Inputs, Textareas, Selects & Placeholders */
+        body.dark-theme input,
+        body.dark-theme select,
+        body.dark-theme textarea,
+        body.dark-theme .form-control,
+        body.dark-theme .form-input,
+        body.dark-theme .form-select,
+        body.dark-theme .search-bar input {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+            border-color: #475569 !important;
+        }
 
-body.dark-theme input::placeholder,
-body.dark-theme textarea::placeholder,
-body.dark-theme .form-input::placeholder {
-    color: #94A3B8 !important;
-}
+        body.dark-theme input::placeholder,
+        body.dark-theme textarea::placeholder,
+        body.dark-theme .form-input::placeholder {
+            color: #94A3B8 !important;
+        }
 
-body.dark-theme option {
-    background-color: #1E293B !important;
-    color: #F8FAFC !important;
-}
+        body.dark-theme option {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+        }
 
-/* 10. Chat Messages, Input Bar & Inbox */
-body.dark-theme #screen-chat,
-body.dark-theme #screen-chat-inbox {
-    background-color: #081729 !important;
-    color: #F8FAFC !important;
-}
+        /* 10. Chat Messages, Input Bar & Inbox */
+        body.dark-theme #screen-chat,
+        body.dark-theme #screen-chat-inbox {
+            background-color: #081729 !important;
+            color: #F8FAFC !important;
+        }
 
-body.dark-theme .msg-bubble.msg-user {
-    background: #1E293B !important;
-    color: #FFFFFF !important;
-    border: 1px solid #334155 !important;
-}
+        body.dark-theme .msg-bubble.msg-user {
+            background: #1E293B !important;
+            color: #FFFFFF !important;
+            border: 1px solid #334155 !important;
+        }
 
-body.dark-theme .msg-bubble.msg-vendor {
-    background: #152238 !important;
-    color: #F8FAFC !important;
-    border: 1px solid #334155 !important;
-}
+        body.dark-theme .msg-bubble.msg-vendor {
+            background: #152238 !important;
+            color: #F8FAFC !important;
+            border: 1px solid #334155 !important;
+        }
 
-body.dark-theme .msg-text {
-    color: #F8FAFC !important;
-}
+        body.dark-theme .msg-text {
+            color: #F8FAFC !important;
+        }
 
-body.dark-theme .msg-meta,
-body.dark-theme .msg-time,
-body.dark-theme .live-relative-time {
-    color: #CBD5E1 !important;
-}
+        body.dark-theme .msg-meta,
+        body.dark-theme .msg-time,
+        body.dark-theme .live-relative-time {
+            color: #CBD5E1 !important;
+        }
 
-body.dark-theme .chat-input-bar {
-    background: #152238 !important;
-    border-top-color: #334155 !important;
-}
+        body.dark-theme .chat-input-bar {
+            background: #152238 !important;
+            border-top-color: #334155 !important;
+        }
 
-body.dark-theme .chat-input {
-    background: #1E293B !important;
-    color: #F8FAFC !important;
-    border-color: #475569 !important;
-}
+        body.dark-theme .chat-input {
+            background: #1E293B !important;
+            color: #F8FAFC !important;
+            border-color: #475569 !important;
+        }
 
-body.dark-theme .chat-input::placeholder {
-    color: #94A3B8 !important;
-}
+        body.dark-theme .chat-input::placeholder {
+            color: #94A3B8 !important;
+        }
 
-/* 11. Bottom Navigation & Tab Bars */
-body.dark-theme .bottom-nav {
-    background: #081729 !important;
-    border-top-color: #1E293B !important;
-}
+        /* 11. Bottom Navigation & Tab Bars */
+        body.dark-theme .bottom-nav {
+            background: #081729 !important;
+            border-top-color: #1E293B !important;
+        }
 
-body.dark-theme .bottom-nav .nav-item {
-    color: #94A3B8 !important;
-}
+        body.dark-theme .bottom-nav .nav-item {
+            color: #94A3B8 !important;
+        }
 
-body.dark-theme .bottom-nav .nav-item.active,
-body.dark-theme .bottom-nav .nav-item:hover {
-    color: #F2A735 !important;
-}
+        body.dark-theme .bottom-nav .nav-item.active,
+        body.dark-theme .bottom-nav .nav-item:hover {
+            color: #F2A735 !important;
+        }
 
-/* 12. Text Over Images, Cards & Overlays */
-body.dark-theme .card-overlay-text,
-body.dark-theme .hero-banner-title,
-body.dark-theme .overlay-text {
-    color: #FFFFFF !important;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85) !important;
-}
+        /* 12. Text Over Images, Cards & Overlays */
+        body.dark-theme .card-overlay-text,
+        body.dark-theme .hero-banner-title,
+        body.dark-theme .overlay-text {
+            color: #FFFFFF !important;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85) !important;
+        }
 
-/* 13. Wildcard Safeguard for Hardcoded Light Hexes in Inline Styles */
-body.dark-theme [style*="color:#0F172A"],
-body.dark-theme [style*="color: #0F172A"],
-body.dark-theme [style*="color:#1B2B4B"],
-body.dark-theme [style*="color: #1B2B4B"],
-body.dark-theme [style*="color:#0B1F3A"],
-body.dark-theme [style*="color: #0B1F3A"],
-body.dark-theme [style*="color:#111827"],
-body.dark-theme [style*="color: #111827"],
-body.dark-theme [style*="color:#1E293B"],
-body.dark-theme [style*="color: #1E293B"],
-body.dark-theme [style*="color:#334155"],
-body.dark-theme [style*="color: #334155"],
-body.dark-theme [style*="color:#475569"],
-body.dark-theme [style*="color: #475569"],
-body.dark-theme [style*="color:var(--gray-800)"],
-body.dark-theme [style*="color: var(--gray-800)"],
-body.dark-theme [style*="color:var(--gray-900)"],
-body.dark-theme [style*="color: var(--gray-900)"] {
-    color: #F8FAFC !important;
-}
+        /* 13. Wildcard Safeguard for Hardcoded Light Hexes in Inline Styles */
+        body.dark-theme [style*="color:#0F172A"],
+        body.dark-theme [style*="color: #0F172A"],
+        body.dark-theme [style*="color:#1B2B4B"],
+        body.dark-theme [style*="color: #1B2B4B"],
+        body.dark-theme [style*="color:#0B1F3A"],
+        body.dark-theme [style*="color: #0B1F3A"],
+        body.dark-theme [style*="color:#111827"],
+        body.dark-theme [style*="color: #111827"],
+        body.dark-theme [style*="color:#1E293B"],
+        body.dark-theme [style*="color: #1E293B"],
+        body.dark-theme [style*="color:#334155"],
+        body.dark-theme [style*="color: #334155"],
+        body.dark-theme [style*="color:#475569"],
+        body.dark-theme [style*="color: #475569"],
+        body.dark-theme [style*="color:var(--gray-800)"],
+        body.dark-theme [style*="color: var(--gray-800)"],
+        body.dark-theme [style*="color:var(--gray-900)"],
+        body.dark-theme [style*="color: var(--gray-900)"] {
+            color: #F8FAFC !important;
+        }
 
-body.dark-theme a[style*="color:"],
-body.dark-theme button[style*="color:"] {
-    color: #F2A735 !important;
-}
+        body.dark-theme a[style*="color:"],
+        body.dark-theme button[style*="color:"] {
+            color: #F2A735 !important;
+        }
 
-/* 14. Global Catch-All App Screen Override in Dark Mode */
-body.dark-theme,
-body.dark-theme #app,
-body.dark-theme .app-body,
-body.dark-theme .main-content,
-body.dark-theme .screen:not(#screen-blog):not(#screen-blog-detail),
-body.dark-theme .page-view:not(#screen-blog):not(#screen-blog-detail) {
-    background-color: #081729 !important;
-    color: #F8FAFC !important;
-}
+        /* 14. Global Catch-All App Screen Override in Dark Mode */
+        body.dark-theme,
+        body.dark-theme #app,
+        body.dark-theme .app-body,
+        body.dark-theme .main-content,
+        body.dark-theme .screen:not(#screen-blog):not(#screen-blog-detail),
+        body.dark-theme .page-view:not(#screen-blog):not(#screen-blog-detail) {
+            background-color: #081729 !important;
+            color: #F8FAFC !important;
+        }
 
-/* Exempt buttons & badges that require dark text on accent background */
-body.dark-theme .btn-primary,
-body.dark-theme .blog-search-btn,
-body.dark-theme .blog-cat-pill.active,
-body.dark-theme .badge-accent,
-body.dark-theme .badge-primary {
-    color: #081729 !important;
+        /* Exempt buttons & badges that require dark text on accent background */
+        body.dark-theme .btn-primary,
+        body.dark-theme .blog-search-btn,
+        body.dark-theme .blog-cat-pill.active,
+        body.dark-theme .badge-accent,
+        body.dark-theme .badge-primary {
+            color: #081729 !important;
+        }
+
+        margin-left: 6px;
+    }
 }

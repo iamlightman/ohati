@@ -278,9 +278,6 @@ if ($requested_vendor_id > 0) {
                 </a>
             </div>
             <div class="header-actions" id="header-actions">
-                <button class="header-icon-btn theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle Theme">
-                    <i class="fa-solid fa-moon" id="theme-icon"></i>
-                </button>
                 <button class="header-icon-btn notification-btn" id="header-notif-btn" aria-label="Notifications">
                     <i class="fa-solid fa-bell"></i>
                     <span class="notif-badge" id="notif-badge" style="display:none;">3</span>
@@ -288,6 +285,9 @@ if ($requested_vendor_id > 0) {
                 <button class="header-avatar-btn" id="header-avatar-btn" aria-label="Profile">
                     <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="User" id="header-avatar" class="header-avatar">
                 </button>
+                <a href="javascript:void(0)" class="desktop-nav-item sidebar-toggle-btn" id="header-sidebar-toggle-btn" aria-label="Toggle Sidebar" onclick="toggleSidebar(); event.preventDefault();" title="Menu Sidebar">
+                    <i class="fa-solid fa-bars"></i>
+                </a>
             </div>
         </header>
 
@@ -326,6 +326,7 @@ if ($requested_vendor_id > 0) {
 
             <!-- Screen: Vendor Dashboard (for vendors) -->
             <section id="screen-vendor-dash" class="screen" style="display:none;"></section>
+            <section id="screen-didit-kyc" class="screen" style="display:none;"></section>
 
             <!-- Screen: Help Center -->
             <section id="screen-help" class="screen" style="display:none;"></section>
@@ -364,9 +365,9 @@ if ($requested_vendor_id > 0) {
                 </div>
                 <span>Messages</span>
             </a>
-            <a href="#" class="nav-item" data-screen="bookings" id="nav-btn-bookings">
-                <div class="nav-icon"><i class="fa-solid fa-layer-group"></i></div>
-                <span>Bookings</span>
+            <a href="javascript:void(0)" class="nav-item" id="nav-btn-menu" onclick="toggleSidebar(); event.preventDefault();">
+                <div class="nav-icon"><i class="fa-solid fa-bars"></i></div>
+                <span>Menu</span>
             </a>
         </nav>
 
@@ -524,25 +525,28 @@ if ($requested_vendor_id > 0) {
     <div id="ohati-global-modal-root"></div>
 
     
-    <script src="js/utils.js?v=3.5.0"></script>
-    <script src="js/helpers.js?v=3.5.0"></script>
-    <script src="js/api.js?v=3.5.0"></script>
-    <script src="js/action_lock.js?v=3.5.0"></script>
-    <script src="js/state.js?v=3.5.0"></script>
-    <script src="js/modals.js?v=3.5.0"></script>
-    <script src="js/auth.js?v=3.5.0"></script>
-    <script src="js/booking.js?v=3.5.0"></script>
-    <script src="js/vendor.js?v=3.5.0"></script>
-    <script src="js/chat.js?v=3.5.0"></script>
-    <script src="js/search.js?v=3.5.0"></script>
-    <script src="js/review.js?v=3.5.0"></script>
-    <script src="js/notification.js?v=3.5.0"></script>
-    <script src="js/payment.js?v=3.5.0"></script>
-    <script src="js/screens.js?v=3.5.0"></script>
-    <script src="js/calling.js?v=3.5.0"></script>
-    <script src="js/jobs.js?v=3.5.0"></script>
-    <script src="js/blog.js?v=3.5.0"></script>
-    <script src="js/app.js?v=3.5.0"></script>
+    <script src="js/utils.js?v=3.8.0"></script>
+    <script src="js/helpers.js?v=3.8.0"></script>
+    <script src="js/api.js?v=3.8.0"></script>
+    <script src="js/action_lock.js?v=3.8.0"></script>
+    <script src="js/state.js?v=3.8.0"></script>
+    <script src="js/modals.js?v=3.8.0"></script>
+    <script src="js/auth.js?v=3.8.0"></script>
+    <script src="js/booking.js?v=3.8.0"></script>
+    <script src="js/vendor.js?v=3.8.0"></script>
+    <script src="js/chat.js?v=3.8.0"></script>
+    <script src="js/search.js?v=3.8.0"></script>
+    <script src="js/review.js?v=3.8.0"></script>
+    <script src="js/notification.js?v=3.8.0"></script>
+    <script src="js/payment.js?v=3.8.0"></script>
+    <script src="js/screens.js?v=3.8.0"></script>
+    <script src="js/calling.js?v=3.8.0"></script>
+    <script src="js/jobs.js?v=3.8.0"></script>
+    <script src="js/blog.js?v=3.8.0"></script>
+    <script src="js/app.js?v=3.8.0"></script>
+
+</body>
+</html>
 
 </body>
 </html>

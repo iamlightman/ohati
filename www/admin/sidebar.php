@@ -131,8 +131,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <a href="jobs.php" class="admin-nav-item <?= $current_page === 'jobs.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-list-check"></i> Event Jobs
         </a>
+        <a href="blog.php" class="admin-nav-item <?= $current_page === 'blog.php' ? 'active' : '' ?>">
+            <i class="fa-solid fa-newspaper"></i> Blog Articles
+        </a>
         <a href="vendors.php" class="admin-nav-item <?= $current_page === 'vendors.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-briefcase"></i> Vendors
+        </a>
+        <a href="categories.php" class="admin-nav-item <?= $current_page === 'categories.php' ? 'active' : '' ?>">
+            <i class="fa-solid fa-layer-group"></i> Vendor Categories
         </a>
         <a href="users.php" class="admin-nav-item <?= $current_page === 'users.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-users"></i> Users

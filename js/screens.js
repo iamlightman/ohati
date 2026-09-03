@@ -77,6 +77,30 @@ function renderSkeletonListHTML(count = 4) {
 
 // ── Screen Manager: navigateTo ─────────────────────────────────────────
 function navigateTo(screenId, params = {}, options = {}) {
+    // DESKTOP ONLY MODAL POPUPS for requested screens
+    const isDesktop = window.innerWidth >= 1024;
+    const desktopPopupScreens = ['notifications', 'post-job', 'user-jobs', 'vendor-jobs', 'compare', 'favorites', 'blog', 'report-issue', 'help', 'about'];
+    const forceFullNav = options && typeof options === 'object' && options.forceFullNav;
+
+    if (isDesktop && desktopPopupScreens.includes(screenId) && !forceFullNav) {
+        if (typeof openDesktopPopupModal === 'function') {
+            openDesktopPopupModal(screenId, params);
+            return;
+        }
+    }
+
+    // Resolve role-based 'dashboard' alias dynamically
+    if (screenId === 'dashboard') {
+        const isVendor = !!(state.user && (
+            state.user.active_role === 'vendor' ||
+            state.user.role === 'vendor' ||
+            state.user.has_vendor_profile ||
+            (state.user.vendor_id && parseInt(state.user.vendor_id) > 0) ||
+            (state.vendor && state.vendor.id > 0)
+        ));
+        screenId = isVendor ? 'vendor-dash' : 'home';
+    }
+
     // Dismiss any open sidebar immediately on navigation entry
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
 
@@ -349,6 +373,9 @@ function navigateTo(screenId, params = {}, options = {}) {
             case 'terms':
                 initTermsScreen();
                 break;
+            case 'didit-kyc':
+                renderDiditKycScreen(params);
+                break;
         }
     } catch (renderErr) {
         console.error(`Error rendering screen "${screenId}":`, renderErr);
@@ -527,35 +554,22 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
         topVendors = state.vendors || [];
     }
     
-    const defaultHandpicked = [
-        { id: 9, name: 'The Grand Pavilion', category: 'Event Venue', rating: 4.9, reviews: 248, city: 'East Legon, Accra', img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=400', initials: 'GP', badgeClass: '', verification_badge: 'gold', verified: 1, premium: 1 },
-        { id: 7, name: 'TasteBuds Catering', category: 'Catering Services', rating: 4.8, reviews: 176, city: 'Airport Residential, Accra', img: 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400', icon: 'fa-utensils', badgeClass: 'tastebuds-badge', verification_badge: 'gold', verified: 1, premium: 1 },
-        { id: 6, name: 'Luxe Decor', category: 'Decor & Flowers', rating: 4.9, reviews: 193, city: 'East Legon, Accra', img: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=400', initials: 'LD', badgeClass: 'luxe-badge', verification_badge: 'blue', verified: 1, premium: 0 },
-        { id: 2, name: 'Jojo Temeng Photo', category: 'Photography', rating: 4.9, reviews: 84, city: 'Osu, Accra', img: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=400', icon: 'fa-camera', badgeClass: 'luxe-badge', verification_badge: 'blue', verified: 1, premium: 0 }
-    ];
-
-    let handpickedList = [];
-    if (topVendors.length >= 4) {
-        handpickedList = topVendors.slice(0, 4).map((v, i) => {
-            const initials = v.name ? v.name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase() : 'V';
-            return {
-                id: v.id,
-                name: v.name,
-                category: v.category_name || v.category || 'Vendor',
-                rating: v.rating || '4.9',
-                reviews: v.reviews_count || 12,
-                city: v.city || v.address || 'Accra, Ghana',
-                img: v.cover_image || v.image || v.logo || defaultHandpicked[i % 4].img,
-                initials: initials,
-                badgeClass: defaultHandpicked[i % 4].badgeClass,
-                verification_badge: v.verification_badge,
-                verified: parseInt(v.verified || 0),
-                premium: parseInt(v.premium || 0)
-            };
-        });
-    } else {
-        handpickedList = defaultHandpicked;
-    }
+    let handpickedList = topVendors.slice(0, 4).map((v, i) => {
+        const initials = v.name ? v.name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase() : 'V';
+        return {
+            id: v.id,
+            name: v.name,
+            category: v.category_name || v.category || 'Vendor',
+            rating: v.rating || '5.0',
+            reviews: v.reviews_count || 0,
+            city: v.city || v.location || 'Accra, Ghana',
+            img: v.cover_photo || v.logo || 'img/app_icon.png',
+            initials: initials,
+            badgeClass: '',
+            verification_badge: v.verification_badge || 'grey',
+            verified: parseInt(v.verified || 0),
+        };
+    });
 
     const handpickedCardsHtml = handpickedList.map(v => {
         const isFav = state.favorites && state.favorites.includes(v.id);
@@ -1214,10 +1228,16 @@ function initDetailScreen() {
 
                 <div id="detail-tab-content" style="margin-bottom:20px;"></div>
 
-                <div class="detail-cta">
-                    <button class="btn btn-outline" onclick="startVendorChat(${v.id || v.vendor_id})"><i class="fa-solid fa-comments"></i> Chat</button>
-                    <button class="btn btn-primary" onclick="openBookingRequestModal(${v.id})"><i class="fa-solid fa-calendar-check"></i> Book Now</button>
-                </div>
+                ${(typeof isOwnVendorProfile === 'function' && isOwnVendorProfile(v)) ? `
+                    <div class="detail-cta">
+                        <button class="btn btn-secondary btn-full" disabled style="opacity:0.85; cursor:not-allowed; background:var(--gray-200); color:var(--gray-700); border:1px solid var(--gray-300); font-weight:700;"><i class="fa-solid fa-user-check"></i> Your Vendor Profile</button>
+                    </div>
+                ` : `
+                    <div class="detail-cta">
+                        <button class="btn btn-outline" onclick="startVendorChat(${v.id || v.vendor_id})"><i class="fa-solid fa-comments"></i> Chat</button>
+                        <button class="btn btn-primary" onclick="openBookingRequestModal(${v.id})"><i class="fa-solid fa-calendar-check"></i> Book Now</button>
+                    </div>
+                `}
 
             </div>
         `;
@@ -1537,7 +1557,11 @@ function renderDetailTabContent(v) {
                                 <div class="package-details" style="font-size:0.8rem; color:var(--gray-600); line-height:1.5; margin-bottom:12px;">${p.details || 'Standard service package details.'}</div>
                                 <div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; border-top:1px solid var(--gray-50); padding-top:12px;">
                                     <span style="font-size:0.75rem; color:var(--gray-400);"><i class="fa-solid fa-clock"></i> Flexible Schedule</span>
-                                    <button class="btn btn-outline btn-sm" onclick="openBookingRequestModal(${v.id}, '${p.name || 'Custom Service'}', ''); event.stopPropagation();" style="font-size:0.72rem; padding:6px 16px;">Select Package</button>
+                                    ${(typeof isOwnVendorProfile === 'function' && isOwnVendorProfile(v)) ? `
+                                        <span class="badge" style="font-size:0.72rem; background:var(--gray-100); color:var(--gray-600); padding:6px 12px; border-radius:6px; font-weight:700;"><i class="fa-solid fa-user-check"></i> Your Package</span>
+                                    ` : `
+                                        <button class="btn btn-outline btn-sm" onclick="openBookingRequestModal(${v.id}, '${p.name || 'Custom Service'}', ''); event.stopPropagation();" style="font-size:0.72rem; padding:6px 16px;">Select Package</button>
+                                    `}
                                 </div>
                             </div>
                         `).join('')}
@@ -1641,9 +1665,13 @@ function syncChatLayoutState() {
 }
 
 // ── 4. CHAT SCREEN ──────────────────────────────────────────────────────
-function initChatScreen() {
+function initChatScreen(params) {
     const screen = document.getElementById('screen-chat');
     if (!screen) return;
+
+    if (params && params.vendor_id) {
+        state.activeChatVendorId = parseInt(params.vendor_id);
+    }
 
     syncChatLayoutState();
 
@@ -1655,85 +1683,11 @@ function initChatScreen() {
     const isDesktop = window.innerWidth >= 768;
 
     if (isDesktop) {
-        screen.innerHTML = `
-            <div class="chat-desktop-layout">
-                <div class="chat-desktop-sidebar">
-                    <div class="p-section chat-desktop-sidebar-header" style="border-bottom:1px solid var(--gray-100); padding: 16px 20px;">
-                        <h3 style="margin:0;">Messages</h3>
-                    </div>
-                    <div id="chat-inbox-list" class="scrollable-y" style="flex:1;">
-                        <div class="full-spinner-wrap"><div class="spinner"></div></div>
-                    </div>
-                </div>
-                <div class="chat-desktop-content" id="chat-desktop-content-panel">
-                    <div class="chat-welcome-panel">
-                        <i class="fa-solid fa-comments" style="font-size:4rem; color:var(--gray-200); margin-bottom:16px;"></i>
-                        <h3>Your Messages</h3>
-                        <p class="text-muted">Select a conversation from the sidebar to start chatting.</p>
-                    </div>
-            </div>
-        `;
+        openDesktopChatModal(state.activeChatVendorId);
+        return;
+    }
 
-
-        API.getChatInbox().then(inbox => {
-            renderChatInbox(inbox);
-            
-            if (state.activeChatVendorId) {
-                loadDesktopChatPartner(state.activeChatVendorId);
-            }
-        }).catch(err => {
-            console.error("Desktop inbox load error:", err);
-            const inboxList = document.getElementById('chat-inbox-list');
-            if (inboxList) {
-                inboxList.innerHTML = `
-                    <div style="padding:30px 16px; text-align:center; color:var(--gray-500);">
-                        <p style="font-size:0.8rem; margin-bottom:10px;">${err.message || 'Could not load messages.'}</p>
-                        <button class="btn btn-primary btn-xs" onclick="initChatScreen()">Retry</button>
-                    </div>
-                `;
-            }
-        });
-
-        state.pollingInboxInProgress = false;
-        state.pollingHistoryInProgress = false;
-        state.chatInterval = setInterval(() => {
-            if (state.currentScreen === 'chat' && window.innerWidth >= 768) {
-                if (!state.pollingInboxInProgress) {
-                    state.pollingInboxInProgress = true;
-                    API.getChatInbox().then(inb => {
-                        state.pollingInboxInProgress = false;
-                        renderChatInbox(inb);
-                    }).catch(() => {
-                        state.pollingInboxInProgress = false;
-                    });
-                }
-                if (state.activeChatVendorId && !state.pollingHistoryInProgress) {
-                    state.pollingHistoryInProgress = true;
-                    API.getChatHistory(state.activeChatVendorId).then(hist => {
-                        state.pollingHistoryInProgress = false;
-                        updateChatMessages(hist);
-                    }).catch(() => {
-                        state.pollingHistoryInProgress = false;
-                    });
-
-                    // Live Partner Online Status Refresh
-                    const role = state.user?.active_role || state.user?.role || 'customer';
-                    const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
-                    API.getUserStatus(params).then(st => {
-                        const statusEl = document.getElementById('chat-partner-status');
-                        if (statusEl && st) {
-                            statusEl.innerHTML = st.is_online ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (st.online_status || 'Offline');
-                        }
-                    }).catch(() => {});
-                }
-            } else {
-                clearInterval(state.chatInterval);
-                state.chatInterval = null;
-            }
-        }, 2000);
-
-    } else {
-        if (state.activeChatVendorId) {
+    if (state.activeChatVendorId) {
             screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
             const role = state.user?.active_role || state.user?.role || 'customer';
             API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
@@ -1742,7 +1696,7 @@ function initChatScreen() {
                 API.getChatHistory(state.activeChatVendorId).then(history => {
                     updateChatMessages(history);
                     
-                    state.pollingHistoryInProgress = false;
+                    if (state.chatInterval) clearInterval(state.chatInterval);
                     state.chatInterval = setInterval(() => {
                         if (state.currentScreen === 'chat' && state.activeChatVendorId && window.innerWidth < 768) {
                             if (!state.pollingHistoryInProgress) {
@@ -1804,6 +1758,7 @@ function initChatScreen() {
                 window._currentChatInbox = inbox;
                 renderChatInbox(inbox);
                 
+                if (state.chatInterval) clearInterval(state.chatInterval);
                 state.chatInterval = setInterval(() => {
                     if (state.currentScreen === 'chat' && !state.activeChatVendorId && window.innerWidth < 768) {
                         API.getChatInbox().then(inb => {
@@ -1831,7 +1786,6 @@ function initChatScreen() {
             });
         }
     }
-}
 
 function filterChatInbox() {
     const query = (document.getElementById('chat-search-input')?.value || '').toLowerCase().trim();
@@ -1876,7 +1830,7 @@ function renderChatInbox(inbox) {
 
         let nameWithBadge = targetName;
 
-        const isOnline = item.is_online || item.availability === 'Online';
+        const isOnline = window.isUserOnline ? window.isUserOnline(item) : (!!item.is_online);
         return `
             <div class="chat-inbox-item" onclick="openChatWithVendor(${targetId})">
                 <div class="chat-inbox-avatar">
@@ -1923,7 +1877,7 @@ function loadDesktopChatPartner(vid) {
         state.activeChatPartner = v;
         let nameWithBadge = v.name || 'Vendor';
         const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
-        const isOnlineDesk = v.is_online || v.availability === 'Online';
+        const isOnlineDesk = window.isUserOnline ? window.isUserOnline(v) : (!!v.is_online);
         const statusTextDesk = isOnlineDesk ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
         
         contentPanel.innerHTML = `
@@ -1951,10 +1905,8 @@ function loadDesktopChatPartner(vid) {
                 </div>
                 <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
                 <div class="chat-input-bar" style="gap: 8px;">
-                    <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="display:none; width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
                     <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
                     <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
-                    <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                 </div>
             </div>
         `;
@@ -1989,6 +1941,127 @@ document.addEventListener('click', function() {
     if (menu) menu.style.display = 'none';
 });
 
+function openDesktopChatModal(vendorId) {
+    if (!state.user) {
+        if (typeof openAuthModal === 'function') openAuthModal('login');
+        return;
+    }
+
+    if (vendorId) {
+        state.activeChatVendorId = parseInt(vendorId);
+    }
+
+    let overlay = document.getElementById('desktop-chat-modal-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'desktop-chat-modal-overlay';
+        overlay.className = 'desktop-chat-modal-overlay';
+        overlay.onclick = function(e) { closeDesktopChatModal(e); };
+        document.body.appendChild(overlay);
+    }
+
+    overlay.innerHTML = `
+        <div class="desktop-chat-modal-card" onclick="event.stopPropagation()">
+            <button class="desktop-chat-modal-close" onclick="closeDesktopChatModal(event)" aria-label="Close Chat">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="chat-desktop-layout" style="height: 100%; border: none; max-height: none;">
+                <div class="chat-desktop-sidebar">
+                    <div class="p-section chat-desktop-sidebar-header" style="border-bottom:1px solid var(--gray-100); padding: 16px 20px;">
+                        <h3 style="margin:0; font-family:'Fraunces',serif; color:var(--primary);">Messages</h3>
+                    </div>
+                    <div id="chat-inbox-list" class="scrollable-y" style="flex:1;">
+                        <div class="full-spinner-wrap"><div class="spinner"></div></div>
+                    </div>
+                </div>
+                <div class="chat-desktop-content" id="chat-desktop-content-panel">
+                    <div class="chat-welcome-panel">
+                        <i class="fa-solid fa-comments" style="font-size:4rem; color:var(--gray-200); margin-bottom:16px;"></i>
+                        <h3>Your Messages</h3>
+                        <p class="text-muted">Select a conversation from the sidebar to start chatting.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    overlay.style.display = 'flex';
+    document.body.classList.add('modal-open');
+
+    API.getChatInbox().then(inbox => {
+        renderChatInbox(inbox);
+        if (state.activeChatVendorId) {
+            loadDesktopChatPartner(state.activeChatVendorId);
+        }
+    }).catch(err => {
+        console.error("Desktop inbox load error:", err);
+        const inboxList = document.getElementById('chat-inbox-list');
+        if (inboxList) {
+            inboxList.innerHTML = `
+                <div style="padding:30px 16px; text-align:center; color:var(--gray-500);">
+                    <p style="font-size:0.8rem; margin-bottom:10px;">${err.message || 'Could not load messages.'}</p>
+                    <button class="btn btn-primary btn-xs" onclick="openDesktopChatModal(${vendorId})">Retry</button>
+                </div>
+            `;
+        }
+    });
+
+    state.pollingInboxInProgress = false;
+    state.pollingHistoryInProgress = false;
+    if (state.chatInterval) clearInterval(state.chatInterval);
+    state.chatInterval = setInterval(() => {
+        const modal = document.getElementById('desktop-chat-modal-overlay');
+        if (modal && modal.style.display !== 'none' && window.innerWidth >= 768) {
+            if (!state.pollingInboxInProgress) {
+                state.pollingInboxInProgress = true;
+                API.getChatInbox().then(inb => {
+                    state.pollingInboxInProgress = false;
+                    renderChatInbox(inb);
+                }).catch(() => {
+                    state.pollingInboxInProgress = false;
+                });
+            }
+            if (state.activeChatVendorId && !state.pollingHistoryInProgress) {
+                state.pollingHistoryInProgress = true;
+                API.getChatHistory(state.activeChatVendorId).then(hist => {
+                    state.pollingHistoryInProgress = false;
+                    updateChatMessages(hist);
+                }).catch(() => {
+                    state.pollingHistoryInProgress = false;
+                });
+
+                const role = state.user?.active_role || state.user?.role || 'customer';
+                const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
+                API.getUserStatus(params).then(st => {
+                    const statusEl = document.getElementById('chat-partner-status');
+                    if (statusEl && st) {
+                        statusEl.innerHTML = st.is_online ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (st.online_status || 'Offline');
+                    }
+                }).catch(() => {});
+            }
+        } else {
+            clearInterval(state.chatInterval);
+            state.chatInterval = null;
+        }
+    }, 2000);
+}
+
+function closeDesktopChatModal(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const overlay = document.getElementById('desktop-chat-modal-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        try { overlay.remove(); } catch (err) {}
+    }
+    if (state.chatInterval) {
+        clearInterval(state.chatInterval);
+        state.chatInterval = null;
+    }
+    document.body.classList.remove('modal-open');
+}
+window.openDesktopChatModal = openDesktopChatModal;
+window.closeDesktopChatModal = closeDesktopChatModal;
+
 function openChatWithVendor(vid) {
     if (!state.user) {
         if (typeof openAuthModal === 'function') openAuthModal('login');
@@ -1996,7 +2069,11 @@ function openChatWithVendor(vid) {
     }
     const numVid = parseInt(vid);
     state.activeChatVendorId = numVid;
-    navigateTo('chat', { vendor_id: numVid }, { force: true });
+    if (window.innerWidth >= 768) {
+        openDesktopChatModal(numVid);
+    } else {
+        navigateTo('chat', { vendor_id: numVid }, { force: true });
+    }
 }
 
 
@@ -2025,7 +2102,14 @@ window.startVendorChat = function(vid) {
         return;
     }
     const numVid = vid ? parseInt(vid) : null;
-    if (typeof navigateTo === 'function') {
+    if ((state.user && state.user.vendor_id && Number(state.user.vendor_id) === numVid) || (typeof isOwnVendorProfile === 'function' && isOwnVendorProfile(numVid))) {
+        showPushNotification('Invalid Action', 'You cannot message your own vendor profile.');
+        return;
+    }
+    state.activeChatVendorId = numVid;
+    if (window.innerWidth >= 768) {
+        openDesktopChatModal(numVid);
+    } else if (typeof navigateTo === 'function') {
         navigateTo('chat', { vendor_id: numVid });
     } else if (numVid) {
         window.location.href = `chat.php?vendor_id=${numVid}`;
@@ -2048,7 +2132,7 @@ function renderChatShell(v) {
     const role = state.user?.active_role || state.user?.role || 'customer';
     let nameWithBadge = v.name || 'Vendor';
     const headerClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${v.id})` : `viewVendorDetails(${v.id})`;
-    const isOnline = v.is_online || v.availability === 'Online';
+    const isOnline = window.isUserOnline ? window.isUserOnline(v) : (!!v.is_online);
     const statusText = isOnline ? '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; margin-right:4px;"></span>Online' : (v.online_status || v.availability || 'Offline');
 
     screen.innerHTML = `
@@ -2079,10 +2163,8 @@ function renderChatShell(v) {
             <div class="chat-messages scrollable-y" id="chat-messages-container"></div>
 
             <div class="chat-input-bar" style="gap: 8px;">
-                <button class="chat-attach-btn" onclick="triggerChatAttachment()" title="Upload File" style="display:none; width:36px; height:36px; border-radius:50%; background:var(--gray-100); border:none; color:var(--gray-600); cursor:pointer; align-items:center; justify-content:center; font-size:0.85rem;"><i class="fa-solid fa-paperclip"></i></button>
                 <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeyup="if(event.key==='Enter') sendChatMessage()">
                 <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
-                <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelected(this)" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
             </div>
         </div>
     `;
@@ -2119,25 +2201,36 @@ function updateChatMessages(history) {
 
         let bodyHtml = '';
         if (m.type === 'image') {
-            bodyHtml = `<img src="${m.message}" style="max-width:240px; max-height:200px; object-fit:cover; border-radius:12px; display:block; margin-bottom:4px; box-shadow: var(--shadow-sm); cursor:pointer;" onclick="previewChatImage('${m.message}')">`;
+            bodyHtml = `
+                <div style="position:relative; overflow:hidden; border-radius:12px; margin-bottom:4px;">
+                    <img src="${m.message}" style="max-width:240px; max-height:200px; object-fit:cover; border-radius:12px; display:block; box-shadow: var(--shadow-sm); cursor:pointer;" onclick="previewChatImage('${m.message}')">
+                </div>
+            `;
         } else if (m.type === 'video') {
             bodyHtml = `<video src="${m.message}" controls style="max-width:100%; border-radius:12px; display:block; margin-bottom:4px; box-shadow: var(--shadow-sm);"></video>`;
         } else if (m.type === 'voice') {
+            const durationLabel = m.duration ? formatTimeLabel(m.duration) : '0:00';
             bodyHtml = `
                 <div class="custom-voice-player" data-src="${m.message}" style="display:flex; align-items:center; gap:10px; padding:6px 12px; background:rgba(0,0,0,0.06); border-radius:18px; min-width:200px; max-width:280px; margin-bottom:4px;">
-                    <button class="voice-play-btn" onclick="handleVoicePlayerClick(this)" style="background:none; border:none; color:var(--accent); font-size:1.15rem; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; padding:0; outline:none;">
+                    <button class="voice-play-btn" onclick="handleVoicePlayerClick(this)" style="background:none; border:none; color:var(--accent, #F2A735); font-size:1.15rem; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; padding:0; outline:none;">
                         <i class="fa-solid fa-play"></i>
                     </button>
-                    <input type="range" class="voice-progress" min="0" max="100" value="0" oninput="handleVoicePlayerSeek(this)" style="flex:1; accent-color:var(--accent); cursor:pointer; height:4px; border:none; background:transparent; outline:none; margin:0;">
-                    <span class="voice-duration" style="font-size:0.75rem; color:var(--gray-600); font-weight:600; min-width:35px; text-align:right;">0:00</span>
+                    <input type="range" class="voice-progress" min="0" max="100" value="0" oninput="handleVoicePlayerSeek(this)" style="flex:1; accent-color:var(--accent, #F2A735); cursor:pointer; height:4px; border:none; background:transparent; outline:none; margin:0;">
+                    <span class="voice-duration" style="font-size:0.75rem; color:var(--gray-600); font-weight:600; min-width:35px; text-align:right;">${durationLabel}</span>
                 </div>
             `;
-        } else if (m.type === 'pdf' || m.type === 'location') {
-            const fileName = m.message.split('/').pop();
+        } else if (m.type === 'pdf' || m.type === 'file' || m.type === 'location') {
+            const displayName = m.file_name || m.message.split('/').pop();
+            const sizeStr = (m.file_size && parseInt(m.file_size) > 0) ? ' (' + formatFileSize(parseInt(m.file_size)) + ')' : '';
+            const downloadUrl = (window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=download_chat_file&file=' + encodeURIComponent(m.message);
             bodyHtml = `
-                <a href="${m.message}" target="_blank" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; padding:6px 10px; background:rgba(0,0,0,0.05); border-radius:8px; margin-bottom:4px; font-weight:500;">
-                    <i class="fa-solid fa-file-lines" style="font-size:1.3rem; color:var(--accent);"></i>
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; font-size:0.75rem;">${fileName}</div>
+                <a href="${downloadUrl}" target="_blank" download style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; padding:8px 12px; background:rgba(0,0,0,0.06); border-radius:10px; margin-bottom:4px; font-weight:600; border:1px solid rgba(255,255,255,0.15);">
+                    <i class="fa-solid fa-file-pdf" style="font-size:1.5rem; color:var(--accent, #F2A735);"></i>
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; font-size:0.78rem;">
+                        <div>${escapeHtml(displayName)}</div>
+                        <div style="font-size:0.65rem; opacity:0.75; font-weight:400;">Download Document${sizeStr}</div>
+                    </div>
+                    <i class="fa-solid fa-download" style="font-size:0.9rem; margin-left:auto; opacity:0.8;"></i>
                 </a>
             `;
         } else {
@@ -2793,7 +2886,7 @@ function initBookingsScreen() {
 
 function openBookingRequestModal(vid, pkgName = '', price = '') {
     // 1. Prevent vendors from booking themselves
-    if (state.user && state.user.vendor_id && Number(state.user.vendor_id) === Number(vid)) {
+    if ((state.user && state.user.vendor_id && Number(state.user.vendor_id) === Number(vid)) || (typeof isOwnVendorProfile === 'function' && isOwnVendorProfile(vid))) {
         showPushNotification('Invalid Action', 'You cannot book your own vendor services.');
         return;
     }
@@ -3129,7 +3222,7 @@ function openSwitchToCustomerModal(vid, pkgName = '', price = '') {
         <div id="sw-otp-section" style="display:none; margin-bottom:16px; padding:12px; background:rgba(var(--accent-rgb),0.05); border:1px dashed var(--accent); border-radius:8px;">
             <label class="form-label" style="font-weight:700; color:var(--accent);">Enter Verification OTP</label>
             <p style="font-size:0.7rem; color:var(--gray-500); margin-bottom:8px;">We have sent a verification code to your new contact info. Please enter it here:</p>
-            <input type="text" id="sw-cust-otp" class="form-input" placeholder="Enter OTP code" maxlength="6" style="letter-spacing:4px; text-align:center; font-weight:700;">
+            <input type="tel" id="sw-cust-otp" name="sw_otp_code" class="form-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter OTP code" maxlength="6" style="letter-spacing:4px; text-align:center; font-weight:700;">
         </div>
         <div style="display:flex; gap:10px;">
             <button class="btn btn-outline btn-full" onclick="closeModal()">Cancel</button>
@@ -4448,7 +4541,7 @@ function initProfileScreen() {
 
         screen.innerHTML = `
             <div class="profile-header">
-                <img class="profile-avatar" src="${window.resolveImageUrl(u.avatar)}" alt="">
+                <img class="profile-avatar" id="profile-avatar" src="${window.resolveImageUrl(u.avatar)}" alt="">
                 <div class="profile-name">${u.name || 'User Profile'}</div>
                 <div class="profile-email">${u.email || u.phone || 'Ohati Planner'}</div>
                 <button class="btn btn-outline btn-xs mb-8" onclick="navigateTo('profile-edit')" style="margin-top:10px; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.4); border-radius:20px; padding:6px 16px; font-weight:700; font-size:0.75rem; cursor:pointer;">
@@ -4466,6 +4559,12 @@ function initProfileScreen() {
             </div>
 
             <div class="profile-menu-section">
+                <div class="profile-menu-item" onclick="showKycInfoModal()">
+                    <div class="profile-menu-icon" style="background:rgba(242,167,53,0.15); color:var(--accent);"><i class="fa-solid fa-id-card"></i></div>
+                    <span class="profile-menu-label" style="font-weight:700;">Identity Verification (KYC)</span>
+                    <span class="badge ${u.kyc_status === 'verified' ? 'badge-success' : 'badge-warning'}" style="font-size:0.65rem; margin-right:8px;">${(u.kyc_status || 'Unverified').replace('_', ' ')}</span>
+                    <i class="fa-solid fa-chevron-right profile-menu-arrow"></i>
+                </div>
                 <div class="profile-menu-item" onclick="openReferAndEarnModal()">
                     <div class="profile-menu-icon" style="background:rgba(var(--accent-rgb),0.12); color:var(--accent);"><i class="fa-solid fa-gift"></i></div>
                     <span class="profile-menu-label" style="font-weight:700;">Refer & Earn Rewards</span>
@@ -4619,14 +4718,14 @@ function openKYCDetailsModal() {
 }
 
 function renderKycStatusBanner(kycStatus) {
-    const st = kycStatus || 'not_started';
-    if (st === 'verified') {
+    const st = (kycStatus || '').toLowerCase();
+    if (st === 'verified' || st === 'approved') {
         return `
             <div class="alert alert-success" style="margin-top:10px; margin-bottom:0; font-size:0.75rem; padding:10px; line-height:1.4; background:#D1FAE5; color:#065F46; border:1px solid #A7F3D0; border-radius:8px;">
-                <i class="fa-solid fa-circle-check" style="color:#10B981;"></i> <strong>Identity Verified:</strong> Blue Badge Active.
+                <i class="fa-solid fa-circle-check" style="color:#10B981;"></i> <strong>Identity Verified:</strong> Verification Badge Active.
             </div>
         `;
-    } else if (st === 'pending_verification') {
+    } else if (st === 'pending_verification' || st === 'pending') {
         return `
             <div class="alert alert-info" style="margin-top:10px; margin-bottom:0; font-size:0.75rem; padding:10px; line-height:1.4; background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; border-radius:8px;">
                 <i class="fa-solid fa-clock" style="color:#F59E0B;"></i> <strong>KYC Submission Under Review:</strong> Your ID documents were received and are currently being reviewed by administrators.
@@ -4650,20 +4749,75 @@ function renderKycStatusBanner(kycStatus) {
 }
 
 // ── 11. VENDOR DASHBOARD SCREEN ──────────────────────────────────────────
+function initVendorDashScreen(params) {
+    const screen = document.getElementById('screen-vendor-dash');
+    if (!screen) return;
+
+    if (!state.user && !localStorage.getItem('ohati_user_session')) {
+        screen.innerHTML = `
+            <div class="text-center" style="padding:80px 20px;">
+                <i class="fa-solid fa-store-slash" style="font-size:3.5rem; color:var(--gray-200); margin-bottom:16px;"></i>
+                <h4>Please Sign In</h4>
+                <p class="text-sm text-muted mb-16">Sign in to access your vendor business dashboard.</p>
+                <button class="btn btn-primary" onclick="openLoginModal()">Sign In</button>
+            </div>
+        `;
+        return;
+    }
+
+    API.getSession().then(res => {
+        if (res && res.user) {
+            state.user = res.user;
+            if (res.vendor) state.vendor = res.vendor;
+        }
+        const userObj = state.user || {};
+        if (!userObj.vendor && state.vendor) userObj.vendor = state.vendor;
+        renderVendorDashScreen(userObj);
+    }).catch(() => {
+        const userObj = state.user || {};
+        if (!userObj.vendor && state.vendor) userObj.vendor = state.vendor;
+        renderVendorDashScreen(userObj);
+    });
+}
+
+function initVendorAutoResponseScreen() {
+    const screen = document.getElementById('screen-vendor-auto-response');
+    if (!screen) return;
+    screen.innerHTML = `
+        <div class="p-section" style="padding-bottom:15px; border-bottom:1px solid var(--gray-100);">
+            <h3 style="font-family:'Fraunces',serif; margin-bottom:4px;">Auto-Response Settings</h3>
+            <div style="font-size:0.75rem; color:var(--gray-500);">Automate instant responses to new client inquiries.</div>
+        </div>
+        <div class="p-section">
+            <div class="card p-16">
+                <div class="form-group mb-12">
+                    <label class="form-label">Welcome Message</label>
+                    <textarea class="form-textarea" id="auto-welcome-msg" placeholder="Thank you for reaching out! We will get back to you shortly.">${state.vendor?.welcome_message || ''}</textarea>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="showPushNotification('Saved', 'Auto-response settings updated.')">Save Settings</button>
+            </div>
+        </div>
+    `;
+}
+
 function renderVendorDashScreen(user) {
     const screen = document.getElementById('screen-vendor-dash');
     if (!screen) return;
 
-    const vendor = user.vendor || {};
-    const isVerified = parseInt(vendor.verified) === 1;
-    const verificationStatus = vendor.verified_status || 'not_started';
+    const vendor = (user && user.vendor) ? user.vendor : (state.vendor ? state.vendor : (state.user?.vendor || {}));
+    const vStatus = (vendor.verification_status || user.vendor_verification_status || user.kyc_status || '').toLowerCase();
+    const dDecision = (vendor.didit_decision || user.didit_decision || '').toLowerCase();
+    const vBadge = (vendor.verification_badge || '').toLowerCase();
+
+    const isVerified = parseInt(vendor.verified) === 1 || vStatus === 'verified' || vStatus === 'approved' || dDecision === 'approved' || vBadge === 'gold' || vBadge === 'blue';
+    const isPending = (vStatus === 'pending' || vStatus === 'pending_verification' || dDecision === 'in review' || dDecision === 'in_review') && dDecision !== 'not started' && dDecision !== 'abandoned' && dDecision !== 'not_started' && dDecision !== 'expired';
     const isPremium = parseInt(vendor.premium) === 1;
     const premiumExpires = vendor.premium_expires_at || '';
 
     let statusBadge = '';
     if (isVerified) {
         statusBadge = '<span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Verified</span>';
-    } else if (verificationStatus === 'pending') {
+    } else if (isPending) {
         statusBadge = '<span class="badge badge-warning"><i class="fa-solid fa-clock"></i> Under Review</span>';
     } else {
         statusBadge = '<span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Unverified</span>';
@@ -4701,137 +4855,90 @@ function renderVendorDashScreen(user) {
     }
 
     screen.innerHTML = `
-        <div class="p-section" style="padding-bottom:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--gray-100);">
+        <div class="p-section" style="padding-bottom:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--gray-100);">
             <div>
-                <h3 style="font-family:'Fraunces',serif; margin-bottom:4px;">Vendor Dashboard</h3>
-                <div style="font-size:0.75rem; color:var(--gray-500);">Manage profile & promotion campaigns</div>
+                <h3 style="margin-bottom:2px; font-weight:700;">Vendor Dashboard</h3>
             </div>
             <div>${statusBadge}</div>
         </div>
 
-        <!-- REAL-TIME ANALYTICS EXECUTIVE DASHBOARD CARD -->
+        <!-- ANALYTICS CARD -->
         <div class="p-section analytics-section-container" style="padding-top:16px; padding-bottom:0;">
-            <div class="card analytics-executive-card">
-                <!-- Header & Live Pulse Badge -->
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--gray-200); padding-bottom:14px;">
-                    <div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <h4 style="margin:0; font-size:1.05rem; font-weight:800; color:var(--primary, #1B2B4B); display:flex; align-items:center; gap:8px;">
-                                <i class="fa-solid fa-chart-line" style="color:var(--accent, #F2A735);"></i> Real-Time Analytics & Growth
-                            </h4>
-                            <span class="live-pulse-badge" style="display:inline-flex; align-items:center; gap:5px; background:rgba(239,68,68,0.1); color:#EF4444; font-size:0.62rem; font-weight:800; padding:3px 9px; border-radius:20px; border:1px solid rgba(239,68,68,0.25);">
-                                <span class="live-pulse-dot" style="width:6px; height:6px; background:#EF4444; border-radius:50%; display:inline-block; animation:pulseRed 1.5s infinite;"></span> LIVE FEED
-                            </span>
-                        </div>
-                        <div style="font-size:0.75rem; color:var(--gray-600, #64748B); margin-top:3px;">Track profile engagement, search rankings, inquiries & booking conversions</div>
-                    </div>
-
-                    <!-- Date Range Summary Badge -->
-                    <div id="analytics-period-badge" style="font-size:0.72rem; font-weight:700; color:var(--primary, #1B2B4B); background:rgba(27,43,75,0.06); padding:6px 12px; border-radius:20px; display:inline-flex; align-items:center; gap:6px;">
-                        <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent, #F2A735);"></i> Displaying: <span id="analytics-range-label" style="font-weight:800;">Last 7 Days</span>
-                    </div>
-                </div>
-
-                <!-- Segmented Filter Control Bar -->
-                <div style="margin-bottom:16px;">
-                    <div class="analytics-segmented-filter" id="analytics-filter-bar">
-                        <button class="analytics-filter-btn" onclick="filterVendorStats('today', this)">⚡ Today</button>
-                        <button class="analytics-filter-btn active" onclick="filterVendorStats('7days', this)">📅 7 Days</button>
-                        <button class="analytics-filter-btn" onclick="filterVendorStats('30days', this)">🗓️ 30 Days</button>
-                        <button class="analytics-filter-btn" onclick="filterVendorStats('this_month', this)">📊 This Month</button>
-                        <button class="analytics-filter-btn" onclick="filterVendorStats('this_year', this)">📈 This Year</button>
-                        <button class="analytics-filter-btn" onclick="toggleCustomAnalyticsDatePicker(this)"><i class="fa-solid fa-sliders"></i> Custom Range</button>
+            <div class="card analytics-executive-card" style="padding:16px; border-radius:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--gray-200); padding-bottom:12px;">
+                    <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:var(--primary, #1B2B4B);">
+                        Overview
+                    </h4>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label for="analytics-period-select" style="font-size:0.75rem; font-weight:600; color:var(--gray-500); margin:0;">Filter:</label>
+                        <select id="analytics-period-select" class="form-select dashboard-filter-select" onchange="handleAnalyticsDropdownChange(this)">
+                            <option value="today">Today</option>
+                            <option value="7days" selected>Last 7 Days</option>
+                            <option value="30days">Last 30 Days</option>
+                            <option value="this_month">This Month</option>
+                            <option value="this_year">This Year</option>
+                            <option value="custom">Custom Range...</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Custom Date Range Picker Container (Collapsible) -->
-                <div id="analytics-custom-date-wrap" style="display:none; background:var(--gray-50, #F8FAFC); padding:16px; border-radius:14px; border:1.5px solid var(--gray-200, #E2E8F0); margin-bottom:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div style="font-size:0.78rem; font-weight:800; color:var(--primary, #1B2B4B); display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-calendar-days" style="color:var(--accent, #F2A735);"></i> Custom Date Range Filter
+                <div id="analytics-custom-date-wrap" style="display:none; background:var(--gray-50, #F8FAFC); padding:12px 14px; border-radius:10px; border:1px solid var(--gray-200, #E2E8F0); margin-bottom:16px;">
+                    <div style="font-size:0.75rem; font-weight:700; color:var(--primary); margin-bottom:8px;">Custom Date Range</div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <div style="flex:1; min-width:130px;">
+                            <label style="font-size:0.68rem; color:var(--gray-600); display:block; margin-bottom:3px; font-weight:600;">From</label>
+                            <input type="date" id="analytics-start-date" class="form-input" style="padding:6px 10px; font-size:0.78rem; border-radius:6px;">
                         </div>
-                        <div style="display:flex; gap:6px;">
-                            <button class="btn btn-xs btn-outline" onclick="setQuickCustomRange(14)" style="font-size:0.65rem;">Last 14 Days</button>
-                            <button class="btn btn-xs btn-outline" onclick="setQuickCustomRange(60)" style="font-size:0.65rem;">Last 60 Days</button>
+                        <div style="flex:1; min-width:130px;">
+                            <label style="font-size:0.68rem; color:var(--gray-600); display:block; margin-bottom:3px; font-weight:600;">To</label>
+                            <input type="date" id="analytics-end-date" class="form-input" style="padding:6px 10px; font-size:0.78rem; border-radius:6px;">
                         </div>
-                    </div>
-                    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                        <div style="flex:1; min-width:140px;">
-                            <label style="font-size:0.68rem; color:var(--gray-600); display:block; margin-bottom:4px; font-weight:700;">From Date</label>
-                            <input type="date" id="analytics-start-date" class="form-input" style="padding:8px 12px; font-size:0.8rem; border-radius:8px;">
-                        </div>
-                        <div style="flex:1; min-width:140px;">
-                            <label style="font-size:0.68rem; color:var(--gray-600); display:block; margin-bottom:4px; font-weight:700;">To Date</label>
-                            <input type="date" id="analytics-end-date" class="form-input" style="padding:8px 12px; font-size:0.8rem; border-radius:8px;">
-                        </div>
-                        <button class="btn btn-primary btn-sm" onclick="applyCustomAnalyticsDateRange()" style="height:38px; margin-top:auto; font-size:0.8rem; padding:0 18px; border-radius:8px;">
-                            <i class="fa-solid fa-filter"></i> Apply Filter
-                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="applyCustomAnalyticsDateRange()" style="height:34px; margin-top:auto; font-size:0.75rem; padding:0 14px; border-radius:6px;">Apply</button>
                     </div>
                 </div>
 
-                <!-- 5-Metric Executive Analytics Grid -->
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap:14px;">
+                <!-- Metrics Grid -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px;">
                     <!-- Metric 1: Profile Views -->
-                    <div class="analytics-stat-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.68rem; color:var(--gray-600, #64748B); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Profile Views</span>
-                            <i class="fa-solid fa-eye" style="color:var(--accent, #F2A735); font-size:0.95rem;"></i>
-                        </div>
-                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.55rem; font-weight:800; color:var(--primary, #1B2B4B); margin:8px 0 4px 0;">--</div>
-                        <div style="font-size:0.68rem; color:#10B981; font-weight:700; display:flex; align-items:center; gap:4px;">
-                            <i class="fa-solid fa-arrow-trend-up"></i> <span id="vd-stat-views-trend">+14.2%</span> vs prior
-                        </div>
+                    <div class="analytics-stat-box" style="padding:12px 14px; border-radius:10px; border:1px solid var(--gray-200); background:var(--white);">
+                        <div style="font-size:0.72rem; color:var(--gray-600); font-weight:600;">Profile Views</div>
+                        <div class="vd-stat-value" id="vd-stat-views" style="font-size:1.4rem; font-weight:700; color:var(--primary); margin:6px 0 2px 0;">--</div>
+                        <div style="font-size:0.68rem; color:#10B981; font-weight:600;" id="vd-stat-views-trend">+14.2%</div>
                     </div>
 
                     <!-- Metric 2: Search Impressions -->
-                    <div class="analytics-stat-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.68rem; color:var(--gray-600, #64748B); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Search Rank</span>
-                            <i class="fa-solid fa-magnifying-glass" style="color:#38BDF8; font-size:0.95rem;"></i>
-                        </div>
-                        <div class="vd-stat-value" id="vd-stat-impressions" style="font-size:1.55rem; font-weight:800; color:var(--primary, #1B2B4B); margin:8px 0 4px 0;">--</div>
-                        <div style="font-size:0.68rem; color:#38BDF8; font-weight:700;">Search Impressions</div>
+                    <div class="analytics-stat-box" style="padding:12px 14px; border-radius:10px; border:1px solid var(--gray-200); background:var(--white);">
+                        <div style="font-size:0.72rem; color:var(--gray-600); font-weight:600;">Search Rank</div>
+                        <div class="vd-stat-value" id="vd-stat-impressions" style="font-size:1.4rem; font-weight:700; color:var(--primary); margin:6px 0 2px 0;">--</div>
                     </div>
 
                     <!-- Metric 3: Client Inquiries -->
-                    <div class="analytics-stat-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.68rem; color:var(--gray-600, #64748B); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Inquiries</span>
-                            <i class="fa-solid fa-comments" style="color:#8B5CF6; font-size:0.95rem;"></i>
-                        </div>
-                        <div class="vd-stat-value" id="vd-stat-chats" style="font-size:1.55rem; font-weight:800; color:var(--primary, #1B2B4B); margin:8px 0 4px 0;">--</div>
-                        <div style="font-size:0.68rem; color:#8B5CF6; font-weight:700;">Direct Customer Chats</div>
+                    <div class="analytics-stat-box" style="padding:12px 14px; border-radius:10px; border:1px solid var(--gray-200); background:var(--white);">
+                        <div style="font-size:0.72rem; color:var(--gray-600); font-weight:600;">Inquiries</div>
+                        <div class="vd-stat-value" id="vd-stat-chats" style="font-size:1.4rem; font-weight:700; color:var(--primary); margin:6px 0 2px 0;">--</div>
                     </div>
 
                     <!-- Metric 4: Bookings & Revenue -->
-                    <div class="analytics-stat-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.68rem; color:var(--gray-600, #64748B); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Bookings</span>
-                            <i class="fa-solid fa-calendar-check" style="color:#10B981; font-size:0.95rem;"></i>
-                        </div>
-                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.55rem; font-weight:800; color:var(--primary, #1B2B4B); margin:8px 0 4px 0;">--</div>
-                        <div style="font-size:0.68rem; color:#10B981; font-weight:800;" id="vd-stat-revenue">GH₵ 0.00 Est.</div>
+                    <div class="analytics-stat-box" style="padding:12px 14px; border-radius:10px; border:1px solid var(--gray-200); background:var(--white);">
+                        <div style="font-size:0.72rem; color:var(--gray-600); font-weight:600;">Bookings</div>
+                        <div class="vd-stat-value" id="vd-stat-bookings" style="font-size:1.4rem; font-weight:700; color:var(--primary); margin:6px 0 2px 0;">--</div>
+                        <div style="font-size:0.68rem; color:var(--gray-500); font-weight:600;" id="vd-stat-revenue">GH₵ 0.00</div>
                     </div>
 
                     <!-- Metric 5: Conversion Rate -->
-                    <div class="analytics-stat-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.68rem; color:var(--gray-600, #64748B); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Conversion</span>
-                            <i class="fa-solid fa-bullseye" style="color:#EC4899; font-size:0.95rem;"></i>
-                        </div>
-                        <div class="vd-stat-value" id="vd-stat-conv" style="font-size:1.55rem; font-weight:800; color:var(--primary, #1B2B4B); margin:8px 0 4px 0;">--%</div>
-                        <div style="font-size:0.68rem; color:#EC4899; font-weight:700;">View to Booking Ratio</div>
+                    <div class="analytics-stat-box" style="padding:12px 14px; border-radius:10px; border:1px solid var(--gray-200); background:var(--white);">
+                        <div style="font-size:0.72rem; color:var(--gray-600); font-weight:600;">Conversion</div>
+                        <div class="vd-stat-value" id="vd-stat-conv" style="font-size:1.4rem; font-weight:700; color:var(--primary); margin:6px 0 2px 0;">--%</div>
                     </div>
                 </div>
 
-                <!-- Executive Smooth Wave Trend Curve Chart -->
-                <div style="margin-top:20px; background:var(--gray-50, #F8FAFC); padding:16px; border-radius:14px; border:1px solid var(--gray-200, #E2E8F0);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span style="font-size:0.75rem; font-weight:800; color:var(--primary, #1B2B4B); text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-chart-area" style="color:var(--accent, #F2A735);"></i> Interactive Engagement Wave Trend
+                <!-- Trend Chart Container -->
+                <div style="margin-top:16px; background:var(--gray-50, #F8FAFC); padding:14px; border-radius:10px; border:1px solid var(--gray-200, #E2E8F0);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--primary, #1B2B4B);">
+                            Engagement Trend
                         </span>
-                        <span style="font-size:0.68rem; color:var(--gray-600); font-weight:700;">Peak Volume: <strong style="color:var(--accent,#F2A735);">Weekend Peak</strong></span>
                     </div>
 
                     <div style="position:relative; width:100%; height:120px; overflow:hidden;">
@@ -4886,7 +4993,7 @@ function renderVendorDashScreen(user) {
                             <i class="fa-solid fa-rectangle-ad" style="color:var(--accent);"></i> Promotions Hub
                         </h4>
                         <p style="margin:0; font-size:0.7rem; opacity:0.9; line-height:1.4; color:#fff;">
-                            Run targeted search & homepage campaigns, check your live analytics (impressions, clicks), and renew or upgrade active promotions.
+                            Run targeted search & homepage campaigns and monitor live real-time analytics (impressions, clicks).
                         </p>
                     </div>
                     <div>
@@ -4979,15 +5086,30 @@ window.toggleCustomAnalyticsDatePicker = function(btnEl) {
     }
 };
 
+window.handleAnalyticsDropdownChange = function(selectEl) {
+    const val = selectEl.value;
+    if (val === 'custom') {
+        const customWrap = document.getElementById('analytics-custom-date-wrap');
+        if (customWrap) customWrap.style.display = 'block';
+    } else {
+        filterVendorStats(val, selectEl);
+    }
+};
+
 window.filterVendorStats = function(period, btnEl) {
     const customWrap = document.getElementById('analytics-custom-date-wrap');
     if (customWrap && period !== 'custom') customWrap.style.display = 'none';
 
-    if (btnEl) {
+    if (btnEl && btnEl.tagName !== 'SELECT') {
         document.querySelectorAll('.analytics-segmented-filter .analytics-filter-btn').forEach(b => {
             b.classList.remove('active');
         });
         btnEl.classList.add('active');
+    }
+
+    const selectEl = document.getElementById('analytics-period-select');
+    if (selectEl && selectEl.value !== period && period !== 'custom') {
+        selectEl.value = period;
     }
 
     loadVendorRealtimeAnalytics({ period });
@@ -5004,75 +5126,54 @@ window.loadVendorRealtimeAnalytics = function(opts = {}) {
     const trendEl = document.getElementById('vd-stat-views-trend');
     const labelEl = document.getElementById('analytics-range-label');
 
-    const vendor = (state.user && state.user.vendor) ? state.user.vendor : {};
-    const baseViews = vendor.views_count || 148;
-    const baseBookings = vendor.bookings_count || 12;
+    const vendor = (state.user && state.user.vendor) ? state.user.vendor : (state.vendor || {});
+    const vendorId = vendor.id || 0;
 
-    let viewMultiplier = 1;
-    let bookingMultiplier = 1;
-    let trendText = '+14.2%';
     let periodName = 'Last 7 Days';
-
     switch (period) {
-        case 'today':
-            viewMultiplier = 0.12;
-            bookingMultiplier = 0.15;
-            trendText = '+8.5%';
-            periodName = 'Today';
-            break;
-        case '7days':
-            viewMultiplier = 0.45;
-            bookingMultiplier = 0.50;
-            trendText = '+14.2%';
-            periodName = 'Last 7 Days';
-            break;
-        case '30days':
-            viewMultiplier = 1.0;
-            bookingMultiplier = 1.0;
-            trendText = '+22.8%';
-            periodName = 'Last 30 Days';
-            break;
-        case 'this_month':
-            viewMultiplier = 0.85;
-            bookingMultiplier = 0.85;
-            trendText = '+18.6%';
-            periodName = 'This Month';
-            break;
-        case 'this_year':
-            viewMultiplier = 4.2;
-            bookingMultiplier = 4.5;
-            trendText = '+45.1%';
-            periodName = 'This Year';
-            break;
+        case 'today': periodName = 'Today'; break;
+        case '7days': periodName = 'Last 7 Days'; break;
+        case '30days': periodName = 'Last 30 Days'; break;
+        case 'this_month': periodName = 'This Month'; break;
+        case 'this_year': periodName = 'This Year'; break;
         case 'custom':
-            const startStr = opts.startDate || opts.start_date;
-            const endStr = opts.endDate || opts.end_date;
-            const start = startStr ? new Date(startStr) : new Date();
-            const end = endStr ? new Date(endStr) : new Date();
-            const diffMs = Math.max(0, end - start);
-            const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-            viewMultiplier = Math.max(0.1, (days / 30));
-            bookingMultiplier = Math.max(0.1, (days / 30));
-            trendText = `${days} Days Range`;
-            periodName = `Custom (${startStr || ''} to ${endStr || ''})`;
+            const startStr = opts.startDate || opts.start_date || '';
+            const endStr = opts.endDate || opts.end_date || '';
+            periodName = `Custom (${startStr} to ${endStr})`;
             break;
     }
-
-    const calcViews = Math.max(1, Math.round(baseViews * viewMultiplier));
-    const calcBookings = Math.max(0, Math.round(baseBookings * bookingMultiplier));
-    const calcImpressions = Math.round(calcViews * 3.4);
-    const calcChats = Math.round(calcBookings * 2.8);
-    const calcRevenue = calcBookings * 450;
-    const calcConv = calcViews > 0 ? ((calcBookings / calcViews) * 100).toFixed(1) : '0.0';
-
-    if (viewsEl) viewsEl.textContent = calcViews.toLocaleString();
-    if (bookingsEl) bookingsEl.textContent = calcBookings.toLocaleString();
-    if (impressionsEl) impressionsEl.textContent = calcImpressions.toLocaleString();
-    if (chatsEl) chatsEl.textContent = calcChats.toLocaleString();
-    if (revenueEl) revenueEl.textContent = `GH₵ ${calcRevenue.toLocaleString()} Est.`;
-    if (convEl) convEl.textContent = `${calcConv}%`;
-    if (trendEl) trendEl.textContent = trendText;
     if (labelEl) labelEl.textContent = periodName;
+
+    API.get('vendor_stats', {
+        period: period,
+        vendor_id: vendorId,
+        start_date: opts.startDate || '',
+        end_date: opts.endDate || ''
+    }).then(res => {
+        if (!res || !res.success) return;
+        const vCount = parseInt(res.views || 0);
+        const bCount = parseInt(res.bookings || 0);
+        const impCount = parseInt(res.impressions || 0);
+        const cCount = parseInt(res.chats || 0);
+        const revVal = parseFloat(res.revenue || 0);
+        const convVal = parseFloat(res.conversion_rate || 0);
+
+        if (viewsEl) viewsEl.textContent = vCount.toLocaleString();
+        if (bookingsEl) bookingsEl.textContent = bCount.toLocaleString();
+        if (impressionsEl) impressionsEl.textContent = impCount.toLocaleString();
+        if (chatsEl) chatsEl.textContent = cCount.toLocaleString();
+        if (revenueEl) revenueEl.textContent = 'GH₵ ' + revVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (convEl) convEl.textContent = convVal.toFixed(1) + '%';
+        if (trendEl) trendEl.textContent = vCount > 0 ? 'Real Metrics' : '0%';
+    }).catch(() => {
+        if (viewsEl) viewsEl.textContent = '0';
+        if (bookingsEl) bookingsEl.textContent = '0';
+        if (impressionsEl) impressionsEl.textContent = '0';
+        if (chatsEl) chatsEl.textContent = '0';
+        if (revenueEl) revenueEl.textContent = 'GH₵ 0.00';
+        if (convEl) convEl.textContent = '0.0%';
+        if (trendEl) trendEl.textContent = '0%';
+    });
 
     // Dynamically animate mini sparkline chart bar heights
     const bars = document.querySelectorAll('#analytics-mini-chart .analytics-chart-bar');
@@ -5224,11 +5325,170 @@ window.showPremiumUpgradeModal = function() {
 function showKycInfoModal() {
     const html = `
         <div style="padding:10px;">
+            <div style="text-align:center; margin-bottom:18px;">
+                <div style="width:64px; height:64px; border-radius:50%; background:rgba(242, 167, 53, 0.12); display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; color:var(--accent); font-size:1.8rem;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 style="font-family:'Fraunces',serif; margin-bottom:6px; font-size:1.25rem;">Automated Identity Verification</h3>
+                <p style="font-size:0.78rem; color:var(--gray-600); line-height:1.5; max-width:360px; margin:0 auto;">
+                    Instant identity verification. Scan your Ghana Card or National ID & perform a quick selfie check in under 60 seconds.
+                </p>
+            </div>
+
+            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px; margin-bottom:18px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:0.75rem; font-weight:700; color:#0F172A;">
+                    <i class="fa-solid fa-bolt" style="color:var(--accent);"></i> Fast, Automated & Secure
+                </div>
+                <div style="font-size:0.72rem; color:#64748B; line-height:1.4;">
+                    Your identity is verified securely via automated identity protocols. Verification badges update automatically upon completion.
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-full" id="didit-start-btn" onclick="startDiditKycFlow()" style="padding:12px; font-weight:800; font-size:0.88rem; border-radius:12px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3);">
+                <i class="fa-solid fa-bolt"></i> Start Automated Verification
+            </button>
+        </div>
+    `;
+    openModal(html);
+}
+
+window.checkPostSignupKycPrompt = function() {
+    if (sessionStorage.getItem('ohati_just_registered_kyc_prompt') === '1') {
+        sessionStorage.removeItem('ohati_just_registered_kyc_prompt');
+        setTimeout(() => {
+            if (typeof showKycInfoModal === 'function') {
+                showKycInfoModal();
+            }
+        }, 700);
+    }
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.checkPostSignupKycPrompt());
+} else {
+    window.checkPostSignupKycPrompt();
+}
+
+window.startDiditKycFlow = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const btn = document.getElementById('didit-start-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Initializing Portal...';
+    }
+
+    API.initDiditKyc()
+        .then(res => {
+            if (res && res.url) {
+                closeModal();
+                if (typeof renderDiditKycScreen === 'function') {
+                    renderDiditKycScreen({ url: res.url, session_id: res.session_id });
+                }
+                if (typeof navigateTo === 'function') {
+                    navigateTo('didit-kyc', { url: res.url, session_id: res.session_id }, { force: true });
+                } else if (typeof renderDiditKycScreen !== 'function') {
+                    window.location.href = res.url;
+                }
+            } else {
+                throw new Error(res?.error || 'Could not retrieve verification session URL.');
+            }
+        })
+        .catch(err => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Retry Verification';
+            }
+            showPushNotification('Verification Error', err.message || 'Could not initialize verification.');
+        });
+};
+
+function renderDiditKycScreen(params) {
+    const screen = document.getElementById('screen-didit-kyc');
+    if (!screen) return;
+
+    const url = params?.url || '';
+    const sessionId = params?.session_id || '';
+
+    screen.innerHTML = `
+        <div style="display:flex; flex-direction:column; height:100vh; background:#F8FAFC;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#0B1F3A; color:#fff; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button onclick="navigateTo('vendor-dash')" style="background:none; border:none; color:#fff; font-size:1.1rem; cursor:pointer;">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <span style="font-weight:700; font-size:0.95rem;">Identity Verification</span>
+                </div>
+                <button onclick="navigateTo('vendor-dash')" style="background:none; border:none; color:#fff; font-size:1.1rem; cursor:pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div style="flex:1; width:100%; position:relative; background:#F8FAFC;">
+                ${url ? `<iframe src="${url}" allow="camera; microphone; fullscreen; autoplay; encrypted-media" style="width:100%; height:100%; border:none;"></iframe>` : '<div style="padding:40px; text-align:center;">Invalid verification session.</div>'}
+            </div>
+        </div>
+    `;
+
+    if (sessionId) {
+        window.pollDiditKycStatus(sessionId);
+    }
+}
+
+window.closeDiditKycModal = function(sessionId) {
+    if (window._diditPollInterval) {
+        clearInterval(window._diditPollInterval);
+        window._diditPollInterval = null;
+    }
+    closeModal();
+    if (typeof API.getSession === 'function') {
+        API.getSession().then(res => {
+            if (res && res.user) state.user = res.user;
+            if (typeof renderVendorDashScreen === 'function') renderVendorDashScreen(state.user || {});
+        });
+    }
+};
+
+window.pollDiditKycStatus = function(sessionId) {
+    if (window._diditPollInterval) clearInterval(window._diditPollInterval);
+
+    let attempts = 0;
+    window._diditPollInterval = setInterval(() => {
+        attempts++;
+        if (attempts > 75) {
+            clearInterval(window._diditPollInterval);
+            window._diditPollInterval = null;
+            return;
+        }
+
+        API.checkDiditKyc(sessionId).then(res => {
+            if (res && res.status === 'Approved') {
+                clearInterval(window._diditPollInterval);
+                window._diditPollInterval = null;
+                showPushNotification('Identity Verified 🎉', 'Your verification was completed successfully!');
+                closeModal();
+                API.getSession().then(r => {
+                    if (r && r.user) state.user = r.user;
+                    if (typeof navigateTo === 'function') navigateTo('vendor-dash');
+                    else if (typeof renderVendorDashScreen === 'function') renderVendorDashScreen(state.user || {});
+                });
+            } else if (res && res.status === 'Declined') {
+                clearInterval(window._diditPollInterval);
+                window._diditPollInterval = null;
+                showPushNotification('Verification Declined', 'Verification could not be completed. Please try again.');
+                closeModal();
+                if (typeof navigateTo === 'function') navigateTo('vendor-dash');
+            }
+        }).catch(() => {});
+    }, 4000);
+};
+
+window.showManualKycFallbackModal = function() {
+    const html = `
+        <div style="padding:10px;">
             <div style="text-align:center; margin-bottom:16px;">
-                <i class="fa-solid fa-shield-halved" style="font-size:2.5rem; color:var(--primary); margin-bottom:10px;"></i>
-                <h3 style="font-family:'Fraunces',serif; margin-bottom:6px;">Identity Verification</h3>
+                <i class="fa-solid fa-file-arrow-up" style="font-size:2.2rem; color:var(--primary); margin-bottom:10px;"></i>
+                <h3 style="font-family:'Fraunces',serif; margin-bottom:6px;">Manual ID Upload</h3>
                 <p style="font-size:0.75rem; color:var(--gray-600); line-height:1.5;">
-                    Upload a valid government-issued ID and a selfie holding it to verify your identity.
+                    Upload photos of your government ID and a selfie for manual admin review.
                 </p>
             </div>
             <div class="form-group">
@@ -5251,12 +5511,12 @@ function showKycInfoModal() {
                 <input type="file" id="kyc-modal-file-selfie" accept="image/*" style="display:none;" onchange="handleKycModalFile(event, 'selfie')">
             </div>
             <button class="btn btn-primary btn-full" id="kyc-modal-submit-btn" onclick="submitKycFromModal()">
-                Submit for Verification
+                Submit for Manual Review
             </button>
         </div>
     `;
     openModal(html);
-}
+};
 
 window._kycModalData = { id_front: '', selfie: '' };
 
@@ -5660,18 +5920,26 @@ function initVendorAdsScreen() {
     state.activePromoTab = state.activePromoTab || 'campaigns';
 
     screen.innerHTML = `
-        <div class="p-section" style="padding-bottom:10px; border-bottom:1px solid var(--gray-100); display:flex; justify-content:space-between; align-items:center; background:var(--white);">
+        <div class="p-section" style="padding-bottom:14px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center; background:#ffffff; border-radius:16px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
             <div>
-                <h3 style="font-family:'Fraunces',serif; margin-bottom:4px;">Promotions Hub</h3>
-                <div style="font-size:0.75rem; color:var(--gray-600);">Grow your business visibility</div>
+                <h3 style="font-family:'Fraunces',serif; font-size:1.35rem; font-weight:800; color:#0F172A; margin:0 0 4px 0;">Promotions & Campaign Hub</h3>
+                <div style="font-size:0.78rem; color:#64748B; font-weight:500;">Scale your business visibility to top event planners across Ghana</div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="switchPromoTab('packages')"><i class="fa-solid fa-rocket"></i> Advertise Business</button>
+            <button class="btn btn-primary btn-sm" onclick="switchPromoTab('packages')" style="background:linear-gradient(135deg, var(--accent) 0%, #d98e20 100%); color:#0B1F3A; border:none; font-weight:800; padding:8px 16px; border-radius:10px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.25);">
+                <i class="fa-solid fa-rocket"></i> Advertise Business
+            </button>
         </div>
 
-        <div style="display:flex; border-bottom:1px solid var(--gray-200); background:var(--white); position:sticky; top:0; z-index:10;">
-            <button onclick="switchPromoTab('campaigns')" id="promo-tab-campaigns" class="promo-tab-btn ${state.activePromoTab === 'campaigns' ? 'active' : ''}" style="flex:1; padding:12px; font-size:0.75rem; font-weight:700; border:none; background:none; border-bottom:2px solid ${state.activePromoTab === 'campaigns' ? 'var(--primary)' : 'transparent'}; color:${state.activePromoTab === 'campaigns' ? 'var(--primary)' : 'var(--gray-600)'}; cursor:pointer;">My Campaigns</button>
-            <button onclick="switchPromoTab('packages')" id="promo-tab-packages" class="promo-tab-btn ${state.activePromoTab === 'packages' ? 'active' : ''}" style="flex:1; padding:12px; font-size:0.75rem; font-weight:700; border:none; background:none; border-bottom:2px solid ${state.activePromoTab === 'packages' ? 'var(--primary)' : 'transparent'}; color:${state.activePromoTab === 'packages' ? 'var(--primary)' : 'var(--gray-600)'}; cursor:pointer;">Promo Packages</button>
-            <button onclick="switchPromoTab('analytics')" id="promo-tab-analytics" class="promo-tab-btn ${state.activePromoTab === 'analytics' ? 'active' : ''}" style="flex:1; padding:12px; font-size:0.75rem; font-weight:700; border:none; background:none; border-bottom:2px solid ${state.activePromoTab === 'analytics' ? 'var(--primary)' : 'transparent'}; color:${state.activePromoTab === 'analytics' ? 'var(--primary)' : 'var(--gray-600)'}; cursor:pointer;">Performance Analytics</button>
+        <div class="promo-nav-tabs-desktop" style="display:flex; background:#F1F5F9; position:sticky; top:0; z-index:10; border-radius:12px; margin-bottom:20px; padding:4px; border:1px solid #E2E8F0;">
+            <button onclick="switchPromoTab('campaigns')" id="promo-tab-campaigns" class="promo-tab-btn ${state.activePromoTab === 'campaigns' ? 'active' : ''}" style="flex:1; padding:10px 14px; font-size:0.75rem; font-weight:700; border:none; background:${state.activePromoTab === 'campaigns' ? '#0B1F3A' : 'transparent'}; border-radius:10px; color:${state.activePromoTab === 'campaigns' ? '#FFFFFF' : '#64748B'}; cursor:pointer; transition:all 0.2s ease;">
+                <i class="fa-solid fa-rectangle-ad"></i> My Campaigns
+            </button>
+            <button onclick="switchPromoTab('packages')" id="promo-tab-packages" class="promo-tab-btn ${state.activePromoTab === 'packages' ? 'active' : ''}" style="flex:1; padding:10px 14px; font-size:0.75rem; font-weight:700; border:none; background:${state.activePromoTab === 'packages' ? '#0B1F3A' : 'transparent'}; border-radius:10px; color:${state.activePromoTab === 'packages' ? '#FFFFFF' : '#64748B'}; cursor:pointer; transition:all 0.2s ease;">
+                <i class="fa-solid fa-gem"></i> Promo Packages
+            </button>
+            <button onclick="switchPromoTab('analytics')" id="promo-tab-analytics" class="promo-tab-btn ${state.activePromoTab === 'analytics' ? 'active' : ''}" style="flex:1; padding:10px 14px; font-size:0.75rem; font-weight:700; border:none; background:${state.activePromoTab === 'analytics' ? '#0B1F3A' : 'transparent'}; border-radius:10px; color:${state.activePromoTab === 'analytics' ? '#FFFFFF' : '#64748B'}; cursor:pointer; transition:all 0.2s ease;">
+                <i class="fa-solid fa-chart-line"></i> Performance Analytics
+            </button>
         </div>
 
         <div id="promo-tab-content-container"></div>
@@ -5744,58 +6012,154 @@ function renderVendorAdsList(ads) {
     const scheduled = ads.filter(ad => new Date(ad.start_date.replace(/-/g, '/')) > now && ad.status === 'active');
     const expired = ads.filter(ad => new Date(ad.end_date.replace(/-/g, '/')) < now || ad.status === 'expired');
 
+    const totalViews = ads.reduce((sum, a) => sum + (parseInt(a.impressions || a.views_count || 0) || 0), 0);
+    const totalClicks = ads.reduce((sum, a) => sum + (parseInt(a.clicks || 0) || 0), 0);
+    const overallCtr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : '0.0';
+
     container.innerHTML = `
-        <div class="p-section" style="padding-bottom:12px; display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
-            <div class="card text-center" style="padding:10px 4px; background:rgba(46, 204, 113, 0.05); border-color:rgba(46, 204, 113, 0.2);">
-                <div style="font-size:1.1rem; font-weight:800; color:#2ecc71;">${active.length}</div>
-                <div style="font-size:0.55rem; color:var(--gray-600); text-transform:uppercase; font-weight:700; margin-top:2px;">Active</div>
-            </div>
-            <div class="card text-center" style="padding:10px 4px; background:rgba(241, 196, 15, 0.05); border-color:rgba(241, 196, 15, 0.2);">
-                <div style="font-size:1.1rem; font-weight:800; color:#f1c40f;">${pending.length}</div>
-                <div style="font-size:0.55rem; color:var(--gray-600); text-transform:uppercase; font-weight:700; margin-top:2px;">Pending</div>
-            </div>
-            <div class="card text-center" style="padding:10px 4px; background:rgba(52, 152, 219, 0.05); border-color:rgba(52, 152, 219, 0.2);">
-                <div style="font-size:1.1rem; font-weight:800; color:#3498db;">${scheduled.length}</div>
-                <div style="font-size:0.55rem; color:var(--gray-600); text-transform:uppercase; font-weight:700; margin-top:2px;">Scheduled</div>
-            </div>
-            <div class="card text-center" style="padding:10px 4px; background:rgba(231, 76, 60, 0.05); border-color:rgba(231, 76, 60, 0.2);">
-                <div style="font-size:1.1rem; font-weight:800; color:#e74c3c;">${expired.length}</div>
-                <div style="font-size:0.55rem; color:var(--gray-600); text-transform:uppercase; font-weight:700; margin-top:2px;">Expired</div>
+        <!-- Dashboard Hero Header -->
+        <div class="p-section" style="padding-bottom:8px;">
+            <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 60%, #0F172A 100%); padding:18px 20px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25); box-shadow:0 8px 24px rgba(11, 31, 58, 0.15); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; box-shadow:0 0 8px #10B981;"></span>
+                        <span style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800;">Real-Time Campaign Analytics</span>
+                    </div>
+                    <h3 style="font-family:'Fraunces',serif; font-size:1.15rem; margin:0; font-weight:700; color:#ffffff;">Campaign Performance Overview</h3>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="switchPromoTab('packages')" style="background:linear-gradient(135deg, var(--accent) 0%, #d98e20 100%); border:none; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3); color:#0B1F3A; font-weight:800; font-size:0.75rem; padding:8px 14px; border-radius:10px;">
+                    <i class="fa-solid fa-plus-circle"></i> New Campaign
+                </button>
             </div>
         </div>
 
+        <!-- Executive Stat Cards Grid -->
+        <div class="p-section" style="padding-top:4px; padding-bottom:14px; display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;">
+            <!-- Active Card -->
+            <div class="card" style="padding:14px 12px; background:#ffffff; border:1px solid #E2E8F0; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.03); transition:all 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:0.62rem; font-weight:700; text-transform:uppercase; color:#64748B; letter-spacing:0.5px;">Active Ads</span>
+                    <div style="width:28px; height:28px; border-radius:8px; background:rgba(16, 185, 129, 0.12); display:flex; align-items:center; justify-content:center; color:#10B981; font-size:0.75rem;">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+                <div style="font-size:1.35rem; font-weight:800; color:#0F172A; line-height:1;">${active.length}</div>
+                <div style="font-size:0.6rem; color:#10B981; font-weight:600; margin-top:4px;"><i class="fa-solid fa-bolt"></i> Live & Running</div>
+            </div>
+
+            <!-- Pending Card -->
+            <div class="card" style="padding:14px 12px; background:#ffffff; border:1px solid #E2E8F0; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.03); transition:all 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:0.62rem; font-weight:700; text-transform:uppercase; color:#64748B; letter-spacing:0.5px;">Pending</span>
+                    <div style="width:28px; height:28px; border-radius:8px; background:rgba(245, 158, 11, 0.12); display:flex; align-items:center; justify-content:center; color:#F59E0B; font-size:0.75rem;">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+                <div style="font-size:1.35rem; font-weight:800; color:#0F172A; line-height:1;">${pending.length}</div>
+                <div style="font-size:0.6rem; color:#F59E0B; font-weight:600; margin-top:4px;"><i class="fa-solid fa-spinner fa-spin-pulse"></i> In Review</div>
+            </div>
+
+            <!-- Views Card -->
+            <div class="card" style="padding:14px 12px; background:#ffffff; border:1px solid #E2E8F0; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.03); transition:all 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:0.62rem; font-weight:700; text-transform:uppercase; color:#64748B; letter-spacing:0.5px;">Total Views</span>
+                    <div style="width:28px; height:28px; border-radius:8px; background:rgba(59, 130, 246, 0.12); display:flex; align-items:center; justify-content:center; color:#3B82F6; font-size:0.75rem;">
+                        <i class="fa-solid fa-eye"></i>
+                    </div>
+                </div>
+                <div style="font-size:1.35rem; font-weight:800; color:#0F172A; line-height:1;">${totalViews.toLocaleString()}</div>
+                <div style="font-size:0.6rem; color:#3B82F6; font-weight:600; margin-top:4px;"><i class="fa-solid fa-chart-line"></i> Total Impressions</div>
+            </div>
+
+            <!-- Clicks Card -->
+            <div class="card" style="padding:14px 12px; background:#ffffff; border:1px solid #E2E8F0; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.03); transition:all 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:0.62rem; font-weight:700; text-transform:uppercase; color:#64748B; letter-spacing:0.5px;">Total Clicks</span>
+                    <div style="width:28px; height:28px; border-radius:8px; background:rgba(139, 92, 246, 0.12); display:flex; align-items:center; justify-content:center; color:#8B5CF6; font-size:0.75rem;">
+                        <i class="fa-solid fa-arrow-pointer"></i>
+                    </div>
+                </div>
+                <div style="font-size:1.35rem; font-weight:800; color:#0F172A; line-height:1;">${totalClicks.toLocaleString()}</div>
+                <div style="font-size:0.6rem; color:#8B5CF6; font-weight:600; margin-top:4px;"><i class="fa-solid fa-bullseye"></i> ${overallCtr}% Avg CTR</div>
+            </div>
+        </div>
+
+        <!-- Campaign Cards List -->
         <div class="p-section" style="padding-top:0;">
             ${ads.length === 0 ? `
-                <div class="text-center" style="padding:40px 0; background:var(--gray-50); border-radius:12px; border:1px dashed var(--gray-200);">
-                    <i class="fa-solid fa-rectangle-ad" style="font-size:3rem; color:var(--gray-300); margin-bottom:12px;"></i>
-                    <p class="text-sm text-muted" style="margin-bottom:12px;">No active campaigns found</p>
-                    <button class="btn btn-primary btn-sm" onclick="switchPromoTab('packages')">Explore Promotion Packages</button>
+                <div class="text-center" style="padding:48px 20px; background:linear-gradient(180deg, #F8FAFC 0%, #EDF2F7 100%); border-radius:16px; border:2px dashed #CBD5E1;">
+                    <div style="width:64px; height:64px; border-radius:50%; background:rgba(27, 43, 75, 0.08); display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; color:var(--primary); font-size:1.8rem;">
+                        <i class="fa-solid fa-rectangle-ad"></i>
+                    </div>
+                    <h4 style="font-family:'Fraunces',serif; font-size:1.1rem; color:#0F172A; margin:0 0 6px 0;">No Active Ad Campaigns</h4>
+                    <p style="font-size:0.78rem; color:#64748B; max-width:340px; margin:0 auto 18px auto; line-height:1.4;">Boost your brand reach to thousands of Ghanaian event planners across Accra, Kumasi, and nationwide.</p>
+                    <button class="btn btn-primary btn-md" onclick="switchPromoTab('packages')" style="border-radius:12px; font-weight:700; padding:10px 20px;">
+                        <i class="fa-solid fa-rocket"></i> Explore Promotion Packages
+                    </button>
                 </div>
             ` : `
-                <div style="display:flex; flex-direction:column; gap:12px;">
+                <div class="promo-cards-grid" style="display:flex; flex-direction:column; gap:14px;">
                     ${ads.map(ad => {
+                        const views = parseInt(ad.impressions || ad.views_count || 0) || 0;
+                        const clicks = parseInt(ad.clicks || 0) || 0;
+                        const ctr = views > 0 ? ((clicks / views) * 100).toFixed(1) : '0.0';
                         const isExp = new Date(ad.end_date.replace(/-/g, '/')) < now;
-                        const statusLbl = isExp ? '<span class="badge badge-error">Expired</span>' : 
-                            (ad.status === 'pending' ? '<span class="badge badge-warning">Pending</span>' : '<span class="badge badge-success">Active</span>');
+                        
+                        let statusBadge = '';
+                        if (isExp) {
+                            statusBadge = `<span style="background:rgba(239, 68, 68, 0.1); color:#EF4444; font-size:0.65rem; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-lock"></i> Expired</span>`;
+                        } else if (ad.status === 'pending') {
+                            statusBadge = `<span style="background:rgba(245, 158, 11, 0.1); color:#D97706; font-size:0.65rem; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid rgba(245, 158, 11, 0.2);"><i class="fa-solid fa-hourglass-half fa-spin"></i> Pending Approval</span>`;
+                        } else {
+                            statusBadge = `<span style="background:rgba(16, 185, 129, 0.1); color:#059669; font-size:0.65rem; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid rgba(16, 185, 129, 0.2); display:inline-flex; align-items:center; gap:5px;"><span style="width:6px; height:6px; border-radius:50%; background:#10B981;"></span> Active</span>`;
+                        }
+
                         return `
-                            <div class="card" style="padding:16px;">
-                                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                            <div class="card" style="padding:18px; border-radius:16px; border:1px solid #E2E8F0; background:#ffffff; box-shadow:0 4px 16px rgba(0,0,0,0.03); transition:transform 0.2s ease, box-shadow 0.2s ease;">
+                                <!-- Top Row: Title, Placement & Status -->
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:10px;">
                                     <div>
-                                        <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:2px;">${ad.title}</h4>
-                                        <p style="font-size:0.7rem; color:var(--gray-600); line-height:1.3; margin-bottom:4px;">${ad.description}</p>
+                                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                                            <h4 style="font-size:0.92rem; font-weight:800; color:#0F172A; margin:0;">${ad.title}</h4>
+                                            <span style="font-size:0.6rem; font-weight:700; background:#F1F5F9; color:#475569; padding:2px 8px; border-radius:6px; text-transform:uppercase;">
+                                                <i class="fa-solid fa-bullseye" style="color:var(--accent);"></i> ${ad.placement || ad.target_category || 'Homepage / Search'}
+                                            </span>
+                                        </div>
+                                        <p style="font-size:0.73rem; color:#64748B; line-height:1.4; margin:0;">${ad.description || 'Targeted Advertising Campaign'}</p>
                                     </div>
-                                    ${statusLbl}
+                                    <div>${statusBadge}</div>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--gray-400); background:var(--gray-50); padding:8px; border-radius:6px; margin-bottom:12px;">
-                                    <span><i class="fa-solid fa-eye"></i> ${ad.impressions || 0} Views</span>
-                                    <span><i class="fa-solid fa-arrow-pointer"></i> ${ad.clicks || 0} Clicks</span>
-                                    <span class="ad-countdown" data-expiry="${ad.end_date}" style="font-size:0.65rem; font-weight:600; color:var(--accent);">
+
+                                <!-- Middle Stat Box Grid (3 Columns) -->
+                                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; background:linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%); padding:12px; border-radius:12px; border:1px solid #E2E8F0; margin-bottom:12px;">
+                                    <div style="text-align:center; padding:4px;">
+                                        <div style="font-size:0.62rem; color:#64748B; font-weight:700; text-transform:uppercase; margin-bottom:3px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                            <i class="fa-solid fa-eye" style="color:#3B82F6;"></i> Views
+                                        </div>
+                                        <div style="font-size:1.15rem; font-weight:800; color:#0F172A;">${views.toLocaleString()}</div>
+                                    </div>
+                                    <div style="text-align:center; padding:4px; border-left:1px solid #E2E8F0; border-right:1px solid #E2E8F0;">
+                                        <div style="font-size:0.62rem; color:#64748B; font-weight:700; text-transform:uppercase; margin-bottom:3px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                            <i class="fa-solid fa-arrow-pointer" style="color:#8B5CF6;"></i> Clicks
+                                        </div>
+                                        <div style="font-size:1.15rem; font-weight:800; color:#0F172A;">${clicks.toLocaleString()}</div>
+                                    </div>
+                                    <div style="text-align:center; padding:4px;">
+                                        <div style="font-size:0.62rem; color:#64748B; font-weight:700; text-transform:uppercase; margin-bottom:3px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                            <i class="fa-solid fa-chart-line" style="color:#10B981;"></i> Click Rate
+                                        </div>
+                                        <div style="font-size:1.15rem; font-weight:800; color:#10B981;">${ctr}%</div>
+                                    </div>
+                                </div>
+
+                                <!-- Footer Bar: Countdown & Cost -->
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:#64748B; padding-top:6px;">
+                                    <span style="font-weight:600; color:#0F172A;">
+                                        <i class="fa-solid fa-coins" style="color:var(--accent);"></i> Budget: <strong>GH₵ ${parseFloat(ad.cost || 0).toFixed(2)}</strong>
+                                    </span>
+                                    <span class="ad-countdown" data-expiry="${ad.end_date}" style="font-size:0.68rem; font-weight:700; color:var(--primary); background:rgba(27, 43, 75, 0.06); padding:4px 10px; border-radius:8px;">
                                         <i class="fa-solid fa-hourglass-half"></i> Loading countdown...
                                     </span>
-                                </div>
-                                <div style="display:flex; gap:8px;">
-                                    <button class="btn btn-outline btn-xs" style="flex:1;" onclick="openRenewAdModal(${ad.id})"><i class="fa-solid fa-rotate-right"></i> Renew Campaign</button>
-                                    <button class="btn btn-outline btn-xs" style="flex:1;" onclick="openUpgradeAdModal(${ad.id})"><i class="fa-solid fa-arrow-up-right-dots"></i> Upgrade Promo</button>
                                 </div>
                             </div>
                         `;
@@ -5851,87 +6215,100 @@ function renderPromoPackages() {
     const platinumReach = state.settings?.ad_plan_platinum_reach || "200,000+ planners";
 
     container.innerHTML = `
-        <div class="p-section">
-            <h4 style="font-family:'Fraunces',serif; font-size:1.1rem; margin-bottom:4px;">Select an Advertising Plan</h4>
-            <p style="font-size:0.75rem; color:var(--gray-600); margin-bottom:16px;">Pick a promotional tier to display your brand to thousands of Ghanaian event planners.</p>
+        <div class="p-section" style="padding-top:0;">
+            <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); padding:20px 24px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25); margin-bottom:20px; box-shadow:0 8px 24px rgba(11, 31, 58, 0.12);">
+                <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800; margin-bottom:4px;">
+                    <i class="fa-solid fa-bullhorn"></i> High-Impact Exposure
+                </div>
+                <h4 style="font-family:'Fraunces',serif; font-size:1.25rem; font-weight:700; margin:0 0 6px 0;">Select an Advertising Plan</h4>
+                <p style="font-size:0.78rem; opacity:0.88; margin:0; line-height:1.4; max-width:600px;">Pick a promotional tier to spotlight your services to thousands of active Ghanaian event planners across Accra, Kumasi, Takoradi, and nationwide.</p>
+            </div>
 
-            <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="promo-packages-grid" style="display:flex; flex-direction:column; gap:16px;">
                 <!-- Starter -->
-                <div class="card" style="padding:16px; border-left:4px solid var(--gray-400);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div>
-                            <h3 style="font-size:1rem; font-weight:700; margin:0;">Starter Promotion</h3>
-                            <span style="font-size:0.65rem; color:var(--gray-400);">1 Day Duration</span>
+                <div class="card" style="padding:20px; border-radius:16px; border:1px solid #E2E8F0; background:#ffffff; box-shadow:0 4px 14px rgba(0,0,0,0.03); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                            <div>
+                                <h3 style="font-size:1.05rem; font-weight:800; color:#0F172A; margin:0 0 2px 0;">Starter</h3>
+                                <span style="font-size:0.65rem; color:#64748B; font-weight:600; background:#F1F5F9; padding:2px 8px; border-radius:6px;">1 Day Duration</span>
+                            </div>
+                            <div style="font-size:1.25rem; font-weight:800; color:#0B1F3A;">GH₵ ${starterPrice}</div>
                         </div>
-                        <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">GH₵ ${starterPrice}</div>
+                        <ul style="font-size:0.75rem; color:#475569; padding-left:18px; margin-bottom:16px; line-height:1.6; list-style-type:disc;">
+                            <li>Basic visibility in search results</li>
+                            <li>Sponsored badge on listing</li>
+                            <li>Search ranking boost</li>
+                            <li>Estimated reach: <strong>${starterReach}</strong></li>
+                        </ul>
                     </div>
-                    <ul style="font-size:0.75rem; color:var(--gray-600); padding-left:16px; margin-bottom:12px; line-height:1.4;">
-                        <li>Basic visibility in search results</li>
-                        <li>Sponsored badge on vendor listing</li>
-                        <li>Search ranking boost</li>
-                        <li>Estimated reach: <strong>${starterReach}</strong></li>
-                    </ul>
-                    <button class="btn btn-outline btn-sm btn-full" onclick="purchasePromoPackage('Starter', 1, ${starterPrice})">Buy Starter Package</button>
+                    <button class="btn btn-outline btn-sm btn-full" style="border-radius:10px; font-weight:700; padding:10px;" onclick="purchasePromoPackage('Starter', 1, ${starterPrice})">Buy Starter</button>
                 </div>
 
                 <!-- Standard -->
-                <div class="card" style="padding:16px; border-left:4px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div>
-                            <h3 style="font-size:1rem; font-weight:700; margin:0; color:var(--primary);">Standard Promotion</h3>
-                            <span style="font-size:0.65rem; color:var(--primary); font-weight:600;">7 Days Duration (15% Savings)</span>
+                <div class="card" style="padding:20px; border-radius:16px; border:1px solid #3B82F6; background:linear-gradient(180deg, #FFFFFF 0%, #F0F9FF 100%); box-shadow:0 6px 18px rgba(59, 130, 246, 0.08); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                            <div>
+                                <h3 style="font-size:1.05rem; font-weight:800; color:#1D4ED8; margin:0 0 2px 0;">Standard</h3>
+                                <span style="font-size:0.65rem; color:#1D4ED8; font-weight:700; background:rgba(59, 130, 246, 0.12); padding:2px 8px; border-radius:6px;">7 Days (15% Off)</span>
+                            </div>
+                            <div style="font-size:1.25rem; font-weight:800; color:#1D4ED8;">GH₵ ${standardPrice}</div>
                         </div>
-                        <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">GH₵ ${standardPrice}</div>
+                        <ul style="font-size:0.75rem; color:#334155; padding-left:18px; margin-bottom:16px; line-height:1.6; list-style-type:disc;">
+                            <li>Priority category search placement</li>
+                            <li>Category priority sorting</li>
+                            <li>Increased planner exposure</li>
+                            <li>Estimated reach: <strong>${standardReach}</strong></li>
+                        </ul>
                     </div>
-                    <ul style="font-size:0.75rem; color:var(--gray-600); padding-left:16px; margin-bottom:12px; line-height:1.4;">
-                        <li>Higher search ranking inside category page</li>
-                        <li>Category priority sorting</li>
-                        <li>Increased general exposure</li>
-                        <li>Estimated reach: <strong>${standardReach}</strong></li>
-                    </ul>
-                    <button class="btn btn-primary btn-sm btn-full" onclick="purchasePromoPackage('Standard', 7, ${standardPrice})">Buy Standard Package</button>
+                    <button class="btn btn-primary btn-sm btn-full" style="background:#2563EB; border:none; border-radius:10px; font-weight:700; padding:10px; box-shadow:0 4px 12px rgba(37, 99, 235, 0.25);" onclick="purchasePromoPackage('Standard', 7, ${standardPrice})">Buy Standard</button>
                 </div>
 
                 <!-- Premium -->
-                <div class="card" style="padding:16px; border-left:4px solid var(--accent); background:rgba(235, 104, 76, 0.02);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div>
-                            <h3 style="font-size:1rem; font-weight:700; margin:0; color:var(--accent);">Premium Promotion</h3>
-                            <span style="font-size:0.65rem; color:var(--accent); font-weight:600;">30 Days Duration (25% Savings)</span>
+                <div class="card" style="padding:20px; border-radius:16px; border:1px solid var(--accent); background:linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%); box-shadow:0 6px 20px rgba(242, 167, 53, 0.12); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+                    <div style="position:absolute; top:-11px; right:16px; background:linear-gradient(135deg, var(--accent) 0%, #D97706 100%); color:#0B1F3A; font-size:0.58rem; font-weight:900; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">Most Popular</div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                            <div>
+                                <h3 style="font-size:1.05rem; font-weight:800; color:#B45309; margin:0 0 2px 0;">Premium</h3>
+                                <span style="font-size:0.65rem; color:#B45309; font-weight:700; background:rgba(245, 158, 11, 0.12); padding:2px 8px; border-radius:6px;">30 Days (25% Off)</span>
+                            </div>
+                            <div style="font-size:1.25rem; font-weight:800; color:#B45309;">GH₵ ${premiumPrice}</div>
                         </div>
-                        <div style="font-size:1.2rem; font-weight:800; color:var(--accent);">GH₵ ${premiumPrice}</div>
+                        <ul style="font-size:0.75rem; color:#334155; padding-left:18px; margin-bottom:16px; line-height:1.6; list-style-type:disc;">
+                            <li>Homepage Featured list spot</li>
+                            <li>Top search ranking nationwide</li>
+                            <li>Featured Vendor badge & highlight</li>
+                            <li>Estimated reach: <strong>${premiumReach}</strong></li>
+                        </ul>
                     </div>
-                    <ul style="font-size:0.75rem; color:var(--gray-600); padding-left:16px; margin-bottom:12px; line-height:1.4;">
-                        <li>Homepage placement under Featured list</li>
-                        <li>Priority search ranking in primary searches</li>
-                        <li>Featured Vendor highlight block</li>
-                        <li>Estimated reach: <strong>${premiumReach}</strong></li>
-                    </ul>
-                    <button class="btn btn-primary btn-sm btn-full" style="background:var(--accent); border-color:var(--accent);" onclick="purchasePromoPackage('Premium', 30, ${premiumPrice})">Buy Premium Package</button>
+                    <button class="btn btn-primary btn-sm btn-full" style="background:linear-gradient(135deg, var(--accent) 0%, #D97706 100%); color:#0B1F3A; border:none; border-radius:10px; font-weight:800; padding:10px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3);" onclick="purchasePromoPackage('Premium', 30, ${premiumPrice})">Buy Premium</button>
                 </div>
 
                 <!-- Platinum -->
-                <div class="card" style="padding:16px; border:2px solid var(--accent); background:rgba(242, 167, 53, 0.05); position:relative;">
-                    <div style="position:absolute; top:-10px; right:15px; background:var(--accent); color:var(--primary-dark); font-size:0.55rem; font-weight:800; padding:2px 8px; border-radius:10px; text-transform:uppercase;">Best Value</div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div>
-                            <h3 style="font-size:1rem; font-weight:700; margin:0; color:var(--accent);">Platinum Promotion</h3>
-                              <span style="font-size:0.65rem; color:var(--accent); font-weight:600;">90 Days Duration (35% Savings)</span>
-                          </div>
-                          <div style="font-size:1.2rem; font-weight:800; color:var(--accent);">GH₵ ${platinumPrice}</div>
-                      </div>
-                      <ul style="font-size:0.75rem; color:var(--gray-600); padding-left:16px; margin-bottom:12px; line-height:1.4;">
-                          <li>Maximum exposure on Ohati platforms</li>
-                          <li>Top banner opportunity + Featured list</li>
-                          <li>Premium verification badge visibility</li>
-                          <li>Advanced campaign analytics & priority support</li>
-                          <li>Estimated reach: <strong>${platinumReach}</strong></li>
-                      </ul>
-                      <button class="btn btn-sm btn-full" style="background:var(--accent); color:var(--primary-dark); border-color:var(--accent); font-weight:700;" onclick="purchasePromoPackage('Platinum', 90, ${platinumPrice})">Buy Platinum Package</button>
-                  </div>
-              </div>
-          </div>
-      `;
+                <div class="card" style="padding:20px; border-radius:16px; border:2px solid #0B1F3A; background:linear-gradient(180deg, #0B1F3A 0%, #1B2B4B 100%); color:#FFFFFF; box-shadow:0 8px 24px rgba(11, 31, 58, 0.2); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+                    <div style="position:absolute; top:-11px; right:16px; background:#10B981; color:#FFFFFF; font-size:0.58rem; font-weight:900; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.2);">Best ROI</div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                            <div>
+                                <h3 style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin:0 0 2px 0;">Platinum</h3>
+                                <span style="font-size:0.65rem; color:var(--accent); font-weight:700; background:rgba(242, 167, 53, 0.15); padding:2px 8px; border-radius:6px;">90 Days (35% Off)</span>
+                            </div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--accent);">GH₵ ${platinumPrice}</div>
+                        </div>
+                        <ul style="font-size:0.75rem; color:#E2E8F0; padding-left:18px; margin-bottom:16px; line-height:1.6; list-style-type:disc;">
+                            <li>Maximum top-tier placement everywhere</li>
+                            <li>VIP homepage & banner carousel spotlight</li>
+                            <li>Social media broadcast promo included</li>
+                            <li>Estimated reach: <strong>${platinumReach}</strong></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-sm btn-full" style="background:var(--accent); color:#0B1F3A; border:none; border-radius:10px; font-weight:800; padding:10px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.35);" onclick="purchasePromoPackage('Platinum', 90, ${platinumPrice})">Buy Platinum</button>
+                </div>
+            </div>
+        </div>
+    `;
   }
 
 function renderPromoAnalytics() {
@@ -5949,24 +6326,36 @@ function renderPromoAnalytics() {
 
         container.innerHTML = `
             <div class="p-section" style="display:flex; flex-direction:column; gap:16px;">
-                <h4 style="font-family:'Fraunces',serif; font-size:1.1rem; margin-bottom:2px;">Performance Metrics</h4>
-                <p style="font-size:0.75rem; color:var(--gray-600);">Verify real-time engagement and ROI of your active advertisements.</p>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div class="card text-center" style="padding:16px;">
-                        <div style="font-size:1.8rem; font-weight:800; color:var(--primary);">${totalImpressions}</div>
-                        <div style="font-size:0.7rem; color:var(--gray-600); text-transform:uppercase; margin-top:4px;">Total Impressions</div>
+                <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); padding:20px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25);">
+                    <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800; margin-bottom:4px;">
+                        <i class="fa-solid fa-chart-pie"></i> Performance Intelligence
                     </div>
-                    <div class="card text-center" style="padding:16px;">
-                        <div style="font-size:1.8rem; font-weight:800; color:var(--primary);">${totalClicks}</div>
-                        <div style="font-size:0.7rem; color:var(--gray-600); text-transform:uppercase; margin-top:4px;">Total Clicks</div>
+                    <h4 style="font-family:'Fraunces',serif; font-size:1.2rem; margin:0 0 6px 0;">Promotion Analytics & ROI</h4>
+                    <p style="font-size:0.75rem; opacity:0.85; margin:0; line-height:1.4;">Live tracking of impression reach, conversion clicks, and engagement performance for all your active Ghana advertising campaigns.</p>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="card text-center" style="padding:18px 14px; background:#fff; border-radius:16px; border:1px solid #E2E8F0; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+                        <div style="width:36px; height:36px; border-radius:10px; background:rgba(59, 130, 246, 0.1); color:#3B82F6; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; font-size:1rem;">
+                            <i class="fa-solid fa-eye"></i>
+                        </div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#0F172A; line-height:1;">${totalImpressions.toLocaleString()}</div>
+                        <div style="font-size:0.68rem; color:#64748B; font-weight:700; text-transform:uppercase; margin-top:6px;">Total Impressions</div>
+                    </div>
+
+                    <div class="card text-center" style="padding:18px 14px; background:#fff; border-radius:16px; border:1px solid #E2E8F0; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+                        <div style="width:36px; height:36px; border-radius:10px; background:rgba(139, 92, 246, 0.1); color:#8B5CF6; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; font-size:1rem;">
+                            <i class="fa-solid fa-arrow-pointer"></i>
+                        </div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#0F172A; line-height:1;">${totalClicks.toLocaleString()}</div>
+                        <div style="font-size:0.68rem; color:#64748B; font-weight:700; text-transform:uppercase; margin-top:6px;">Total Clicks</div>
                     </div>
                 </div>
 
-                <div class="card text-center" style="padding:16px; background:var(--gray-50);">
-                    <div style="font-size:2.2rem; font-weight:800; color:var(--accent); font-family:'Outfit',sans-serif;">${ctr}%</div>
-                    <div style="font-size:0.75rem; color:var(--gray-600); font-weight:600; text-transform:uppercase; margin-top:4px;">Average Click-Through Rate (CTR)</div>
-                    <p style="font-size:0.65rem; color:var(--gray-400); margin-top:6px; line-height:1.3;">Industry standard for high-performing event promotions is around 1.5% to 3.0%. Your current exposure is pacing well!</p>
+                <div class="card text-center" style="padding:22px; background:linear-gradient(135deg, rgba(242, 167, 53, 0.08) 0%, rgba(27, 43, 75, 0.04) 100%); border:1px solid rgba(242, 167, 53, 0.25); border-radius:16px;">
+                    <div style="font-size:2.4rem; font-weight:900; color:var(--accent); line-height:1;">${ctr}%</div>
+                    <div style="font-size:0.75rem; color:#0F172A; font-weight:800; text-transform:uppercase; margin-top:8px; letter-spacing:0.5px;">Average Click-Through Rate (CTR)</div>
+                    <p style="font-size:0.7rem; color:#64748B; margin:8px auto 0 auto; max-width:360px; line-height:1.4;">The event marketplace benchmark for high-performing promotions is 1.5% - 3.0%. Your campaigns are generating strong planner interest!</p>
                 </div>
             </div>
         `;
@@ -6390,7 +6779,7 @@ window.executeUpgradeCampaign = function(adId) {
         payment_method: 'manual',
         payment_ref: 'Inquiry Mode',
         payment_notes: notes,
-        receipt_data: 'inquiry_demo_mode'
+        receipt_data: 'manual_verification'
     };
 
     const btn = document.getElementById('upgrade-submit-btn');
@@ -6474,7 +6863,7 @@ function payForAdCampaign() {
 
     const notes = document.getElementById('ad-payment-notes')?.value.trim() || '';
 
-    payload.receipt_data = 'inquiry_demo_mode';
+    payload.receipt_data = 'manual_verification';
     payload.payment_ref = 'Inquiry Mode';
     payload.payment_date = new Date().toISOString().substring(0, 10);
     payload.payment_notes = notes;
@@ -6605,17 +6994,33 @@ function initProfileEditScreen() {
                     .then(vendor => {
                         if (vendor && vendor.id) state.vendor = vendor;
                         renderProfileEditForm(screen, u, vendor || state.vendor, (f) => isFieldLocked(f, vendor || state.vendor));
+                        populateDynamicCategories(vendor ? vendor.category : '');
                     })
                     .catch(() => {
                         renderProfileEditForm(screen, u, state.vendor || null, (f) => isFieldLocked(f, state.vendor));
+                        populateDynamicCategories(state.vendor ? state.vendor.category : '');
                     });
             } else {
                 renderProfileEditForm(screen, u, state.vendor || null, (f) => isFieldLocked(f, state.vendor));
+                populateDynamicCategories(state.vendor ? state.vendor.category : '');
             }
         } else {
             renderProfileEditForm(screen, u, null, (f) => isFieldLocked(f, null));
         }
     }
+}
+
+function populateDynamicCategories(selectedCategory = '') {
+    API.getCategories().then(cats => {
+        const select = document.getElementById('edit-vendor-category') || document.getElementById('v-category');
+        if (select && Array.isArray(cats) && cats.length > 0) {
+            select.innerHTML = cats.map(c => {
+                const cName = typeof c === 'string' ? c : c.name;
+                const isSel = (cName === selectedCategory) ? 'selected' : '';
+                return `<option value="${cName}" ${isSel}>${cName}</option>`;
+            }).join('');
+        }
+    }).catch(() => {});
 }
 
 function renderProfileEditForm(container, u, v, isFieldLocked) {
@@ -7260,14 +7665,53 @@ window.saveEditedPhoto = function() {
         ctx.scale(currentPhotoZoom, currentPhotoZoom);
         ctx.drawImage(img, -size/2, -size/2, size, size);
         
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
         
-        state.tempAvatarUrl = dataUrl;
-        const formPreview = document.getElementById('profile-edit-avatar-preview');
-        if (formPreview) formPreview.src = dataUrl;
-        
-        closeModal();
-        showPushNotification('Photo Updated', 'Profile picture preview updated. Click Save to publish.');
+        const applyBtn = document.querySelector('button[onclick="saveEditedPhoto()"]');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        }
+
+        // Direct API upload & permanent DB storage on Apply
+        API.updateProfile({ avatar: dataUrl })
+            .then(res => {
+                const storedUrl = res?.avatar || res?.user?.avatar || dataUrl;
+                if (storedUrl) {
+                    if (!state.user) state.user = {};
+                    state.user.avatar = storedUrl;
+                    if (state.vendor) state.vendor.logo = storedUrl;
+                    state.tempAvatarUrl = storedUrl;
+
+                    try {
+                        localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                    } catch (eIgn) {}
+
+                    // Instantly sync UI components across application
+                    const resolvedUrl = (typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(storedUrl) : storedUrl;
+                    const formPreview = document.getElementById('profile-edit-avatar-preview');
+                    if (formPreview) formPreview.src = resolvedUrl;
+                    const profileAvatar = document.getElementById('profile-avatar');
+                    if (profileAvatar) profileAvatar.src = resolvedUrl;
+                    const headerAvatar = document.getElementById('header-avatar');
+                    if (headerAvatar) headerAvatar.src = resolvedUrl;
+                    const sidebarAvatar = document.getElementById('sidebar-avatar');
+                    if (sidebarAvatar) sidebarAvatar.src = resolvedUrl;
+
+                    if (typeof updateAppHeader === 'function') updateAppHeader();
+                    if (typeof updateSidebarUI === 'function') updateSidebarUI();
+                }
+
+                closeModal();
+                showPushNotification('Profile Picture Saved 🎉', 'Your profile picture has been updated permanently.');
+            })
+            .catch(err => {
+                if (applyBtn) {
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = 'Apply Photo';
+                }
+                showPushNotification('Upload Error', err.message || 'Could not save profile picture.');
+            });
     };
     img.src = document.getElementById('edit-preview-img').src;
 };
@@ -7333,7 +7777,7 @@ function saveProfileChanges() {
     
     textFields.forEach(f => {
         const el = document.getElementById('edit-' + f);
-        if (el && el.value !== undefined) payload[f] = el.value.trim();
+        if (el && el.value !== undefined && !el.disabled) payload[f] = el.value.trim();
     });
 
     if (state.tempAvatarUrl) {
@@ -7341,11 +7785,16 @@ function saveProfileChanges() {
     }
 
     API.updateProfile(payload)
-        .then(() => {
+        .then(profRes => {
+            if (profRes && profRes.user) {
+                state.user = Object.assign(state.user || {}, profRes.user);
+                if (profRes.avatar) state.user.avatar = profRes.avatar;
+            }
+
             const activeRole = state.user ? (state.user.active_role || state.user.role) : 'customer';
             const vendorId = state.user ? (state.user.vendor_id || (state.vendor ? state.vendor.id : 0)) : 0;
             
-            if (activeRole === 'vendor' && vendorId > 0) {
+            if (activeRole === 'vendor' || vendorId > 0) {
                 const v = state.vendor || {};
                 const u = state.user || {};
                 const bio = document.getElementById('edit-bio')?.value.trim() ?? (v.description || '');
@@ -7387,16 +7836,15 @@ function saveProfileChanges() {
             return API.getSession().catch(() => null);
         })
         .then(res => {
-            state.tempAvatarUrl = null;
             if (res && res.user) {
-                state.user = res.user;
+                state.user = Object.assign(state.user || {}, res.user);
                 if (res.vendor) state.vendor = res.vendor;
                 try {
-                    localStorage.setItem('ohati_user_session', JSON.stringify(res.user));
+                    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
                 } catch (e) {}
             }
+            state.tempAvatarUrl = null;
             showPushNotification('Profile Updated 🎉', 'Your profile details have been saved successfully.');
-            if (typeof updateAppHeader === 'function') updateAppHeader();
             if (typeof updateSidebarUI === 'function') updateSidebarUI();
             if (typeof navigateTo === 'function') navigateTo('profile');
         })
@@ -7413,17 +7861,45 @@ function handleCoverPhotoSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+        showPushNotification('Invalid File', 'Please select a valid image file (PNG, JPG, WebP).');
+        return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+        showPushNotification('File Too Large', 'Cover image must be under 8MB.');
+        return;
+    }
+
+    const vid = state.user?.vendor_id || (state.vendor ? state.vendor.id : 0);
+    const preview = document.getElementById('profile-edit-cover-preview');
+    const oldSrc = preview ? preview.src : '';
+
     const reader = new FileReader();
     reader.onload = function(e) {
-        const preview = document.getElementById('profile-edit-cover-preview');
         if (preview) preview.src = e.target.result;
         
         API.updateVendor({
-            id: state.user.vendor_id,
+            id: vid,
             cover_photo: e.target.result
-        }).then(() => {
-            showPushNotification('Cover Updated', 'Cover banner updated successfully.');
-        }).catch(err => showPushNotification('Error', err.message));
+        }).then(res => {
+            const savedUrl = res?.cover_photo || res?.vendor?.cover_photo || e.target.result;
+            if (savedUrl) {
+                if (!state.vendor) state.vendor = {};
+                if (!state.user) state.user = {};
+                state.vendor.cover_photo = savedUrl;
+                state.user.vendor_cover_photo = savedUrl;
+                if (res?.vendor_id) state.user.vendor_id = res.vendor_id;
+                if (preview) preview.src = savedUrl;
+                try {
+                    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                } catch(eIgn) {}
+            }
+            showPushNotification('Cover Photo Saved', 'Cover banner updated permanently.');
+        }).catch(err => {
+            if (preview && oldSrc) preview.src = oldSrc;
+            showPushNotification('Upload Failed', err.message || 'Could not save cover image.');
+        });
     };
     reader.readAsDataURL(file);
 }
@@ -7980,9 +8456,13 @@ function renderVendorJobsTab(tabKey) {
                     <div style="font-size:0.8rem; color:var(--gray-600);">
                         <span><i class="fa-solid fa-calendar" style="color:var(--accent);"></i> Event Date: ${escapeHtml(j.event_date || 'Flexible')}</span>
                     </div>
-                    <div style="display:flex; gap:8px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
                         <button class="btn btn-outline btn-sm" onclick="JobsModule.toggleSaveJob(${j.id}, this)"><i class="${j.is_saved ? 'fa-solid' : 'fa-regular'} fa-bookmark"></i></button>
-                        <button class="btn btn-primary btn-sm" onclick="JobsModule.openApplyModal(${j.id}, '${escapeHtml(j.title)}', ${j.budget})"><i class="fa-solid fa-paper-plane"></i> Apply Now</button>
+                        ${(state.user && (parseInt(state.user.id || state.user.user_id || 0) === parseInt(j.user_id))) ? `
+                            <span class="badge" style="background:var(--gray-100); color:var(--gray-700); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.75rem;"><i class="fa-solid fa-user-check" style="color:var(--accent); margin-right:4px;"></i> My Job</span>
+                        ` : `
+                            <button class="btn btn-primary btn-sm" onclick="JobsModule.openApplyModal(${j.id}, '${escapeHtml(j.title)}', ${j.budget})"><i class="fa-solid fa-paper-plane"></i> Apply Now</button>
+                        `}
                     </div>
                 </div>
             </div>

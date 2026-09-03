@@ -216,6 +216,10 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
                 'From: ' . $from_name . ' <' . $from_email . '>',
                 'Reply-To: ' . $from_name . ' <' . $from_email . '>',
                 'Subject: ' . $subject,
+                'X-Priority: 1 (Highest)',
+                'X-MSMail-Priority: High',
+                'Importance: High',
+                'X-Auto-Response-Suppress: All',
                 'Date: ' . date('r'),
                 'Message-ID: <' . time() . '-' . md5($to . $subject) . '@ohati.com>'
             ]);

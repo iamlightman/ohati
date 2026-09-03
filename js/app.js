@@ -48,7 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasLocalAuth && !isPublicGuestPage) {
         state.user = null;
         dismissLoading();
-        if (typeof showMandatoryAuthLockScreen === 'function') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        if ((action === 'register' || action === 'signup') && typeof showMandatoryAuthLockScreen === 'function') {
+            showMandatoryAuthLockScreen('register');
+        } else if (typeof showMandatoryAuthLockScreen === 'function') {
             showMandatoryAuthLockScreen('login');
         }
         return;
@@ -172,6 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateAppHeader();
             updateNotifBadgeCount();
 
+            if (typeof window.showDiditKycModalPopup === 'function') {
+                setTimeout(() => {
+                    window.showDiditKycModalPopup(res.user);
+                }, 1200);
+            }
+
             // Render skeleton loading screen IMMEDIATELY so user never sees a blank screen
             const { startScreen, startParams } = getStartRoute();
             if (typeof navigateTo === 'function') {
@@ -251,6 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Attach Bottom Navigation Handlers
     document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            if (btn.id === 'nav-btn-menu') {
+                return;
+            }
             e.preventDefault();
             const screen = btn.getAttribute('data-screen');
             if (screen) {
@@ -261,17 +274,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 4. Attach Sidebar Burger Menu Handler
+    // 4. Attach Header Brand Logo Handler (Navigates to Home)
     const menuBtn = document.getElementById('header-menu-btn');
     if (menuBtn) {
-        menuBtn.addEventListener('click', () => {
-            toggleSidebar(true);
+        menuBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            navigateTo('home');
         });
     }
+
+    // Attach Header Profile Avatar Handler (Navigates to User Profile Page)
     const avatarBtn = document.getElementById('header-avatar-btn');
     if (avatarBtn) {
-        avatarBtn.addEventListener('click', () => {
-            toggleSidebar(true);
+        avatarBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            navigateTo('profile');
         });
     }
 
@@ -287,37 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeBtn = document.getElementById('theme-toggle-btn');
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
-            const body = document.body;
-            const icon = document.getElementById('theme-icon');
-            const logo = document.getElementById('header-logo-img');
-
-            const isCurrentlyDark = localStorage.getItem('theme') === 'dark';
-            const isBlogScreen = (state.currentScreen === 'blog' || state.currentScreen === 'blog-detail');
-
-            if (isCurrentlyDark) {
-                body.classList.remove('dark-theme');
-                if (icon) icon.className = 'fa-solid fa-moon';
-                if (state.currentScreen !== 'home') {
-                    if (logo) logo.src = 'img/logo black transparent small.png';
-                }
-                localStorage.setItem('theme', 'light');
-            } else {
-                localStorage.setItem('theme', 'dark');
-                if (!isBlogScreen) {
-                    body.classList.add('dark-theme');
-                    if (logo) logo.src = 'img/logo white transparent small.png';
-                }
-                if (icon) icon.className = 'fa-solid fa-sun';
-            }
-
-            // Sync native mobile status bar color with active theme
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
-                try {
-                    const isDark = body.classList.contains('dark-theme');
-                    window.Capacitor.Plugins.StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' });
-                    window.Capacitor.Plugins.StatusBar.setBackgroundColor({ color: isDark ? '#0F1923' : '#FFFFFF' });
-                } catch(e) {}
-            }
+            window.toggleAppTheme();
         });
     }
 
@@ -629,6 +616,38 @@ window.checkReferralWebLanding = function() {
                 }
             }, 800);
         }
+    }
+};
+
+window.toggleAppTheme = function() {
+    const body = document.body;
+    const icon = document.getElementById('theme-icon');
+    const logo = document.getElementById('header-logo-img');
+    const isCurrentlyDark = body.classList.contains('dark-theme') || localStorage.getItem('theme') === 'dark';
+    const isBlogScreen = (window.state && (window.state.currentScreen === 'blog' || window.state.currentScreen === 'blog-detail'));
+
+    if (isCurrentlyDark) {
+        body.classList.remove('dark-theme');
+        if (icon) icon.className = 'fa-solid fa-moon';
+        if (window.state && window.state.currentScreen !== 'home') {
+            if (logo) logo.src = 'img/logo black transparent small.png';
+        }
+        localStorage.setItem('theme', 'light');
+    } else {
+        localStorage.setItem('theme', 'dark');
+        if (!isBlogScreen) {
+            body.classList.add('dark-theme');
+            if (logo) logo.src = 'img/logo white transparent small.png';
+        }
+        if (icon) icon.className = 'fa-solid fa-sun';
+    }
+
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
+        try {
+            const isDark = body.classList.contains('dark-theme');
+            window.Capacitor.Plugins.StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' });
+            window.Capacitor.Plugins.StatusBar.setBackgroundColor({ color: isDark ? '#0F1923' : '#FFFFFF' });
+        } catch (e) {}
     }
 };
 

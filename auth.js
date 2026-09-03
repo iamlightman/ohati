@@ -56,7 +56,7 @@ function renderAuthModal() {
                     </div>
                     <div class="account-type-card" id="card-vend" onclick="selectAccountType('vendor')">
                         <div class="account-type-icon"><i class="fa-solid fa-briefcase"></i></div>
-                        <div class="account-type-title">Vendor</div>
+                        <div class="account-type-title">Event Vendor</div>
                         <div class="account-type-desc">For professionals offering event services.</div>
                         <div class="account-type-tags">
                             <span class="account-type-tag">Photographer</span>
@@ -72,10 +72,11 @@ function renderAuthModal() {
 
         case 'register':
             if (step === 1) {
+                const isVendor = state.authData.role === 'vendor';
                 html = `
                     <div class="auth-modal-header">
                         <h2 class="auth-modal-title">Sign Up</h2>
-                        <p class="auth-modal-subtitle">Step 1: Your Information</p>
+                        <p class="auth-modal-subtitle">Step 1: Your Information (${isVendor ? 'Event Vendor' : 'Customer'})</p>
                     </div>
                     <div class="auth-step-indicator">
                         <div class="auth-step-dot active"></div>
@@ -90,6 +91,12 @@ function renderAuthModal() {
                         <label class="form-label">Last Name</label>
                         <input type="text" class="form-input" id="reg-lname" placeholder="Last Name" value="${state.authData.lname || ''}">
                     </div>
+                    ${isVendor ? `
+                    <div class="form-group">
+                        <label class="form-label">Business Name <span style="color:#EF4444;">*</span></label>
+                        <input type="text" class="form-input" id="reg-bizname" placeholder="e.g. Royal Crown Event Services" value="${state.authData.bizname || state.authData.business_name || ''}">
+                    </div>
+                    ` : ''}
                     <div class="form-group">
                         <label class="form-label">Username (optional)</label>
                         <input type="text" class="form-input" id="reg-username" placeholder="Username" value="${state.authData.username || ''}">
@@ -132,7 +139,10 @@ function renderAuthModal() {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Confirm Password</label>
-                        <input type="password" class="form-input" id="reg-confirm" placeholder="Confirm your password">
+                        <div class="input-group">
+                            <input type="password" class="form-input" id="reg-confirm" placeholder="Confirm your password">
+                            <span class="input-suffix" onclick="togglePasswordVisibility('reg-confirm')"><i class="fa-solid fa-eye" id="reg-confirm-eye"></i></span>
+                        </div>
                     </div>
                     <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
                     <div style="display:flex;gap:10px;">
@@ -158,18 +168,22 @@ function renderAuthModal() {
                         <i class="fa-solid fa-circle-check"></i> SMS Sent
                     </span>
                 </div>
-                <div class="otp-inputs">
-                    <input type="text" maxlength="1" class="otp-input" id="otp-1" oninput="otpMove(1)" onkeyup="otpKey(1, event)" value="">
-                    <input type="text" maxlength="1" class="otp-input" id="otp-2" oninput="otpMove(2)" onkeyup="otpKey(2, event)" value="">
-                    <input type="text" maxlength="1" class="otp-input" id="otp-3" oninput="otpMove(3)" onkeyup="otpKey(3, event)" value="">
-                    <input type="text" maxlength="1" class="otp-input" id="otp-4" oninput="otpMove(4)" onkeyup="otpKey(4, event)" value="">
-                    <input type="text" maxlength="1" class="otp-input" id="otp-5" oninput="otpMove(5)" onkeyup="otpKey(5, event)" value="">
-                    <input type="text" maxlength="1" class="otp-input" id="otp-6" oninput="otpMove(6)" onkeyup="otpKey(6, event)" value="">
+                <div class="otp-inputs" onpaste="handleOtpPaste(event)">
+                    <input type="tel" maxlength="1" class="otp-input" id="otp-1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); otpMove(1)" onkeyup="otpKey(1, event)" value="">
+                    <input type="tel" maxlength="1" class="otp-input" id="otp-2" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); otpMove(2)" onkeyup="otpKey(2, event)" value="">
+                    <input type="tel" maxlength="1" class="otp-input" id="otp-3" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); otpMove(3)" onkeyup="otpKey(3, event)" value="">
+                    <input type="tel" maxlength="1" class="otp-input" id="otp-4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); otpMove(4)" onkeyup="otpKey(4, event)" value="">
+                    <input type="tel" maxlength="1" class="otp-input" id="otp-5" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); otpMove(5)" onkeyup="otpKey(5, event)" value="">
+                    <input type="tel" maxlength="1" class="otp-input" id="otp-6" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); otpMove(6)" onkeyup="otpKey(6, event)" value="">
                 </div>
-                <div class="otp-timer">Resend code in <span id="otp-countdown">59</span>s</div>
-                <div id="otp-resend-container" style="display:none; text-align:center; margin-bottom:16px;">
+                <div class="otp-timer" id="otp-timer-box">Resend code in <span id="otp-countdown">60</span>s</div>
+                <div id="otp-resend-container" style="display:none; text-align:center; margin-bottom:12px;">
                     <button class="btn btn-ghost btn-sm" onclick="resendOTPCode()">Resend Code</button>
                 </div>
+                <p style="font-size:0.75rem; color:var(--text-muted, #94A3B8); margin-bottom:16px; text-align:center; line-height:1.4;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent, #F2A735); margin-right:4px;"></i>
+                    Note: Email OTP may take a minute or two to enter your inbox. Please check your spam folder if delayed.
+                </p>
                 <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
                 <button class="btn btn-primary btn-full" onclick="submitOTPVerify()">Verify & Complete</button>
             `;
@@ -239,15 +253,21 @@ function renderAuthModal() {
                 `}
                 <div class="form-group">
                     <label class="form-label">6-digit Reset Code</label>
-                    <input type="text" class="form-input" id="reset-code" placeholder="Enter code received in email" value="${resetFallback}">
+                    <input type="tel" class="form-input" id="reset-code" name="reset_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter 6-digit code received" value="${resetFallback}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">New Password</label>
-                    <input type="password" class="form-input" id="reset-pass" placeholder="Minimum 8 characters">
+                    <div class="input-group">
+                        <input type="password" class="form-input" id="reset-pass" name="new_password" autocomplete="new-password" placeholder="Minimum 8 characters">
+                        <span class="input-suffix" onclick="togglePasswordVisibility('reset-pass')"><i class="fa-solid fa-eye" id="reset-pass-eye"></i></span>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Confirm New Password</label>
-                    <input type="password" class="form-input" id="reset-confirm" placeholder="Confirm new password">
+                    <div class="input-group">
+                        <input type="password" class="form-input" id="reset-confirm" name="confirm_password" autocomplete="new-password" placeholder="Confirm new password">
+                        <span class="input-suffix" onclick="togglePasswordVisibility('reset-confirm')"><i class="fa-solid fa-eye" id="reset-confirm-eye"></i></span>
+                    </div>
                 </div>
                 <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
                 <button class="btn btn-primary btn-full" onclick="submitReset()">Reset & Sign In</button>
@@ -318,13 +338,22 @@ function checkPasswordStrengthUI() {
 function submitRegisterStep1() {
     const fname = document.getElementById('reg-fname').value.trim();
     const lname = document.getElementById('reg-lname').value.trim();
-    const username = document.getElementById('reg-username').value.trim();
+    const username = document.getElementById('reg-username')?.value.trim() || '';
     const email = document.getElementById('reg-email').value.trim();
     const phone = document.getElementById('reg-phone').value.trim();
+    const biznameEl = document.getElementById('reg-bizname');
+    const bizname = biznameEl ? biznameEl.value.trim() : '';
     const err = document.getElementById('auth-error-msg');
+    const isVendor = state.authData.role === 'vendor';
 
     if (!fname || !lname || (!email && !phone)) {
         err.textContent = 'Please fill out first name, last name, and email or phone.';
+        err.style.display = 'block';
+        return;
+    }
+
+    if (isVendor && !bizname) {
+        err.textContent = 'Please enter your Business Name.';
         err.style.display = 'block';
         return;
     }
@@ -334,6 +363,8 @@ function submitRegisterStep1() {
     state.authData.username = username;
     state.authData.email = email;
     state.authData.phone = phone;
+    state.authData.bizname = bizname;
+    state.authData.business_name = bizname;
 
     state.authStep = 2;
     renderAuthModal();
@@ -374,12 +405,23 @@ function submitRegisterStep2() {
             ref: pendingRef
         };
 
-        const res = await API.register(regPayload);
-        if (res.auth_token) {
+        let res;
+        try {
+            res = await API.register(regPayload);
+        } catch (e) {
+            if (e.message && (e.message.includes('already registered') || e.message.includes('verify'))) {
+                showPushNotification('Account Verification', 'Proceeding to OTP verification...');
+            } else {
+                throw e;
+            }
+        }
+        if (res && res.auth_token) {
             localStorage.setItem('ohati_auth_token', res.auth_token);
         }
-        state.user = res.user;
-        showPushNotification('Account Created', 'Please verify your details.');
+        if (res && res.user) {
+            state.user = res.user;
+        }
+        showPushNotification('Account Created', 'Please enter the 6-digit OTP code sent to your phone/email.');
 
         const email = state.authData.email || '';
         const phone = state.authData.phone || '';
@@ -387,7 +429,7 @@ function submitRegisterStep2() {
 
         try {
             const otpRes = await API.sendOTP(target, 'verify', email, phone);
-            state.authData.email_sent = otpRes.email_sent;
+            if (otpRes && otpRes.email_sent) state.authData.email_sent = otpRes.email_sent;
         } catch (e) { }
 
         state.authMode = 'otp';
@@ -401,10 +443,33 @@ function submitRegisterStep2() {
     });
 }
 
-// OTP Input Navigation
+// OTP Input Navigation & Paste Handling
+function handleOtpPaste(e) {
+    const paste = (e.clipboardData || window.clipboardData)?.getData('text')?.trim();
+    if (paste && /^\d{6}$/.test(paste)) {
+        e.preventDefault();
+        for (let i = 1; i <= 6; i++) {
+            const el = document.getElementById('otp-' + i);
+            if (el) el.value = paste[i - 1];
+        }
+        document.getElementById('otp-6')?.focus();
+    }
+}
 function otpMove(idx) {
     const curr = document.getElementById('otp-' + idx);
-    if (curr && curr.value.length === 1 && idx < 6) {
+    if (!curr) return;
+    curr.value = curr.value.replace(/\D/g, '');
+    if (curr.value.length >= 1 && idx < 6) {
+        if (curr.value.length > 1 && /^\d{6}$/.test(curr.value.trim())) {
+            const val = curr.value.trim();
+            for (let i = 1; i <= 6; i++) {
+                const el = document.getElementById('otp-' + i);
+                if (el) el.value = val[i - 1];
+            }
+            document.getElementById('otp-6')?.focus();
+            return;
+        }
+        curr.value = curr.value.slice(-1);
         document.getElementById('otp-' + (idx + 1))?.focus();
     }
 }
@@ -420,15 +485,19 @@ function otpKey(idx, e) {
 // OTP Timer
 let otpCountdownTimer = null;
 function startOTPTimer() {
-    let secs = 59;
+    let secs = 60;
     const cd = document.getElementById('otp-countdown');
+    const timerBox = document.getElementById('otp-timer-box');
     const resend = document.getElementById('otp-resend-container');
+    if (timerBox) timerBox.style.display = 'block';
+    if (resend) resend.style.display = 'none';
     if (otpCountdownTimer) clearInterval(otpCountdownTimer);
     otpCountdownTimer = setInterval(() => {
         secs--;
         if (cd) cd.textContent = secs;
         if (secs <= 0) {
             clearInterval(otpCountdownTimer);
+            if (timerBox) timerBox.style.display = 'none';
             if (resend) resend.style.display = 'block';
         }
     }, 1000);
@@ -466,6 +535,7 @@ function submitOTPVerify(event) {
         showPushNotification('Verified', 'Verification successful!');
         closeModal();
         updateAppHeader();
+        sessionStorage.setItem('ohati_just_registered_kyc_prompt', '1');
         if (state.user && (state.user.active_role || state.user.role) === 'vendor' && !state.user.vendor_onboarding_completed) {
             showPushNotification('Profile Incomplete', 'Please complete your business & profile verification steps.');
             state.authMode = 'vendor-register';
@@ -813,32 +883,42 @@ function renderVendorOnboardingStep() {
 
         case 5:
             html += `
-                <h4 style="font-size:0.9rem;margin-bottom:12px;">Verify Owner Identity (KYC)</h4>
-                <p style="font-size:0.75rem;color:var(--gray-500);margin-bottom:12px;">Required before accepting active client event bookings.</p>
-                <div class="form-group">
-                    <label class="form-label">Accepted ID Type</label>
-                    <select class="form-select" id="v-id-type">
-                        <option value="Ghana Card / National ID">Ghana Card / National ID</option>
-                        <option value="Passport">Passport</option>
-                        <option value="Driver's License">Driver's License</option>
-                        <option value="Voter ID">Voter ID</option>
-                    </select>
+                <div style="text-align:center; padding:6px 0 12px 0;">
+                    <div style="width:54px; height:54px; border-radius:50%; background:rgba(242,167,53,0.12); color:var(--accent); display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; font-size:1.6rem;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h3 style="font-family:'Fraunces',serif; font-size:1.15rem; margin-bottom:4px; color:var(--primary);">Identity Verification (Didit KYC)</h3>
+                    <p style="font-size:0.75rem; color:var(--gray-600); line-height:1.4; max-width:380px; margin:0 auto 14px auto;">
+                        Verify your identity with your Ghana Card or National ID to get your blue verified badge and start accepting client bookings.
+                    </p>
                 </div>
-                <div class="kyc-upload-zone mb-12" onclick="document.getElementById('file-id-front').click()">
-                    <i class="fa-solid fa-id-card"></i>
-                    <p id="front-status">${state.authData.id_front ? `<i class="fa-solid fa-circle-check text-success"></i> Uploaded` : 'Upload Front of ID'}</p>
-                    <input type="file" id="file-id-front" accept="image/*" style="display:none;" onchange="handleKycFileSelect(event, 'id-front')">
-                    <input type="hidden" id="v-id-front" value="${state.authData.id_front || ''}">
+
+                <div style="background:linear-gradient(135deg, rgba(11,31,58,0.03) 0%, rgba(242,167,53,0.06) 100%); border:1px solid #E2E8F0; border-radius:14px; padding:14px; margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:rgba(242,167,53,0.15); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.83rem; font-weight:700; color:#0F172A;">Instant Automated Verification</div>
+                            <div style="font-size:0.72rem; color:#64748B;">Scan Ghana Card & Selfie (~60 seconds)</div>
+                        </div>
+                    </div>
+                    <ul style="font-size:0.72rem; color:#475569; padding-left:18px; margin:0 0 14px 0; line-height:1.5;">
+                        <li>Instant automated Ghana Card check via Didit</li>
+                        <li>Unlocks verified blue badge on your live profile</li>
+                        <li>Higher ranking & client trust on Ohati</li>
+                    </ul>
+                    <button class="btn btn-primary btn-full mb-8" id="btn-start-didit-onboarding" onclick="startOnboardingDiditKyc()" style="padding:11px; font-weight:700; font-size:0.85rem; border-radius:10px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.25);">
+                        <i class="fa-solid fa-bolt"></i> Verify Identity Now
+                    </button>
                 </div>
-                <div class="kyc-upload-zone mb-16" onclick="document.getElementById('file-selfie').click()">
-                    <i class="fa-solid fa-camera"></i>
-                    <p id="selfie-status">${state.authData.selfie ? `<i class="fa-solid fa-circle-check text-success"></i> Uploaded` : 'Upload Selfie with ID'}</p>
-                    <input type="file" id="file-selfie" accept="image/*" style="display:none;" onchange="handleKycFileSelect(event, 'selfie')">
-                    <input type="hidden" id="v-selfie" value="${state.authData.selfie || ''}">
-                </div>
-                <div style="display:flex;gap:10px;">
-                    <button class="btn btn-outline btn-full" onclick="state.authStep=4; renderAuthModal();">Back</button>
-                    <button class="btn btn-primary btn-full" onclick="saveVendorStep5()">Submit Application</button>
+
+                <button class="btn btn-outline btn-full mb-10" onclick="skipVendorKycAndFinish()" style="font-size:0.78rem; border-color:#CBD5E1; color:#475569; padding:9px;">
+                    <i class="fa-solid fa-arrow-right"></i> Skip for Now & Go to Dashboard
+                </button>
+
+                <div style="display:flex; justify-content:flex-start;">
+                    <button class="btn btn-ghost btn-sm" onclick="state.authStep=4; renderAuthModal();" style="font-size:0.75rem;"><i class="fa-solid fa-arrow-left"></i> Back</button>
                 </div>
             `;
             break;
@@ -851,13 +931,15 @@ function simulateFileUpload(type) {
     const status = document.getElementById(type === 'id-front' ? 'front-status' : 'selfie-status');
     const hidden = document.getElementById(type === 'id-front' ? 'v-id-front' : 'v-selfie');
     if (status && hidden) {
-        status.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading...`;
+        const fileInput = document.getElementById(type === 'id-front' ? 'v-file-id-front' : 'v-file-selfie');
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            handleKycFileSelect({ target: fileInput }, type);
+            return;
+        }
+        status.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing Document...`;
         setTimeout(() => {
-            const fakeUrl = `img/kyc/${type}_uploaded.jpg`;
-            hidden.value = fakeUrl;
-            state.authData[type === 'id-front' ? 'id_front' : 'selfie'] = fakeUrl;
-            status.innerHTML = `<i class="fa-solid fa-circle-check text-success"></i> Uploaded successfully!`;
-        }, 1500);
+            status.innerHTML = `<i class="fa-solid fa-circle-check text-success"></i> Ready for Verification`;
+        }, 800);
     }
 }
 
@@ -1020,74 +1102,81 @@ function saveVendorStep4() {
     renderAuthModal();
 }
 
-/************* VENDOR REGISTRATION STEP 5 *************/
-function saveVendorStep5() {
-    const idType = document.getElementById('v-id-type').value;
-    const idFront = document.getElementById('v-id-front').value;
-    const selfie = document.getElementById('v-selfie').value;
+/************* VENDOR REGISTRATION STEP 5 DATA SAVER *************/
+async function saveVendorStep5Data() {
+    const payload = {
+        business_name: state.authData.bizname,
+        category: state.authData.category,
+        description: state.authData.desc,
+        location: state.authData.address,
+        phone: state.authData.phone,
+        email: state.authData.email,
+        experience: state.authData.experience
+    };
 
-    if (!idFront || !selfie) {
-        showPushNotification('KYC Documents Required', 'Please upload both your ID front and selfie before proceeding.');
-        return;
+    const res = await API.registerVendor(payload);
+    const vid = res.vendor_id;
+    const pkgs = (state.authData.packages || []).map(p => ({
+        name: p[0],
+        price: p[1],
+        details: p[2]
+    }));
+
+    const updatePayload = {
+        id: vid,
+        whatsapp: state.authData.whatsapp,
+        website: state.authData.website,
+        service_radius: state.authData.radius,
+        packages_pricing: pkgs,
+        instant_booking: 0
+    };
+
+    await API.updateVendor(updatePayload);
+    return vid;
+}
+
+window.startOnboardingDiditKyc = async function() {
+    const btn = document.getElementById('btn-start-didit-onboarding');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving & Launching Portal...';
     }
 
-    state.authData.id_type = idType;
-    state.authData.id_front = idFront;
-    state.authData.selfie = selfie;
-
-    const btn = document.querySelector('button[onclick="saveVendorStep5()"]');
-
-    ActionLock.execute(btn, 'Submitting Application...', async () => {
-        try {
-            const payload = {
-                business_name: state.authData.bizname,
-                category: state.authData.category,
-                description: state.authData.desc,
-                location: state.authData.address,
-                phone: state.authData.phone,
-                email: state.authData.email,
-                experience: state.authData.experience
-            };
-
-            const res = await API.registerVendor(payload);
-            const vid = res.vendor_id;
-            const pkgs = (state.authData.packages || []).map(p => ({
-                name: p[0],
-                price: p[1],
-                details: p[2]
-            }));
-
-            const updatePayload = {
-                id: vid,
-                whatsapp: state.authData.whatsapp,
-                website: state.authData.website,
-                service_radius: state.authData.radius,
-                packages_pricing: pkgs,
-                instant_booking: 0,
-                verification_status: 'pending',
-                verification_badge: 'blue'
-            };
-
-            await API.updateVendor(updatePayload);
-            await API.updateProfile({
-                kyc_status: 'pending_verification',
-                kyc_id_type: state.authData.id_type,
-                kyc_id_front: state.authData.id_front,
-                kyc_selfie: state.authData.selfie,
-                kyc_submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
-            });
-
-            const sessionRes = await API.getSession();
-            state.user = sessionRes.user;
-            showPushNotification('Application Submitted', 'Our moderation team will review your application.');
-            closeModal();
-            if (typeof updateSidebarUI === 'function') updateSidebarUI();
-            if (typeof navigateTo === 'function') navigateTo('vendor-dash');
-        } catch (e) {
-            showPushNotification('Submission Error', e.message || 'Error completing application');
+    try {
+        await saveVendorStep5Data();
+        closeModal();
+        const res = await API.initDiditKyc();
+        if (res && res.url) {
+            if (typeof navigateTo === 'function') {
+                navigateTo('didit-kyc', { url: res.url, session_id: res.session_id });
+            } else if (typeof renderDiditKycScreen === 'function') {
+                renderDiditKycScreen({ url: res.url, session_id: res.session_id });
+            }
+        } else {
+            throw new Error(res?.error || 'Could not retrieve verification portal URL.');
         }
-    });
-}
+    } catch (err) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Verify Identity Now';
+        }
+        showPushNotification('Initialization Error', err.message || 'Could not launch Didit verification.');
+    }
+};
+
+window.skipVendorKycAndFinish = async function() {
+    try {
+        await saveVendorStep5Data();
+        const sessionRes = await API.getSession();
+        if (sessionRes && sessionRes.user) state.user = sessionRes.user;
+        closeModal();
+        showPushNotification('Vendor Setup Complete! 🎉', 'Your profile is saved. You can complete identity verification anytime from your dashboard.');
+        if (typeof updateSidebarUI === 'function') updateSidebarUI();
+        if (typeof navigateTo === 'function') navigateTo('vendor-dash');
+    } catch (err) {
+        showPushNotification('Save Error', err.message || 'Could not save vendor setup.');
+    }
+};
 
 
 window.closeAccountDeletionModal = function () {
@@ -1283,10 +1372,6 @@ window.triggerAccountDeletionFlow = function () {
 };
 
 window.showMandatoryAuthLockScreen = function (initialMode) {
-    const currentPath = decodeURIComponent(window.location.pathname.split('/').pop() || '');
-    if (currentPath.includes('login.php') || currentPath.includes('register.php')) {
-        return;
-    }
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -1321,20 +1406,28 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                     <form onsubmit="handleMandatoryOTPVerifySubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">6-Digit OTP Code</label>
-                            <input type="text" id="m-lock-otp" maxlength="6" required placeholder="123456" style="width:100%; padding:14px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:1.4rem; letter-spacing:6px; text-align:center; font-weight:800; outline:none; box-sizing:border-box;">
+                            <input type="tel" id="m-lock-otp" name="m_lock_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" maxlength="6" required placeholder="123456" style="width:100%; padding:14px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:1.4rem; letter-spacing:6px; text-align:center; font-weight:800; outline:none; box-sizing:border-box;">
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
                         <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem;">Verify & Complete Registration</button>
                     </form>
 
-                    <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
+                    <div style="margin-top:16px; font-size:0.8rem; color:#94A3B8; text-align:center;" id="m-otp-timer-box">
+                        Resend code in <span id="m-otp-countdown">60</span>s
+                    </div>
+                    <div id="m-otp-resend-container" style="display:none; margin-top:16px; font-size:0.85rem; color:#94A3B8; text-align:center;">
                         Didn't receive the code? <a href="#" onclick="handleResendSignupOTP(event); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Resend OTP</a>
                     </div>
+                    <p style="font-size:0.75rem; color:#94A3B8; margin-top:10px; text-align:center; line-height:1.4;">
+                        <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent, #F2A735); margin-right:4px;"></i>
+                        Note: Email OTP may take a minute or two to enter your inbox. Please check your spam folder if delayed.
+                    </p>
                     <div style="margin-top:10px; font-size:0.85rem; color:#94A3B8;">
                         <a href="#" onclick="renderMandatoryAuthContent('${role === 'vendor' ? 'vendor-details' : 'signup'}'); return false;" style="color:#CBD5E1; text-decoration:underline;">Back</a>
                     </div>
                 </div>
             `;
+            setTimeout(() => { if (typeof startMandatoryOTPTimer === 'function') startMandatoryOTPTimer(); }, 50);
         } else if (mode === 'vendor-details') {
             const draft = window._mandatorySignupDraft || {};
             overlay.innerHTML = `
@@ -1408,11 +1501,17 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         </div>
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password *</label>
-                            <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            <div style="position:relative;">
+                                <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px 40px 12px 12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                <span onclick="togglePasswordVisibility('m-lock-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-pass-eye"></i></span>
+                            </div>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password *</label>
-                            <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                            <div style="position:relative;">
+                                <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px 40px 12px 12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                <span onclick="togglePasswordVisibility('m-lock-confirm')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-confirm-eye"></i></span>
+                            </div>
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
                         <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">
@@ -1422,6 +1521,61 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
 
                     <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
                         Already have an account? <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Log In</a>
+                    </div>
+                </div>
+            `;
+        } else if (mode === 'forgot') {
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Reset Your Password</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Enter your registered Email or Phone Number to receive a 6-digit reset code via SMS & Email.</p>
+
+                    <form onsubmit="handleMandatoryForgotPasswordSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email or Phone Number</label>
+                            <input type="text" id="m-lock-forgot-id" required placeholder="email@example.com or phone" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div id="m-lock-forgot-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-forgot-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Reset Code</button>
+                    </form>
+
+                    <div style="margin-top:24px; font-size:0.85rem; color:#94A3B8;">
+                        Remembered your password? <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Log In</a>
+                    </div>
+                </div>
+            `;
+        } else if (mode === 'reset-pass') {
+            const target = window._forgotTarget || '';
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Enter New Password</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">Code sent to <strong>${target}</strong>. Enter your 6-digit OTP code and new password.</p>
+
+                    <form onsubmit="handleMandatoryResetPasswordSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:14px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">6-Digit OTP Code</label>
+                            <input type="tel" id="m-lock-reset-code" name="m_lock_otp_code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore="true" spellcheck="false" autocorrect="off" onbeforeinput="if(event.data && /\D/.test(event.data)) event.preventDefault();" onkeydown="if(event.key.length===1 && !/[0-9]/.test(event.key)){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" maxlength="6" required placeholder="123456" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:1.3rem; letter-spacing:4px; text-align:center; font-weight:800; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">New Password (min. 8 characters)</label>
+                            <div style="position:relative;">
+                                <input type="password" id="m-lock-reset-pass" required placeholder="Enter new password" style="width:100%; padding:13px 40px 13px 13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                                <span onclick="togglePasswordVisibility('m-lock-reset-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-reset-pass-eye"></i></span>
+                            </div>
+                        </div>
+                        <div id="m-lock-reset-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <div id="m-lock-reset-success" style="display:none; padding:10px; border-radius:10px; background:rgba(34,197,94,0.15); border:1px solid #22C55E; color:#86EFAC; font-size:0.85rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-reset-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Save New Password</button>
+                    </form>
+
+                    <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
+                        <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:#CBD5E1; text-decoration:underline;">Back to Log In</a>
                     </div>
                 </div>
             `;
@@ -1440,8 +1594,14 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                             <input type="text" id="m-lock-id" required placeholder="email@example.com or phone" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Password</label>
-                            <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin:0;">Password</label>
+                                <a href="#" onclick="renderMandatoryAuthContent('forgot'); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
+                            </div>
+                            <div style="position:relative;">
+                                <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px 40px 13px 13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                                <span onclick="togglePasswordVisibility('m-lock-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-pass-eye"></i></span>
+                            </div>
                         </div>
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
                         <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Sign In</button>
@@ -1750,9 +1910,141 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
             throw new Error(res.error || 'Registration failed.');
         }
     }).catch(err => {
+        // If registration detected an existing account, log user into existing account via verified OTP
+        if (err && (err.account_exists || (err.message && err.message.toLowerCase().includes('already exists')))) {
+            return API.post('login', {
+                identifier: draft.email || draft.phone,
+                otp: otp
+            }).then(loginRes => {
+                if (loginRes.user) {
+                    state.user = loginRes.user;
+                    const token = loginRes.auth_token || loginRes.token;
+                    if (token) localStorage.setItem('ohati_auth_token', token);
+                    localStorage.setItem('ohati_user_session', JSON.stringify(loginRes.user));
+                    if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
+                    else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
+                    if (typeof updateAppHeader === 'function') updateAppHeader();
+                    window.location.reload();
+                } else {
+                    unlockOTP();
+                    if (errBox) {
+                        errBox.textContent = err.message || 'Account already registered. Please log in with your password.';
+                        errBox.style.display = 'block';
+                    }
+                }
+            }).catch(loginErr => {
+                unlockOTP();
+                if (errBox) {
+                    errBox.textContent = err.message || loginErr.message || 'Account already registered. Please log in with your password.';
+                    errBox.style.display = 'block';
+                }
+            });
+        }
         unlockOTP();
         if (errBox) { errBox.textContent = err.message || 'Invalid or expired OTP code.'; errBox.style.display = 'block'; }
     });
+};
+
+window.showDiditKycModalPopup = function(user) {
+    if (!user) return;
+    const kycSt = (user.kyc_status || '').toLowerCase();
+    if (kycSt === 'approved' || kycSt === 'pending_verification' || kycSt === 'in review' || kycSt === 'rejected') {
+        return;
+    }
+    if (sessionStorage.getItem('ohati_kyc_skipped_' + user.id) === '1') {
+        return;
+    }
+    if (document.getElementById('didit-kyc-popup-container')) return;
+
+    const modalHtml = `
+        <div id="didit-kyc-popup-overlay" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px;">
+            <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.15); border-radius:24px; width:100%; max-width:440px; padding:28px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.9); color:#FFF; text-align:center; position:relative;">
+                <div style="width:72px; height:72px; border-radius:20px; background:rgba(242,167,53,0.12); border:2px solid var(--accent, #F2A735); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; color:var(--accent, #F2A735); font-size:2rem; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div style="font-size:0.75rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Identity Verification</div>
+                <h3 style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:800; margin:0 0 8px 0; color:#FFF;">Verify Your Identity (Didit KYC)</h3>
+                <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0; line-height:1.4;">
+                    Complete quick automated verification with your Ghana Card or Passport for enhanced safety and trusted badge status on Ohati.
+                </p>
+                <div style="background:rgba(255,255,255,0.04); border-radius:12px; padding:14px; margin-bottom:20px; text-align:left; font-size:0.8rem; color:#CBD5E1; display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-shield-halved" style="color:var(--accent, #F2A735);"></i> Ghana Card & Passport check via Didit V3 API</div>
+                    <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-lock" style="color:#34D399;"></i> Bank-grade encryption & data security</div>
+                    <div style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-badge-check" style="color:#60A5FA;"></i> Earn your Verified badge for higher trust</div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn btn-primary btn-full" id="btn-popup-start-kyc" onclick="startPopupDiditKyc()" style="padding:13px; font-weight:800; font-size:0.95rem; border-radius:12px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; border:none; cursor:pointer;">
+                        <i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> Start Verification
+                    </button>
+                    <button class="btn btn-outline btn-full" onclick="skipPopupDiditKyc(${user.id})" style="padding:12px; font-weight:700; font-size:0.85rem; border-radius:12px; background:transparent; border:1px solid rgba(255,255,255,0.2); color:#CBD5E1; cursor:pointer;">
+                        Skip for now
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const el = document.createElement('div');
+    el.id = 'didit-kyc-popup-container';
+    el.innerHTML = modalHtml;
+    document.body.appendChild(el);
+};
+
+window.skipPopupDiditKyc = function(userId) {
+    if (userId) {
+        sessionStorage.setItem('ohati_kyc_skipped_' + userId, '1');
+    }
+    const popup = document.getElementById('didit-kyc-popup-container');
+    if (popup) popup.remove();
+};
+
+window.startPopupDiditKyc = async function() {
+    const btn = document.getElementById('btn-popup-start-kyc');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Launching Didit...';
+    }
+    try {
+        const res = await API.initDiditKyc();
+        const popup = document.getElementById('didit-kyc-popup-container');
+        if (popup) popup.remove();
+        if (res && res.url) {
+            if (typeof navigateTo === 'function') {
+                navigateTo('didit-kyc', { url: res.url, session_id: res.session_id });
+            } else if (typeof renderDiditKycScreen === 'function') {
+                renderDiditKycScreen({ url: res.url, session_id: res.session_id });
+            } else {
+                window.location.href = res.url;
+            }
+        }
+    } catch (err) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> Start Verification';
+        }
+        alert(err.message || 'Failed to initialize Didit identity verification.');
+    }
+};
+
+let mandatoryOtpTimer = null;
+window.startMandatoryOTPTimer = function() {
+    let secs = 60;
+    const cd = document.getElementById('m-otp-countdown');
+    const timerBox = document.getElementById('m-otp-timer-box');
+    const resend = document.getElementById('m-otp-resend-container');
+    if (timerBox) timerBox.style.display = 'block';
+    if (resend) resend.style.display = 'none';
+    if (mandatoryOtpTimer) clearInterval(mandatoryOtpTimer);
+    mandatoryOtpTimer = setInterval(() => {
+        secs--;
+        if (cd) cd.textContent = secs;
+        if (secs <= 0) {
+            clearInterval(mandatoryOtpTimer);
+            if (timerBox) timerBox.style.display = 'none';
+            if (resend) resend.style.display = 'block';
+        }
+    }, 1000);
 };
 
 window.handleResendSignupOTP = function (e) {
@@ -1768,7 +2060,100 @@ window.handleResendSignupOTP = function (e) {
         phone: draft.phone
     }).then(() => {
         if (errBox) { errBox.textContent = 'New 6-digit verification code sent!'; errBox.style.color = '#34D399'; errBox.style.display = 'block'; }
+        if (typeof window.startMandatoryOTPTimer === 'function') window.startMandatoryOTPTimer();
     }).catch(err => {
         if (errBox) { errBox.textContent = err.message || 'Resend failed. Please wait a minute before trying again.'; errBox.style.color = '#FCA5A5'; errBox.style.display = 'block'; }
+    });
+};
+
+window.handleMandatoryForgotPasswordSubmit = function (e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById('m-lock-forgot-btn');
+    const idInput = document.getElementById('m-lock-forgot-id');
+    const errBox = document.getElementById('m-lock-forgot-error');
+
+    if (errBox) errBox.style.display = 'none';
+    const target = idInput ? idInput.value.trim() : '';
+
+    if (!target) {
+        if (errBox) { errBox.textContent = 'Please enter your email or phone number.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending code...';
+    }
+
+    fetch('api.php?action=forgot_password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: target })
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            window._forgotTarget = target;
+            if (res.fallback_code) {
+                alert('Local Mode Reset Code: ' + res.fallback_code);
+            }
+            renderMandatoryAuthContent('reset-pass');
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Code'; }
+            if (errBox) { errBox.textContent = res.error || 'Failed to send reset code.'; errBox.style.display = 'block'; }
+        }
+    }).catch(err => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Code'; }
+        if (errBox) { errBox.textContent = 'Network error. Please try again.'; errBox.style.display = 'block'; }
+    });
+};
+
+window.handleMandatoryResetPasswordSubmit = function (e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById('m-lock-reset-btn');
+    const codeInput = document.getElementById('m-lock-reset-code');
+    const passInput = document.getElementById('m-lock-reset-pass');
+    const errBox = document.getElementById('m-lock-reset-error');
+    const succBox = document.getElementById('m-lock-reset-success');
+
+    if (errBox) errBox.style.display = 'none';
+    if (succBox) succBox.style.display = 'none';
+
+    const target = window._forgotTarget || '';
+    const code = codeInput ? codeInput.value.trim() : '';
+    const password = passInput ? passInput.value : '';
+
+    if (!code || !password) {
+        if (errBox) { errBox.textContent = 'Please enter both the OTP code and new password.'; errBox.style.display = 'block'; }
+        return;
+    }
+    if (password.length < 8) {
+        if (errBox) { errBox.textContent = 'Password must be at least 8 characters.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Saving password...';
+    }
+
+    fetch('api.php?action=reset_password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: target, code: code, password: password })
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            if (succBox) {
+                succBox.textContent = 'Password reset successfully! Redirecting to Log In...';
+                succBox.style.display = 'block';
+            }
+            setTimeout(() => {
+                renderMandatoryAuthContent('login');
+            }, 1800);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Save New Password'; }
+            if (errBox) { errBox.textContent = res.error || 'Invalid code or password reset failed.'; errBox.style.display = 'block'; }
+        }
+    }).catch(err => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Save New Password'; }
+        if (errBox) { errBox.textContent = 'Network error. Please try again.'; errBox.style.display = 'block'; }
     });
 };

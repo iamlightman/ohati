@@ -101,6 +101,27 @@ function initLiveTimeTicker() {
     }, 30000);
 }
 
+/** Check if a target vendor profile ID or vendor object belongs to the currently logged in user */
+function isOwnVendorProfile(vendorIdOrObj) {
+    if (typeof state === 'undefined' || !state || !state.user) return false;
+    let targetVid = null;
+    let targetUid = null;
+
+    if (typeof vendorIdOrObj === 'object' && vendorIdOrObj !== null) {
+        targetVid = vendorIdOrObj.id || vendorIdOrObj.vendor_id;
+        targetUid = vendorIdOrObj.user_id;
+    } else if (vendorIdOrObj) {
+        targetVid = vendorIdOrObj;
+    }
+
+    const userVid = state.user.vendor_id || (state.vendor ? state.vendor.id : null);
+    const userId = state.user.id;
+
+    if (targetVid && userVid && Number(targetVid) === Number(userVid)) return true;
+    if (targetUid && userId && Number(targetUid) === Number(userId)) return true;
+    return false;
+}
+
 // Global bindings for backward compatibility
 window.formatCompact = formatCompact;
 window.formatCurrency = formatCurrency;
@@ -109,6 +130,7 @@ window.formatFriendlyDate = formatFriendlyDate;
 window.formatFriendlyDateTime = formatFriendlyDateTime;
 window.formatRelativeTime = formatRelativeTime;
 window.initLiveTimeTicker = initLiveTimeTicker;
+window.isOwnVendorProfile = isOwnVendorProfile;
 
 if (typeof window !== 'undefined') {
     window.addEventListener('DOMContentLoaded', initLiveTimeTicker);

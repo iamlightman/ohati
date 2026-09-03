@@ -92,18 +92,19 @@ const JobsModule = {
         }
 
         const modalHtml = `
-            <div class="job-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
-                <h3 style="margin:0; font-size:1.2rem; color:var(--primary, #1B2B4B);"><i class="fa-solid fa-briefcase" style="color:var(--accent, #F2A735); margin-right:8px;"></i>${jobToEdit ? 'Edit Job' : 'Post an Event Job'}</h3>
-                <button onclick="closeModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--gray-500);"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <div class="job-step-wizard" style="display:flex; justify-content:space-around; background:var(--gray-100, #F8FAFC); padding:12px 20px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
-                <div class="wizard-step active" id="job-step-indicator-1" style="font-weight:700; color:var(--primary, #1B2B4B); font-size:0.85rem;"><span style="background:var(--primary, #1B2B4B); color:#fff; padding:2px 8px; border-radius:50%; margin-right:6px;">1</span> General Info</div>
-                <div class="wizard-step" id="job-step-indicator-2" style="font-weight:600; color:var(--gray-500); font-size:0.85rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:2px 8px; border-radius:50%; margin-right:6px;">2</span> Budget & Location</div>
-                <div class="wizard-step" id="job-step-indicator-3" style="font-weight:600; color:var(--gray-500); font-size:0.85rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:2px 8px; border-radius:50%; margin-right:6px;">3</span> Media & Settings</div>
-            </div>
+            <div class="job-modal-wrapper" style="width:94vw; max-width:1180px; height:88vh; max-height:90vh; display:flex; flex-direction:column; background:var(--card-bg, #ffffff); border-radius:20px; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.38); border:1px solid var(--gray-200, rgba(255,255,255,0.12)); margin:auto;">
+                <div class="job-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px; border-bottom:1px solid var(--gray-200, #E2E8F0); background:var(--card-header-bg, #F8FAFC);">
+                    <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--primary, #1B2B4B);"><i class="fa-solid fa-briefcase" style="color:var(--accent, #F2A735); margin-right:10px;"></i>${jobToEdit ? 'Edit Job' : 'Post an Event Job'}</h3>
+                    <button onclick="closeModal()" style="background:rgba(0,0,0,0.06); border:none; font-size:1.2rem; cursor:pointer; color:var(--gray-600); width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='rgba(239,68,68,0.15)'; this.style.color='#EF4444';" onmouseout="this.style.background='rgba(0,0,0,0.06)'; this.style.color='var(--gray-600)';"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="job-step-wizard" style="display:flex; justify-content:space-around; background:var(--gray-100, #F8FAFC); padding:14px 28px; border-bottom:1px solid var(--gray-200, #E2E8F0);">
+                    <div class="wizard-step active" id="job-step-indicator-1" style="font-weight:700; color:var(--primary, #1B2B4B); font-size:0.9rem;"><span style="background:var(--primary, #1B2B4B); color:#fff; padding:3px 10px; border-radius:50%; margin-right:8px;">1</span> General Info</div>
+                    <div class="wizard-step" id="job-step-indicator-2" style="font-weight:600; color:var(--gray-500); font-size:0.9rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:3px 10px; border-radius:50%; margin-right:8px;">2</span> Budget & Location</div>
+                    <div class="wizard-step" id="job-step-indicator-3" style="font-weight:600; color:var(--gray-500); font-size:0.9rem;"><span style="background:var(--gray-300, #CBD5E1); color:#333; padding:3px 10px; border-radius:50%; margin-right:8px;">3</span> Media & Settings</div>
+                </div>
 
-            <form id="post-job-form" onsubmit="event.preventDefault();" style="padding:20px; max-height:75vh; overflow-y:auto;">
+                <form id="post-job-form" onsubmit="event.preventDefault();" style="padding:28px; flex:1; overflow-y:auto;">
                 <!-- STEP 1 -->
                 <div class="job-step-pane" id="job-step-pane-1">
                     <div class="form-group" style="margin-bottom:14px;">
@@ -224,6 +225,7 @@ const JobsModule = {
                     </div>
                 </div>
             </form>
+        </div>
         `;
 
         this.displayModal(modalHtml);
@@ -358,6 +360,14 @@ const JobsModule = {
             if (typeof openLoginModal === 'function') openLoginModal();
             else showToast('Please sign in to submit proposals.', 'warning');
             return;
+        }
+
+        const currentUid = parseInt(user.id || user.user_id || 0);
+        if (window.state && window.state.currentJobDetails && parseInt(window.state.currentJobDetails.id) === parseInt(jobId)) {
+            if (currentUid > 0 && parseInt(window.state.currentJobDetails.user_id) === currentUid) {
+                showToast("You cannot apply or submit proposals for your own posted job.", "warning");
+                return;
+            }
         }
 
         const modalHtml = `
@@ -645,6 +655,10 @@ const JobsModule = {
             const attachments = res.attachments || [];
             const hasApplied = res.has_applied || false;
 
+            const currentUser = this.getUser();
+            const currentUid = currentUser ? parseInt(currentUser.id || currentUser.user_id || 0) : 0;
+            const isJobOwner = currentUid > 0 && (parseInt(job.user_id) === currentUid);
+
             const modalHtml = `
                 <div style="padding:24px; max-height:85vh; overflow-y:auto;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
@@ -678,15 +692,15 @@ const JobsModule = {
                     </div>
 
                     <div style="margin-bottom:20px;">
-                        <h4 style="margin:0 0 8px 0; color:var(--primary, #1B2B4B);">Description</h4>
-                        <p style="font-size:0.92rem; line-height:1.6; color:var(--gray-700); white-space:pre-wrap;">${escapeHtml(job.description)}</p>
+                        <h4 style="margin:0 0 8px 0; color:var(--primary, #1B2B4B);">Job Description</h4>
+                        <p style="margin:0; font-size:0.9rem; line-height:1.6; color:var(--gray-700); white-space:pre-line;">${escapeHtml(job.description)}</p>
                     </div>
 
                     ${job.required_skills ? `
                         <div style="margin-bottom:20px;">
                             <h4 style="margin:0 0 8px 0; color:var(--primary, #1B2B4B);">Required Skills / Equipment</h4>
                             <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                                ${job.required_skills.split(',').map(s => `<span style="background:var(--gray-200, #E2E8F0); color:var(--primary); padding:4px 10px; border-radius:6px; font-size:0.8rem; font-weight:600;">${escapeHtml(s.trim())}</span>`).join('')}
+                                ${job.required_skills.split(',').map(s => `<span style="background:var(--gray-100); padding:4px 10px; border-radius:6px; font-size:0.8rem; color:var(--gray-700);">${escapeHtml(s.trim())}</span>`).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -710,11 +724,13 @@ const JobsModule = {
 
                     <div style="display:flex; justify-content:flex-end; gap:10px;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
-                        ${hasApplied ? `
+                        ${isJobOwner ? `
+                            <button type="button" class="btn btn-outline" disabled style="opacity:0.85; cursor:not-allowed; border-color:var(--accent, #F2A735); color:var(--accent, #F2A735); font-weight:700;"><i class="fa-solid fa-user-shield" style="margin-right:6px;"></i> Your Posted Job (Self-Booking Disabled)</button>
+                        ` : (hasApplied ? `
                             <button type="button" class="btn btn-secondary" disabled style="opacity:0.7;"><i class="fa-solid fa-circle-check" style="color:#16A34A;"></i> Proposal Submitted</button>
                         ` : `
                             <button type="button" class="btn btn-primary" onclick="closeModal(); JobsModule.openApplyModal(${job.id}, '${escapeJsString(job.title)}', ${job.budget});"><i class="fa-solid fa-paper-plane"></i> Submit Proposal</button>
-                        `}
+                        `)}
                     </div>
                 </div>
             `;

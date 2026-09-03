@@ -1374,6 +1374,18 @@ window.triggerAccountDeletionFlow = function () {
 };
 
 window.showMandatoryAuthLockScreen = function (initialMode) {
+    if (window.state && window.state.user && window.state.user.id) {
+        if (typeof unlockMandatoryAuthScreen === 'function') unlockMandatoryAuthScreen();
+        if (initialMode === 'signup' || initialMode === 'vendor-details' || initialMode === 'vendor-register' || initialMode === 'become-vendor' || initialMode === 'account-type') {
+            if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+                if (typeof switchAccountType === 'function') switchAccountType('vendor');
+            } else {
+                if (typeof openBecomeVendorModal === 'function') openBecomeVendorModal();
+            }
+            return;
+        }
+    }
+
     let overlay = document.getElementById('mandatory-auth-lock-overlay');
     if (!overlay) {
         overlay = document.createElement('div');

@@ -374,6 +374,20 @@ function switchAccountType(targetRole) {
 }
 
 function openBecomeVendorModal() {
+    if (!window.state || !window.state.user || !window.state.user.id) {
+        if (typeof openSignUpModal === 'function') {
+            openSignUpModal();
+        }
+        return;
+    }
+
+    if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+        if (typeof switchAccountType === 'function') {
+            switchAccountType('vendor');
+        }
+        return;
+    }
+
     const html = `
         <div class="auth-modal-content p-24" style="max-width:520px; width:100%; border-radius:20px; background:var(--white);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -788,11 +802,16 @@ function openSignUpModal() {
 
 function openPremiumModal() {
     if (window.state && window.state.user && window.state.user.id) {
-        openBecomeVendorModal();
+        if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+            switchAccountType('vendor');
+        } else {
+            openBecomeVendorModal();
+        }
     } else {
         openSignUpModal();
     }
 }
+window.openPremiumModal = openPremiumModal;
 
 function openSettingsModal() {
     openModal(`

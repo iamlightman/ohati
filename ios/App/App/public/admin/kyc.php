@@ -57,7 +57,7 @@ $stmt = $pdo->query("
            u.kyc_id_front as id_front, u.kyc_selfie as selfie 
     FROM users u 
     JOIN vendors v ON u.id = v.user_id 
-    WHERE (u.kyc_status = 'pending_verification' OR u.kyc_status = 'pending' OR u.didit_session_id IS NOT NULL)
+    WHERE (u.kyc_status = 'pending_verification' OR u.kyc_status = 'pending' OR (u.didit_session_id IS NOT NULL AND u.kyc_status NOT IN ('approved', 'verified', 'rejected')))
     ORDER BY u.id DESC
 ");
 $pending = $stmt->fetchAll();
@@ -339,6 +339,10 @@ $pending_kyc = count($pending);
                                 <div><span class="info-label">Experience:</span> <?= htmlspecialchars($v['experience']) ?> Years</div>
                                 <div><span class="info-label">ID Type:</span> <?= htmlspecialchars($v['id_type'] ?: 'Not specified') ?></div>
                                 <div><span class="info-label">Submitted:</span> <?= htmlspecialchars($v['submitted_at'] ?: 'Not yet') ?></div>
+                                <?php if (!empty($v['didit_decision'])): ?>
+                                    <div><span class="info-label">Didit Status:</span> <span style="font-weight:700; color:var(--accent);"><?= htmlspecialchars($v['didit_decision']) ?></span></div>
+                                <?php endif; ?>
+                            </div>
                             </div>
 
                             <div>

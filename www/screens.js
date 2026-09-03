@@ -4777,8 +4777,11 @@ function initVendorDashScreen(params) {
         return;
     }
 
-    if (state.user && state.user.vendor) {
-        renderVendorDashScreen(state.user);
+    const initialUserObj = state.user || {};
+    if (!initialUserObj.vendor && state.vendor) initialUserObj.vendor = state.vendor;
+
+    if (initialUserObj.vendor || initialUserObj.has_vendor_profile || initialUserObj.vendor_id) {
+        renderVendorDashScreen(initialUserObj);
         if (typeof loadVendorRealtimeAnalytics === 'function') loadVendorRealtimeAnalytics({ period: '7days' });
     } else {
         screen.innerHTML = `
@@ -4800,6 +4803,8 @@ function initVendorDashScreen(params) {
         if (!userObj.vendor && state.vendor) userObj.vendor = state.vendor;
         if (userObj.vendor) {
             renderVendorDashScreen(userObj);
+        } else if (state.user && !state.user.has_vendor_profile) {
+            if (typeof openBecomeVendorModal === 'function') openBecomeVendorModal();
         } else {
             screen.innerHTML = `
                 <div class="p-section text-center" style="padding:60px 20px;">

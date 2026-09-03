@@ -365,14 +365,29 @@ function switchAccountType(targetRole) {
 }
 
 function openBecomeVendorModal() {
-    if (!window.state || !window.state.user || !window.state.user.id) {
-        if (typeof openSignUpModal === 'function') {
-            openSignUpModal();
+    let currentUser = (window.state && window.state.user && window.state.user.id) ? window.state.user : null;
+    if (!currentUser) {
+        try {
+            const cached = localStorage.getItem('ohati_user_session');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && parsed.id) {
+                    if (!window.state) window.state = {};
+                    window.state.user = parsed;
+                    currentUser = parsed;
+                }
+            }
+        } catch(e) {}
+    }
+
+    if (!currentUser || !currentUser.id) {
+        if (typeof openLoginModal === 'function') {
+            openLoginModal();
         }
         return;
     }
 
-    if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+    if (currentUser.has_vendor_profile || currentUser.vendor_id || (window.state && window.state.vendor)) {
         if (typeof switchAccountType === 'function') {
             switchAccountType('vendor');
         }
@@ -792,14 +807,25 @@ function openSignUpModal() {
 
 
 function openPremiumModal() {
-    if (window.state && window.state.user && window.state.user.id) {
-        if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+    let currentUser = (window.state && window.state.user && window.state.user.id) ? window.state.user : null;
+    if (!currentUser) {
+        try {
+            const cached = localStorage.getItem('ohati_user_session');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && parsed.id) currentUser = parsed;
+            }
+        } catch(e) {}
+    }
+
+    if (currentUser && currentUser.id) {
+        if (currentUser.has_vendor_profile || currentUser.vendor_id || (window.state && window.state.vendor)) {
             switchAccountType('vendor');
         } else {
             openBecomeVendorModal();
         }
     } else {
-        openSignUpModal();
+        if (typeof openLoginModal === 'function') openLoginModal();
     }
 }
 window.openPremiumModal = openPremiumModal;

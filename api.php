@@ -3589,7 +3589,7 @@ case 'register_vendor':
     // Auto-update users role to vendor & store KYC info
     if ($uid > 0) {
         $kyc_type = clean($input['kyc_id_type'] ?? 'Ghana Card');
-        $pdo->prepare("UPDATE users SET role = 'vendor', kyc_id_type = ?, kyc_status = 'pending' WHERE id = ?")->execute([$kyc_type, $uid]);
+        $pdo->prepare("UPDATE users SET role = 'vendor', active_role = 'vendor', kyc_id_type = ?, kyc_status = 'pending' WHERE id = ?")->execute([$kyc_type, $uid]);
         if (isset($_SESSION['user'])) {
             $_SESSION['user']['role'] = 'vendor';
             $_SESSION['user']['active_role'] = 'vendor';
@@ -3888,12 +3888,17 @@ case 'switch_role':
 
     $_SESSION['user']['active_role'] = $role;
     try {
-        if ($vendor && !empty($vendor['name'])) {
-            $stmt = $pdo->prepare("UPDATE users SET role = ?, active_role = ?, name = ? WHERE id = ?");
-            $stmt->execute([$role, $role, $vendor['name'], $uid]);
+        if ($role === 'vendor') {
+            if ($vendor && !empty($vendor['name'])) {
+                $stmt = $pdo->prepare("UPDATE users SET role = 'vendor', active_role = 'vendor', name = ? WHERE id = ?");
+                $stmt->execute([$vendor['name'], $uid]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE users SET role = 'vendor', active_role = 'vendor' WHERE id = ?");
+                $stmt->execute([$uid]);
+            }
         } else {
-            $stmt = $pdo->prepare("UPDATE users SET role = ?, active_role = ? WHERE id = ?");
-            $stmt->execute([$role, $role, $uid]);
+            $stmt = $pdo->prepare("UPDATE users SET active_role = 'customer' WHERE id = ?");
+            $stmt->execute([$uid]);
         }
     } catch (Exception $e) {}
     echo json_encode(['success'=>true, 'active_role'=>$role, 'user'=>$_SESSION['user']]);

@@ -1448,16 +1448,31 @@ window.triggerAccountDeletionFlow = function () {
 };
 
 window.showMandatoryAuthLockScreen = function (initialMode) {
-    if (window.state && window.state.user && window.state.user.id) {
+    let currentUser = (window.state && window.state.user && window.state.user.id) ? window.state.user : null;
+    if (!currentUser) {
+        try {
+            const cached = localStorage.getItem('ohati_user_session');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && parsed.id) {
+                    if (!window.state) window.state = {};
+                    window.state.user = parsed;
+                    currentUser = parsed;
+                }
+            }
+        } catch(e) {}
+    }
+
+    if (currentUser && currentUser.id) {
         if (typeof unlockMandatoryAuthScreen === 'function') unlockMandatoryAuthScreen();
         if (initialMode === 'signup' || initialMode === 'vendor-details' || initialMode === 'vendor-register' || initialMode === 'become-vendor' || initialMode === 'account-type') {
-            if (window.state.user.has_vendor_profile || window.state.user.vendor_id || window.state.vendor) {
+            if (currentUser.has_vendor_profile || currentUser.vendor_id || (window.state && window.state.vendor)) {
                 if (typeof switchAccountType === 'function') switchAccountType('vendor');
             } else {
                 if (typeof openBecomeVendorModal === 'function') openBecomeVendorModal();
             }
-            return;
         }
+        return;
     }
 
     let overlay = document.getElementById('mandatory-auth-lock-overlay');

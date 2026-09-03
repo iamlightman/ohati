@@ -2170,22 +2170,6 @@ function renderPaymentSection(b) {
                     <button class="btn btn-outline" onclick="submitSimulatedPayment(${b.id}, ${b.price}, 'Fully Paid')" style="padding: 8px 12px; font-size: 0.7rem; height: auto; flex: 1;">Pay Full (${formatGHS(b.price)})</button>
                 </div>
             </div>
-        `;
-    }
-    
-    if (b.payment_status === 'Deposit Paid') {
-        return `
-            <div style="border: 1.5px solid var(--forest-green); padding: 12px; border-radius: 10px; background: rgba(45,90,60,0.03);">
-                <h5 style="font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; color: var(--forest-green);"><i class="fa-solid fa-credit-card"></i> Clear Outstanding Balance</h5>
-                <p style="font-size: 0.65rem; color: var(--gray-text); margin-bottom: 8px;">Paid GHS ${b.deposit_paid || 0}. Settle remaining outstanding balance before event day.</p>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary" onclick="submitSimulatedPayment(${b.id}, ${balanceAmount}, 'Fully Paid')" style="padding: 8px 12px; font-size: 0.7rem; height: auto; width: 100%;">Pay Balance (${formatGHS(balanceAmount)})</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    if (b.payment_status === 'Fully Paid') {
         return `
             <div style="border: 1.5px solid var(--forest-green); padding: 12px; border-radius: 10px; background: rgba(45,90,60,0.02); text-align: center;">
                 <span style="font-size: 1.3rem; color: var(--forest-green);"><i class="fa-solid fa-circle-check"></i></span>

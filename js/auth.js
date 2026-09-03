@@ -200,10 +200,43 @@ function renderAuthModal() {
                     <label class="form-label">Email or Phone Number</label>
                     <input type="text" class="form-input" id="login-id" placeholder="email@example.com or phone number">
                 </div>
-                <div class="form-group">
+window.openForgotPasswordPage = function(event) {
+    if (event && event.preventDefault) event.preventDefault();
+
+    const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                     window.location.protocol === 'capacitor:' ||
+                     window.location.protocol === 'file:' ||
+                     (navigator.userAgent && navigator.userAgent.includes('OhatiApp'));
+
+    let targetUrl = 'forgot-password.php';
+    if (isNative) {
+        const apiBase = (typeof window.getOhatiApiBaseUrl === 'function') ? window.getOhatiApiBaseUrl() : 'https://ohati.com/api.php';
+        const origin = apiBase.replace(/\/api\.php.*$/, '');
+        targetUrl = (origin && origin.startsWith('http')) ? origin + '/forgot-password.php' : 'https://ohati.com/forgot-password.php';
+    }
+
+    if (isNative) {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+                window.Capacitor.Plugins.Browser.open({ url: targetUrl });
+                return;
+            }
+        } catch(err) {}
+        try {
+            window.open(targetUrl, '_system');
+            return;
+        } catch(err) {}
+    }
+
+    const win = window.open(targetUrl, '_blank');
+    if (!win) {
+        window.location.href = targetUrl;
+    }
+};
+
                     <div class="flex-between">
                         <label class="form-label">Password</label>
-                        <a href="forgot-password.php" target="_blank" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="window.open('forgot-password.php', '_blank'); return false;">Forgot?</a>
+                        <a href="forgot-password.php" target="_blank" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="window.openForgotPasswordPage(event); return false;">Forgot?</a>
                     </div>
                     <div class="input-group">
                         <input type="password" class="form-input" id="login-pass" placeholder="Your password">
@@ -220,7 +253,7 @@ function renderAuthModal() {
             break;
 
         case 'forgot':
-            window.open('forgot-password.php', '_blank');
+            window.openForgotPasswordPage();
             state.authMode = 'login';
             renderAuthModal();
             return;
@@ -1618,7 +1651,7 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                 </div>
             `;
         } else if (mode === 'forgot') {
-            window.open('forgot-password.php', '_blank');
+            window.openForgotPasswordPage();
             renderMandatoryAuthContent('login');
             return;
         } else if (mode === 'forgot-sent') {
@@ -1694,7 +1727,7 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin:0;">Password</label>
-                                <a href="forgot-password.php" target="_blank" onclick="window.open('forgot-password.php', '_blank'); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
+                                <a href="forgot-password.php" target="_blank" onclick="window.openForgotPasswordPage(event); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
                             </div>
                             <div style="position:relative;">
                                 <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px 40px 13px 13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">

@@ -689,7 +689,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${premiumVendors.length > 0 ? premiumVendors.map(v => `
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})">
                         <div class="vendor-card-cover">
-                            <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300';" alt="">
+                            <img src="${window.resolveImageUrl(v.cover_photo || v.logo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)}">
                             <div style="position:absolute; top:12px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:5;">
                                 <button onclick="shareVendorProfile(state.vendors.find(x => x.id === ${v.id}), event)" style="border:none; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); color:#1B2B4B; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:var(--shadow-sm);">
                                     <i class="fa-solid fa-share-nodes"></i>
@@ -738,7 +738,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${popularVendors.length > 0 ? popularVendors.map(v => `
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})" style="flex:0 0 160px; min-height:165px; margin-bottom:8px;">
                         <div class="vendor-card-cover" style="height:90px;">
-                            <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300';" alt="">
+                            <img src="${window.resolveImageUrl(v.cover_photo || v.logo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)}">
                         </div>
                         <div class="vendor-card-body" style="padding:6px 8px;">
                             <div class="vendor-card-name" style="font-size:0.75rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.name}</div>
@@ -770,7 +770,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 ${state.platformReviews.map(r => `
                     <div class="review-card">
                         <div class="review-header">
-                            <img class="review-avatar" src="${r.avatar || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" alt="">
+                            <img class="review-avatar" src="${window.resolveImageUrl(r.avatar, 'avatar')}" onerror="window.handleImageError(this, 'avatar')" alt="${escapeHtml(r.name || 'User')}">
                             <div>
                                 <div class="review-name">${r.name}</div>
                                 <div class="review-stars">${starsHTML(r.rating, '0.55rem')}</div>
@@ -1017,21 +1017,10 @@ function renderSearchScreen() {
         const isFeatured = parseInt(v.featured) === 1;
         const isPremium = v.verification_badge === 'gold' || parseInt(v.premium) === 1;
         
-        let badgeHtml = '';
-        if (v.verification_badge === 'gold') {
-            badgeHtml = `<span class="card-trust-badge premium-badge"><i class="fa-solid fa-crown"></i><span class="badge-text"> Premium</span></span>`;
-        } else if (v.verification_badge === 'blue') {
-            badgeHtml = `<span class="card-trust-badge verified-badge"><i class="fa-solid fa-circle-check"></i><span class="badge-text"> Verified</span></span>`;
-        }
-
-        const sponsoredBadge = isFeatured ? `<span class="card-sponsored-badge"><i class="fa-solid fa-rectangle-ad"></i><span class="badge-text"> Sponsored</span></span>` : '';
-        const ratingVal = parseFloat(v.rating || '5.0');
-        let ratingWord = 'Rating';
-
         return `
             <div class="vendor-list-item" onclick="viewVendorDetails(${v.id})">
                 <div class="vendor-list-cover-wrapper">
-                    <img class="vendor-list-cover" src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300'}" alt="${v.name}">
+                    <img class="vendor-list-cover" src="${window.resolveImageUrl(v.cover_photo || v.logo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)}">
                 </div>
                 <div class="vendor-list-info" style="display:flex; flex-direction:column; gap:4px; padding:12px 4px 4px 4px;">
                     <div class="vendor-list-cat" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--gray-600, #4B5563); font-weight:700; margin:0;">${v.category}</div>
@@ -1053,7 +1042,7 @@ function renderSearchScreen() {
                     
                     <div class="vendor-rating-row" style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
                         <span class="rating-badge" style="background:rgba(27,43,75,0.06); color:var(--primary); font-weight:800; padding:2px 6px; border-radius:6px; font-size:0.75rem;"><i class="fa-solid fa-star" style="color:#F59E0B; margin-right:3px;"></i>${parseFloat(v.rating || '5.0').toFixed(1)}</span>
-                        <span class="rating-text" style="font-size:0.72rem; font-weight:700; color:var(--gray-800);">${ratingWord}</span>
+                        <span class="rating-text" style="font-size:0.72rem; font-weight:700; color:var(--gray-800);">Rating</span>
                         <span class="rating-count" style="font-size:0.7rem; color:var(--gray-500);">(${v.reviews_count || 12} reviews)</span>
                     </div>
 
@@ -1100,7 +1089,7 @@ function viewCustomerProfileModal(customerId) {
     `);
     
     API.getVendorDetails(customerId, true).then(c => {
-        let avatarUrl = c.logo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>');
+        let avatarUrl = window.resolveImageUrl(c.logo || c.avatar, 'avatar');
         let contactRows = '';
         if (c.phone) {
             contactRows += `
@@ -1132,7 +1121,7 @@ function viewCustomerProfileModal(customerId) {
             </div>
             
             <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 0 20px; border-bottom:1px solid var(--gray-100); margin-bottom:20px;">
-                <img src="${avatarUrl}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid var(--gray-100); box-shadow:var(--shadow-md); margin-bottom:12px;">
+                <img src="${avatarUrl}" onerror="window.handleImageError(this, 'avatar')" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid var(--gray-100); box-shadow:var(--shadow-md); margin-bottom:12px;">
                 <h3 style="margin:0; font-size:1.15rem; color:var(--gray-900); font-weight:800;">${c.name}</h3>
                 <span style="font-size:0.7rem; background:rgba(27,43,75,0.06); color:var(--primary); padding:3px 10px; border-radius:20px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-top:6px;">Client / Customer</span>
             </div>
@@ -1177,7 +1166,7 @@ function initDetailScreen() {
 
         let html = `
             <div class="detail-hero">
-                <img class="detail-cover" src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800'}" alt="${escapeHtml(v.name)} - ${escapeHtml(v.category)} in ${escapeHtml(v.city || 'Ghana')}" title="${escapeHtml(v.name)}">
+                <img class="detail-cover" src="${window.resolveImageUrl(v.cover_photo || v.logo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)} - ${escapeHtml(v.category)} in ${escapeHtml(v.city || 'Ghana')}" title="${escapeHtml(v.name)}">
                 <div class="detail-hero-overlay"></div>
                 <button class="detail-back-btn" onclick="navigateBack()"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="detail-actions-top">
@@ -1192,7 +1181,7 @@ function initDetailScreen() {
                     </button>
                 </div>
                 <div class="detail-vendor-identity">
-                    <img class="detail-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="${escapeHtml(v.name)} Logo - ${escapeHtml(v.category)}" title="${escapeHtml(v.name)}">
+                    <img class="detail-logo" src="${window.resolveImageUrl(v.logo || v.avatar, 'avatar')}" onerror="window.handleImageError(this, 'avatar')" alt="${escapeHtml(v.name)} Logo - ${escapeHtml(v.category)}" title="${escapeHtml(v.name)}">
                     <div class="detail-vendor-name" style="display:flex; align-items:center; gap:6px;">
                         <span>${v.name}</span>
                         ${v.verification_badge === 'gold' ? `<i class="fa-solid fa-circle-check" style="color:#FFD700;" title="Gold Verified"></i>` : ''}
@@ -2184,11 +2173,21 @@ function updateChatMessages(history) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
 
-    const role = state.user?.active_role || state.user?.role || 'customer';
+    const curUid = state.user ? parseInt(state.user.id || 0) : 0;
+    const curVendorId = state.user ? parseInt(state.user.vendor_id || 0) : 0;
 
     const newHTML = history.map(m => {
-        const isOutgoing = (role === 'vendor' && m.sender === 'vendor') || (role !== 'vendor' && m.sender === 'user');
-        
+        const mUserId = parseInt(m.user_id || 0);
+        const mVendorId = parseInt(m.vendor_id || 0);
+        const mSender = m.sender;
+
+        let isOutgoing = false;
+        if (mSender === 'vendor') {
+            isOutgoing = (curVendorId > 0 && curVendorId === mVendorId) || (curUid > 0 && curUid === mVendorId);
+        } else {
+            isOutgoing = (curUid > 0 && curUid === mUserId);
+        }
+
         const timeStr = m.created_at ? formatChatDateTime(m.created_at) : '';
         let statusHtml = '';
         if (isOutgoing) {
@@ -2244,11 +2243,10 @@ function updateChatMessages(history) {
                 </a>
             `;
         } else {
-            bodyHtml = `<div class="msg-text">${m.message}</div>`;
+            bodyHtml = `<div class="msg-text">${escapeHtml(m.message).replace(/\n/g, '<br>')}</div>`;
         }
 
-        const isUserSender = m.sender === 'user';
-        const bubbleClass = (role === 'vendor') ? (isUserSender ? 'msg-vendor' : 'msg-user') : (isUserSender ? 'msg-user' : 'msg-vendor');
+        const bubbleClass = isOutgoing ? 'msg-user' : 'msg-vendor';
 
         if (isOutgoing) {
             return `
@@ -2261,8 +2259,8 @@ function updateChatMessages(history) {
             `;
         } else {
             let badgeBadgeHtml = '';
-            if (role !== 'vendor' && state.activeChatPartner) {
-                const isVerified = parseInt(state.activeChatPartner.verified) === 1;
+            if (state.activeChatPartner) {
+                const isVerified = parseInt(state.activeChatPartner.verified || 0) === 1;
                 const badge = state.activeChatPartner.verification_badge;
                 if (badge === 'gold') {
                     badgeBadgeHtml = `
@@ -2278,8 +2276,8 @@ function updateChatMessages(history) {
                     `;
                 }
             }
-            const partnerAvatar = state.activeChatPartner?.logo || window.DEFAULT_USER_AVATAR;
-            const avatarClickAction = (role === 'vendor') ? `viewCustomerProfileModal(${state.activeChatPartner?.id})` : `viewVendorDetails(${state.activeChatPartner?.id})`;
+            const partnerAvatar = state.activeChatPartner?.logo || state.activeChatPartner?.avatar || window.DEFAULT_USER_AVATAR;
+            const avatarClickAction = state.activeChatPartner?.category ? `viewVendorDetails(${state.activeChatPartner?.id})` : `viewCustomerProfileModal(${state.activeChatPartner?.id})`;
             return `
                 <div class="msg-row incoming" style="display:flex; align-items:flex-end; justify-content:flex-start; gap:8px; width:100%; margin-bottom:4px;">
                     <div style="position:relative; width:28px; height:28px; flex-shrink:0;">
@@ -2295,23 +2293,21 @@ function updateChatMessages(history) {
         }
     }).join('');
 
-    if (container.innerHTML !== newHTML) {
-        container.innerHTML = newHTML;
+    container.innerHTML = newHTML;
 
-        // Re-append active/failed pending chat upload bubbles so polling doesn't erase them
-        if (window._pendingChatUploads) {
-            Object.keys(window._pendingChatUploads).forEach(tempId => {
-                const item = window._pendingChatUploads[tempId];
-                if (item && item.vendorId == state.activeChatVendorId && (item.status === 'uploading' || item.status === 'failed')) {
-                    if (typeof window.renderPendingChatBubble === 'function') {
-                        window.renderPendingChatBubble(tempId);
-                    }
+    // Re-append active/failed pending chat upload bubbles so polling doesn't erase them
+    if (window._pendingChatUploads) {
+        Object.keys(window._pendingChatUploads).forEach(tempId => {
+            const item = window._pendingChatUploads[tempId];
+            if (item && item.vendorId == state.activeChatVendorId && (item.status === 'uploading' || item.status === 'failed')) {
+                if (typeof window.renderPendingChatBubble === 'function') {
+                    window.renderPendingChatBubble(tempId);
                 }
-            });
-        }
-
-        scrollToBottom('chat-messages-container');
+            }
+        });
     }
+
+    scrollToBottom('chat-messages-container');
 }
 
 function closeActiveChat() {
@@ -2324,18 +2320,34 @@ function closeActiveChat() {
 }
 
 function sendChatMessage() {
+    if (state.isSendingChatMessage) return;
     const input = document.getElementById('chat-input-field');
-    const msg = input?.value.trim() || '';
+    const msg = input?.value ? input.value.trim() : '';
     if (!msg || !state.activeChatVendorId) return;
 
+    state.isSendingChatMessage = true;
+    const textToSend = msg;
     input.value = '';
 
-    API.sendMessage(state.activeChatVendorId, msg).then(() => {
-        API.getChatHistory(state.activeChatVendorId).then(history => {
-            updateChatMessages(history);
+    API.sendMessage(state.activeChatVendorId, textToSend)
+        .then(() => {
+            state.isSendingChatMessage = false;
+            API.getChatHistory(state.activeChatVendorId).then(history => {
+                updateChatMessages(history);
+            });
+        })
+        .catch(err => {
+            state.isSendingChatMessage = false;
+            if (input) input.value = textToSend;
+            if (typeof showPushNotification === 'function') {
+                showPushNotification('Send Failed', err.message || 'Failed to send message.');
+            } else {
+                alert(err.message || 'Failed to send message.');
+            }
         });
-    });
 }
+window.sendChatMessage = sendChatMessage;
+window.sendTextMessage = sendChatMessage;
 
 function triggerChatAttachment() {
     if (typeof window.triggerChatAttachment === 'function' && window.triggerChatAttachment !== triggerChatAttachment) {
@@ -2708,9 +2720,6 @@ function renderBookingsScreen(bookings) {
                 <div class="booking-details-row" style="margin-top:10px; padding-top:8px; border-top:1px dashed var(--gray-200); display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
                     <div class="booking-detail-item"><i class="fa-solid fa-calendar-day" style="color:var(--primary);"></i> <span>${formatFriendlyDate(b.event_date)}</span></div>
                     <div class="booking-detail-item"><i class="fa-solid fa-tag" style="color:var(--primary);"></i> <strong style="color:var(--primary);">GH₵ ${negPrice.toLocaleString('en-US', {minimumFractionDigits:2})}</strong></div>
-                </div>
-                <div style="margin-top:6px; font-size:0.68rem; color:var(--gray-500); text-align:right;">
-                    <i class="fa-regular fa-clock"></i> Requested ${createdRelTime}
                 </div>
             </div>
         `;
@@ -3380,12 +3389,6 @@ window.openBookingDetailsModal = function(bid) {
                 <span class="booking-status ${booking.status === 'Inquiry' ? 'status-pending' : 'status-confirmed'}">${booking.status}</span>
             </div>
 
-            <!-- Real-Time Timestamp Banner -->
-            <div style="background:var(--gray-100); padding:8px 12px; border-radius:8px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; font-size:0.72rem;">
-                <span style="color:var(--gray-700); font-weight:600;"><i class="fa-regular fa-clock" style="color:var(--primary);"></i> Requested: <strong>${createdTimeStr}</strong></span>
-                <span style="color:var(--gray-500); font-size:0.68rem;">${formatFriendlyDate(booking.created_at)}</span>
-            </div>
-
             <!-- Contact & Booking Grid -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--gray-50); padding:12px; border-radius:10px; border:1px solid var(--gray-100); margin-bottom:14px; font-size:0.75rem;">
                 <div>
@@ -3403,9 +3406,6 @@ window.openBookingDetailsModal = function(bid) {
                     <span style="color:var(--gray-500); font-size:0.68rem; display:block;">EVENT & PRICING</span>
                     <div style="margin-top:2px;"><i class="fa-solid fa-calendar-day" style="color:var(--primary);"></i> Date: <strong>${formatFriendlyDate(booking.event_date)}</strong></div>
                     <div style="margin-top:2px;"><i class="fa-solid fa-tag" style="color:var(--primary);"></i> Total: <strong>GH₵ ${negPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</strong></div>
-                    <div style="margin-top:2px; font-size:0.7rem; color:${remaining <= 0 ? 'var(--success)' : 'var(--error)'}; font-weight:700;">
-                        ${remaining <= 0 ? 'Fully Paid ✓' : 'Balance: GH₵ ' + remaining.toLocaleString(undefined,{minimumFractionDigits:2})}
-                    </div>
                 </div>
             </div>
 
@@ -3429,7 +3429,7 @@ window.openBookingDetailsModal = function(bid) {
                         </div>
                         <div class="stage-info" style="margin-left:12px;">
                             <div class="stage-label" style="font-size:0.78rem; font-weight:700; color:var(--gray-800);">${t.status}</div>
-                            <div class="stage-date" style="font-size:0.62rem; color:var(--gray-500);">${formatRelativeTime(t.timestamp)}</div>
+                            ${(t.status === 'Inquiry Submitted' || t.status === 'Inquiry') ? `<div class="stage-date" style="font-size:0.62rem; color:var(--gray-500);">${formatFriendlyDate(t.timestamp || booking.created_at)}</div>` : ''}
                             ${t.notes ? `<div class="stage-note" style="font-size:0.7rem; margin-top:2px;">${t.notes}</div>` : ''}
                         </div>
                     </div>
@@ -3523,14 +3523,6 @@ function showPaymentReceipt(booking, amountPaid, reference) {
                     <span style="color:var(--gray-500);">Reference</span>
                     <span style="font-weight:600;color:var(--gray-700);font-size:0.65rem;">${reference || '—'}</span>
                 </div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                    <span style="color:var(--gray-500);">Date & Time</span>
-                    <span style="font-weight:600;color:var(--gray-700);">${now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} ${now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span>
-                </div>
-                <div style="border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;display:flex;justify-content:space-between;">
-                    <span style="color:var(--gray-500);">Balance Due</span>
-                    <span style="font-weight:800;color:${remaining <= 0 ? 'var(--success)' : 'var(--error)'};">${remaining <= 0 ? 'Fully Paid ✓' : 'GH₵ ' + remaining.toLocaleString(undefined,{minimumFractionDigits:2})}</span>
-                </div>
             </div>
 
             <!-- Action Buttons -->
@@ -3545,120 +3537,79 @@ function showPaymentReceipt(booking, amountPaid, reference) {
 }
 
 // ── PROFESSIONAL BOOKING INVOICE ────────────────────────────────────────
-function openBookingInvoice(bid) {
-    const booking = state.bookings.find(b => b.id === bid);
-    if (!booking) return;
+window.openBookingInvoice = function(bid) {
+    let booking = (state.bookings && Array.isArray(state.bookings)) ? state.bookings.find(b => Number(b.id) === Number(bid)) : null;
+    
+    if (!booking) {
+        showPushNotification('Error', 'Booking invoice data not found.');
+        return;
+    }
 
     const totalCost = parseFloat(booking.negotiated_price || booking.price || 0);
-    const invoiceNo = 'INV-OHT-' + String(booking.id).padStart(5, '0');
-    const createdDate = booking.timeline && booking.timeline.length > 0
-        ? new Date(booking.timeline[0].timestamp)
-        : new Date(booking.created_at || Date.now());
-    const timeFormatted = createdDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const vendorLogo = booking.vendor_logo || 'img/logo black transparent small.png';
-
-    const statusBadge = booking.status === 'Confirmed'
-        ? '<span style="color:var(--success); font-weight:800;">✓ CONFIRMED</span>'
-        : (booking.status === 'Cancelled' ? '<span style="color:var(--error); font-weight:800;">✕ CANCELLED</span>' : '<span style="color:var(--primary); font-weight:800;">● INQUIRY SUBMITTED</span>');
+    const invoiceNo = 'OHT-INV-' + String(booking.id).padStart(5, '0');
+    const statusBadge = `<span class="booking-status ${booking.status === 'Inquiry' ? 'status-pending' : 'status-confirmed'}" style="font-size:0.7rem; padding:3px 8px;">${booking.status}</span>`;
 
     const html = `
-        <div id="invoice-printable" style="max-width:460px;margin:0 auto;">
-            <!-- INVOICE HEADER: Two-column logo layout -->
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid var(--primary);margin-bottom:16px;">
-                <!-- Ohati Side -->
-                <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-                        <img src="img/logo black transparent small.png" alt="Ohati" style="height:28px;width:auto;">
-                        <span style="font-family:'Fraunces',serif;font-size:1rem;font-weight:800;color:var(--primary);">OHATI</span>
-                    </div>
-                    <div style="font-size:0.6rem;color:var(--gray-500);line-height:1.5;">
-                        Ghana's Event Marketplace<br>
-                        support@ohati.com<br>
-                        +233 54 337 7470
-                    </div>
-                </div>
-                <!-- Vendor Side -->
-                <div style="flex:1;text-align:right;">
-                    <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:6px;">
-                        <span style="font-size:0.9rem;font-weight:800;color:var(--gray-800);">${booking.vendor_name}</span>
-                        <img src="${vendorLogo}" alt="${booking.vendor_name}" style="height:28px;width:28px;border-radius:50%;object-fit:cover;border:2px solid var(--gray-200);" onerror="this.src='img/logo black transparent small.png'">
-                    </div>
-                    <div style="font-size:0.6rem;color:var(--gray-500);line-height:1.5;">
-                        ${booking.vendor_category}<br>
-                        ${booking.vendor_location || 'Ghana'}<br>
-                        ${booking.vendor_phone || booking.vendor_whatsapp || ''}
-                    </div>
-                </div>
-            </div>
-
-            <!-- INVOICE META -->
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding:10px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;">
-                <div>
-                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Invoice No.</div>
-                    <div style="font-size:0.8rem;font-weight:800;color:var(--primary);">${invoiceNo}</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Issued Date & Time</div>
-                    <div style="font-size:0.75rem;font-weight:700;color:var(--gray-800);">${createdDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} ${timeFormatted}</div>
+        <div id="invoice-printable" style="max-width:440px; margin:0 auto; font-family:'Outfit', sans-serif;">
+            <!-- CLEAN HEADER -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:1.5px solid var(--gray-200); margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <img src="img/logo black transparent small.png" alt="Ohati" style="height:28px; width:auto;">
+                    <span style="font-family:'Fraunces',serif; font-size:1.1rem; font-weight:800; color:var(--primary);">OHATI</span>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Booking Status</div>
-                    <div style="font-size:0.75rem;">${statusBadge}</div>
+                    <div style="font-size:0.7rem; font-weight:800; color:var(--primary);">${invoiceNo}</div>
+                    <div style="margin-top:2px;">${statusBadge}</div>
                 </div>
             </div>
 
-            <!-- BILL TO -->
-            <div style="margin-bottom:14px; padding:10px 12px; background:var(--gray-50); border-radius:8px;">
-                <div style="font-size:0.6rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Billed To (Client Details)</div>
-                <div style="font-size:0.8rem;font-weight:700;color:var(--gray-800);">${booking.user_name}</div>
-                <div style="font-size:0.7rem;color:var(--gray-600);"><i class="fa-solid fa-phone"></i> ${booking.user_phone}</div>
-                ${booking.user_email ? `<div style="font-size:0.7rem;color:var(--gray-600);"><i class="fa-solid fa-envelope"></i> ${booking.user_email}</div>` : ''}
+            <!-- PARTY DETAILS GRID -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--gray-50); padding:12px 14px; border-radius:10px; border:1px solid var(--gray-100); margin-bottom:14px; font-size:0.75rem;">
+                <div>
+                    <span style="font-size:0.65rem; color:var(--gray-400); text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">CLIENT</span>
+                    <strong style="color:var(--gray-800); font-size:0.82rem;">${booking.user_name}</strong>
+                    <div style="color:var(--gray-600); font-size:0.7rem; margin-top:2px;"><i class="fa-solid fa-phone" style="font-size:0.65rem;"></i> ${booking.user_phone}</div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-size:0.65rem; color:var(--gray-400); text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">VENDOR</span>
+                    <strong style="color:var(--gray-800); font-size:0.82rem;">${booking.vendor_name}</strong>
+                    <div style="color:var(--gray-600); font-size:0.7rem; margin-top:2px;">${booking.vendor_category}</div>
+                </div>
             </div>
 
-            <!-- SERVICE DETAILS TABLE -->
-            <table style="width:100%;border-collapse:collapse;margin-bottom:14px;border:1px solid var(--gray-100);border-radius:8px;overflow:hidden;">
-                <thead>
-                    <tr style="background:var(--primary);color:white;">
-                        <th style="padding:8px 10px;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;">Description / Service Package</th>
-                        <th style="padding:8px 10px;text-align:right;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;">Agreed Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="padding:10px;border-bottom:1px solid var(--gray-100);">
-                            <div style="font-size:0.78rem;font-weight:700;color:var(--gray-800);">${booking.package_name || 'Custom Service Package'}</div>
-                            <div style="font-size:0.65rem;color:var(--gray-500);">${booking.vendor_category} · ${booking.event_type || 'Event'} · Event Date: ${formatFriendlyDate(booking.event_date)}</div>
-                            ${booking.notes ? `<div style="font-size:0.65rem;color:var(--gray-600);margin-top:4px;"><em>Notes: ${booking.notes}</em></div>` : ''}
-                        </td>
-                        <td style="padding:10px;text-align:right;font-weight:800;font-size:0.85rem;color:var(--gray-800);border-bottom:1px solid var(--gray-100);">GH₵ ${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr style="background:var(--gray-50);border-top:2px solid var(--primary);">
-                        <td style="padding:10px;font-size:0.78rem;font-weight:800;color:var(--primary);">Total Booking Amount</td>
-                        <td style="padding:10px;text-align:right;font-weight:800;font-size:0.9rem;color:var(--primary);">GH₵ ${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <!-- MARKETPLACE NOTICE -->
-            <div style="background:rgba(14,131,69,0.06);border:1px solid rgba(14,131,69,0.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;">
-                <p style="margin:0;font-size:0.68rem;color:var(--gray-700);line-height:1.5;">
-                    <i class="fa-solid fa-circle-check" style="color:var(--primary);"></i>
-                    <strong>Official Booking Invoice:</strong> Issued by Ohati Event Marketplace. Details and scheduling are confirmed between client and vendor.
-                </p>
+            <!-- SERVICE & EVENT DETAILS -->
+            <div style="background:var(--gray-50); padding:12px 14px; border-radius:10px; border:1px solid var(--gray-100); margin-bottom:14px; font-size:0.75rem;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="color:var(--gray-500);">Service / Package</span>
+                    <span style="font-weight:700; color:var(--gray-800);">${booking.package_name || 'Custom Package'}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="color:var(--gray-500);">Event Date</span>
+                    <span style="font-weight:700; color:var(--gray-800);"><i class="fa-solid fa-calendar-day" style="color:var(--primary); font-size:0.7rem;"></i> ${formatFriendlyDate(booking.event_date)}</span>
+                </div>
+                ${booking.notes ? `
+                    <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--gray-200); font-size:0.7rem; color:var(--gray-600);">
+                        <strong>Notes:</strong> ${booking.notes}
+                    </div>
+                ` : ''}
             </div>
 
-            <!-- ACTION BUTTONS -->
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-                <button class="btn btn-outline btn-full btn-sm" onclick="printBookingInvoice(${booking.id})" style="font-size:0.75rem;height:38px;"><i class="fa-solid fa-print"></i> Print Invoice</button>
-                <button class="btn btn-outline btn-full btn-sm" onclick="downloadBookingInvoice(${booking.id})" style="font-size:0.75rem;height:38px;"><i class="fa-solid fa-download"></i> Download PDF</button>
+            <!-- PROPOSED PRICE BANNER -->
+            <div style="background:linear-gradient(135deg, rgba(14,131,69,0.08), rgba(14,131,69,0.03)); border:1.5px solid var(--primary); border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <span style="font-size:0.8rem; font-weight:700; color:var(--primary);">Proposed Price</span>
+                <span style="font-size:1.15rem; font-weight:800; color:var(--primary);">GH₵ ${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</span>
             </div>
-            <button class="btn btn-primary btn-full" onclick="closeModal();" style="height:38px;font-size:0.85rem;">Close</button>
+
+            <!-- ACTIONS -->
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button class="btn btn-outline btn-full btn-sm" onclick="printBookingInvoice(${booking.id})" style="font-size:0.75rem; height:36px;"><i class="fa-solid fa-print"></i> Print</button>
+                <button class="btn btn-outline btn-full btn-sm" onclick="downloadBookingInvoice(${booking.id})" style="font-size:0.75rem; height:36px;"><i class="fa-solid fa-download"></i> Download</button>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="closeModal();" style="height:36px; font-size:0.8rem;">Close</button>
         </div>
     `;
     openModal(html);
-}
+};
 
 // ── PRINT & DOWNLOAD INVOICE HELPERS ────────────────────────────────────
 function printBookingInvoice(bid) {

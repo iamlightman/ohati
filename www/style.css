@@ -3113,11 +3113,7 @@ body.dark-theme .vendor-card-h {
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
-    background-color: var(--gray-100) !important;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="%23a0aec0"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>') !important;
-    background-repeat: no-repeat !important;
-    background-position: center !important;
-    background-size: 24px !important;
+    background-color: var(--gray-100, #F3F4F6) !important;
 }
 
 .vendor-list-cover {

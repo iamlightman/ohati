@@ -427,7 +427,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
                     <div><strong>Vendor Phone:</strong> ${b.vendor_phone || 'N/A'}</div>
                     <div><strong>Vendor Email:</strong> ${b.vendor_email || 'N/A'}</div>
                     <div><strong>Event Date:</strong> 📅 ${b.event_date || 'N/A'}</div>
-                    <div><strong>Agreed Price:</strong> <span style="font-weight:800; color:var(--primary);">GH₵ ${parseFloat(b.price || 0).toFixed(2)}</span></div>
+                    <div><strong>Proposed Price:</strong> <span style="font-weight:800; color:var(--primary);">GH₵ ${parseFloat(b.price || 0).toFixed(2)}</span></div>
                     <div><strong>Created At:</strong> ${b.created_at || 'N/A'}</div>
                     <div><strong>Payment Status:</strong> ${b.payment_status || 'Pending'}</div>
                     <div style="grid-column: span 2;"><strong>Special Notes:</strong> ${b.notes || 'No special requests submitted.'}</div>

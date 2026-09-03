@@ -231,7 +231,7 @@ $recent_bookings = $pdo->query("
                     <div><strong>Customer Name:</strong> ${b.user_name || 'N/A'}</div>
                     <div><strong>Vendor Name:</strong> ${b.vendor_name || 'N/A'}</div>
                     <div><strong>Event Date:</strong> 📅 ${b.event_date || 'N/A'}</div>
-                    <div><strong>Agreed Price:</strong> <span style="font-weight:800; color:var(--primary);">GH₵ ${parseFloat(b.price || 0).toFixed(2)}</span></div>
+                    <div><strong>Proposed Price:</strong> <span style="font-weight:800; color:var(--primary);">GH₵ ${parseFloat(b.price || 0).toFixed(2)}</span></div>
                     <div style="grid-column: span 2;"><strong>Special Notes:</strong> ${b.notes || 'No special requests submitted.'}</div>
                 </div>
 

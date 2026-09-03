@@ -34,12 +34,6 @@ window.openBookingDetailsModal = function(bid) {
                 <span class="booking-status ${booking.status === 'Inquiry' ? 'status-pending' : 'status-confirmed'}">${booking.status}</span>
             </div>
 
-            <!-- Real-Time Timestamp Banner -->
-            <div style="background:var(--gray-100); padding:8px 12px; border-radius:8px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; font-size:0.72rem;">
-                <span style="color:var(--gray-700); font-weight:600;"><i class="fa-regular fa-clock" style="color:var(--primary);"></i> Requested: <strong>${createdTimeStr}</strong></span>
-                <span style="color:var(--gray-500); font-size:0.68rem;">${formatFriendlyDate(booking.created_at)}</span>
-            </div>
-
             <!-- Contact & Booking Grid -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--gray-50); padding:12px; border-radius:10px; border:1px solid var(--gray-100); margin-bottom:14px; font-size:0.75rem;">
                 <div>
@@ -57,9 +51,6 @@ window.openBookingDetailsModal = function(bid) {
                     <span style="color:var(--gray-500); font-size:0.68rem; display:block;">EVENT & PRICING</span>
                     <div style="margin-top:2px;"><i class="fa-solid fa-calendar-day" style="color:var(--primary);"></i> Date: <strong>${formatFriendlyDate(booking.event_date)}</strong></div>
                     <div style="margin-top:2px;"><i class="fa-solid fa-tag" style="color:var(--primary);"></i> Total: <strong>GH₵ ${negPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</strong></div>
-                    <div style="margin-top:2px; font-size:0.7rem; color:var(--primary); font-weight:700;">
-                        <i class="fa-solid fa-file-invoice"></i> Invoice Generated
-                    </div>
                 </div>
             </div>
 
@@ -83,7 +74,7 @@ window.openBookingDetailsModal = function(bid) {
                         </div>
                         <div class="stage-info" style="margin-left:12px;">
                             <div class="stage-label" style="font-size:0.78rem; font-weight:700; color:var(--gray-800);">${t.status}</div>
-                            <div class="stage-date" style="font-size:0.62rem; color:var(--gray-500);">${formatRelativeTime(t.timestamp)}</div>
+                            ${(t.status === 'Inquiry Submitted' || t.status === 'Inquiry') ? `<div class="stage-date" style="font-size:0.62rem; color:var(--gray-500);">${formatFriendlyDate(t.timestamp || booking.created_at)}</div>` : ''}
                             ${t.notes ? `<div class="stage-note" style="font-size:0.7rem; margin-top:2px;">${t.notes}</div>` : ''}
                         </div>
                     </div>

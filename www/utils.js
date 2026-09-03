@@ -1,28 +1,46 @@
-window.DEFAULT_USER_AVATAR = "profile-icon.jpg";
-window.DEFAULT_BUSINESS_COVER = "profile-icon.jpg";
+window.DEFAULT_USER_AVATAR = "https://ohati.com/img/profile-icon.jpg";
+window.DEFAULT_BUSINESS_COVER = "https://ohati.com/img/default-cover.jpg";
+window.DEFAULT_VENDOR_COVER = "https://ohati.com/img/default-cover.jpg";
+window.LOCAL_FALLBACK_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
 
 /**
- * Universal Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
- * Converts relative paths (uploads/avatars/...) into absolute HTTPS domain URLs.
+ * Universal Authoritative Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
+ * Normalizes relative paths, local prefixes, and missing values into absolute HTTPS domain URLs.
  */
-window.resolveImageUrl = function(url, defaultFallback = null) {
-    const fallback = defaultFallback || window.DEFAULT_USER_AVATAR;
-    if (!url || typeof url !== 'string' || !url.trim()) return fallback;
+window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
+    let fallback = window.DEFAULT_USER_AVATAR;
+    if (typeOrFallback === 'cover' || typeOrFallback === 'vendor_cover') {
+        fallback = window.DEFAULT_VENDOR_COVER;
+    } else if (typeof typeOrFallback === 'string' && (typeOrFallback.startsWith('http') || typeOrFallback.startsWith('data:'))) {
+        fallback = typeOrFallback;
+    }
+
+    if (!url || typeof url !== 'string' || !url.trim() || url.trim() === 'null' || url.trim() === 'undefined') {
+        return fallback;
+    }
     
     let trimmed = url.trim();
-    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
-    
-    const isCapacitorNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
-    const isIOS = isCapacitorNative && (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') || navigator.userAgent.includes('iPod') || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios'));
 
-    // Upgrade http:// to https:// on iOS or in secure native contexts to prevent ATS/mixed-content blocks
-    if ((isIOS || window.location.protocol === 'https:') && trimmed.startsWith('http://')) {
+    // Strip accidental local webview/dev server prefixes
+    if (trimmed.startsWith('capacitor://localhost/')) {
+        trimmed = trimmed.replace('capacitor://localhost/', '');
+    } else if (trimmed.startsWith('http://localhost/')) {
+        trimmed = trimmed.replace('http://localhost/', '');
+    } else if (trimmed.startsWith('http://127.0.0.1/')) {
+        trimmed = trimmed.replace('http://127.0.0.1/', '');
+    }
+
+    if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return fallback;
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+
+    // Upgrade http:// to https:// for secure webviews
+    if (trimmed.startsWith('http://')) {
         trimmed = 'https://' + trimmed.substring(7);
     }
 
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return encodeURI(trimmed);
+    if (trimmed.startsWith('https://')) return encodeURI(trimmed);
     
-    let domainPrefix = '';
+    let domainPrefix = 'https://ohati.com';
     if (typeof window.getOhatiApiBaseUrl === 'function') {
         const apiBase = window.getOhatiApiBaseUrl();
         if (apiBase && apiBase.includes('://')) {
@@ -30,18 +48,29 @@ window.resolveImageUrl = function(url, defaultFallback = null) {
         }
     }
     
-    if (!domainPrefix && typeof window.location !== 'undefined' && window.location.origin && window.location.origin !== 'null' && !window.location.origin.includes('capacitor://') && !window.location.origin.includes('file://')) {
-        const pathName = window.location.pathname || '';
-        const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
-        domainPrefix = window.location.origin + appDir;
-    }
-    
-    if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://')) {
+    if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://') || domainPrefix.includes('localhost') || domainPrefix.includes('127.0.0.1')) {
         domainPrefix = 'https://ohati.com';
     }
 
     const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
     return encodeURI(`${domainPrefix}/${cleanPath}`);
+};
+
+/**
+ * Universal Image Error Fallback Handler
+ * Prevents broken image icons and infinite loops across Web, iOS, and Android
+ */
+window.handleImageError = function(imgEl, type = 'avatar') {
+    if (!imgEl) return;
+    imgEl.onerror = null; // Prevent infinite fallback loops
+    let fallback = (type === 'cover' || type === 'vendor_cover') ? window.DEFAULT_VENDOR_COVER : window.DEFAULT_USER_AVATAR;
+    imgEl.src = fallback;
+    
+    // Safety net: Use SVG data URI if default network JPG fails
+    imgEl.onerror = function() {
+        this.onerror = null;
+        this.src = window.LOCAL_FALLBACK_SVG;
+    };
 };
 
 /**

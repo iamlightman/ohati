@@ -747,6 +747,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
             </div>
         </div>
 
+        ${(state.platformReviews && state.platformReviews.length > 0) ? `
         <!-- Client Reviews / Testimonials -->
         <div class="home-section client-reviews-section" style="padding-bottom:30px; padding-top:20px;">
             <div class="section-header reviews-section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -776,6 +777,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 </button>
             </div>
         </div>
+        ` : ''}
     `;
 
     screen.innerHTML = html;

@@ -32,14 +32,5 @@ const state = {
     demoResetCode: '',
 
     // Platform reviews
-    platformReviews: [
-        { id: 1, name: 'Abena Boateng', rating: 5, comment: 'Ohati made finding my decorator simple.<br>Verified badges gave us real confidence.', views: 476000, likes: 287000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 2, name: 'Kwame Mensah', rating: 5, comment: 'Booked our photographer through Ohati.<br>Process was seamless from start to finish.', views: 421000, likes: 254000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 3, name: 'Adjoa Sarfo', rating: 5, comment: 'Great support & easy vendor bookings.<br>Budget planner kept us on track.', views: 389000, likes: 212000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 4, name: 'Yaw Osei', rating: 5, comment: 'Best catering deals found here.<br>The comparison helper is superb.', views: 453000, likes: 271000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 5, name: 'Esi Ansah', rating: 5, comment: 'Simply the best event planning ecosystem in Ghana. Highly recommended!', views: 310000, likes: 185000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 6, name: 'Kofi Owusu', rating: 5, comment: 'Saved me tons of time negotiating with DJs and MCs. Five stars!', views: 290000, likes: 172000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 7, name: 'Ama Asare', rating: 5, comment: 'The vendor KYC and payment protection systems give me absolute peace of mind.', views: 340000, likes: 204000, liked: false, avatar: "img/default-avatar.png" },
-        { id: 8, name: 'Mustapha Ali', rating: 5, comment: 'Excellent interface, super fast load times, and amazing customer service.', views: 270000, likes: 161000, liked: false, avatar: "img/default-avatar.png" }
-    ],
+    platformReviews: [],
 };

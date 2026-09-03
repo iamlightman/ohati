@@ -220,20 +220,10 @@ function renderAuthModal() {
             break;
 
         case 'forgot':
-            html = `
-                <div class="auth-modal-header">
-                    <h2 class="auth-modal-title">Reset Your Password</h2>
-                    <p class="auth-modal-subtitle">Enter your registered email address to receive a reset link</p>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" class="form-input" id="forgot-target" placeholder="name@example.com">
-                </div>
-                <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
-                <button class="btn btn-primary btn-full" onclick="submitForgot()">Send Reset Link</button>
-                <button class="btn btn-ghost btn-full mt-8" onclick="state.authMode='login'; renderAuthModal();">Back to Login</button>
-            `;
-            break;
+            window.open('forgot-password.php', '_blank');
+            state.authMode = 'login';
+            renderAuthModal();
+            return;
 
         case 'forgot-sent':
             const sentEmail = state.authData?.resetTarget || document.getElementById('forgot-target')?.value || '';
@@ -1628,28 +1618,9 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                 </div>
             `;
         } else if (mode === 'forgot') {
-            overlay.innerHTML = `
-                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
-                    <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
-                        <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
-                    </div>
-                    <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Reset Your Password</h2>
-                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Enter your registered email address to receive a password reset link.</p>
-
-                    <form onsubmit="handleMandatoryForgotPasswordSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
-                        <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email Address</label>
-                            <input type="email" id="m-lock-forgot-id" required placeholder="name@example.com" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
-                        </div>
-                        <div id="m-lock-forgot-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
-                        <button type="submit" id="m-lock-forgot-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Reset Link</button>
-                    </form>
-
-                    <div style="margin-top:24px; font-size:0.85rem; color:#94A3B8;">
-                        Remembered your password? <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Log In</a>
-                    </div>
-                </div>
-            `;
+            window.open('forgot-password.php', '_blank');
+            renderMandatoryAuthContent('login');
+            return;
         } else if (mode === 'forgot-sent') {
             const target = window._forgotTarget || '';
             overlay.innerHTML = `

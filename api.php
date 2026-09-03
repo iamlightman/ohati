@@ -1819,7 +1819,13 @@ case 'categories':
                 ['name'=>'Honeymoon Packages','icon'=>'plane-departure'],['name'=>'Invitation Designers','icon'=>'envelope-open-text'],
                 ['name'=>'Jewelers','icon'=>'gem'],['name'=>'Lighting','icon'=>'lightbulb'],
                 ['name'=>'Printing Services','icon'=>'print'],['name'=>'Ushers','icon'=>'user-check'],
-                ['name'=>'Content Creators','icon'=>'clapperboard'],['name'=>'Juice Bar','icon'=>'glass-water']
+                ['name'=>'Content Creators','icon'=>'clapperboard'],['name'=>'Juice Bar','icon'=>'glass-water'],
+                ['name'=>'Traditional Marriage Services','icon'=>'hands-holding'],
+                ['name'=>'Dowry Wrapping','icon'=>'gift'],['name'=>'Breakfast','icon'=>'mug-hot'],
+                ['name'=>'Coordinators','icon'=>'clipboard-list'],['name'=>'Waiters','icon'=>'concierge-bell'],
+                ['name'=>'Portable Washroom','icon'=>'restroom'],['name'=>'Souvenirs','icon'=>'bag-shopping'],
+                ['name'=>'Hairstylists','icon'=>'scissors'],['name'=>'Dowry Bearers','icon'=>'people-group'],
+                ['name'=>'Local Bar','icon'=>'beer-mug-empty']
             ];
         }
         echo json_encode($categories);

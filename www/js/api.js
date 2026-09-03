@@ -220,6 +220,7 @@ const API = {
     // ── Didit Automated KYC ──
     initDiditKyc() { return this.post('init_didit_kyc', {}); },
     checkDiditKyc(sessionId) { return this.post('check_didit_kyc', { session_id: sessionId || '' }); },
+    getKycStatus() { return this.get('get_kyc_status'); },
 
     // ── Recommendations & Toggles ──
     getRecommendedVendors(categoryId, excludeId) { return this.get('get_recommended_vendors', { category: categoryId || '', exclude_id: excludeId || 0 }); },

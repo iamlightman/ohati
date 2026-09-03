@@ -5323,33 +5323,107 @@ window.showPremiumUpgradeModal = function() {
 
 
 function showKycInfoModal() {
-    const html = `
-        <div style="padding:10px;">
-            <div style="text-align:center; margin-bottom:18px;">
-                <div style="width:64px; height:64px; border-radius:50%; background:rgba(242, 167, 53, 0.12); display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; color:var(--accent); font-size:1.8rem;">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <h3 style="font-family:'Fraunces',serif; margin-bottom:6px; font-size:1.25rem;">Automated Identity Verification</h3>
-                <p style="font-size:0.78rem; color:var(--gray-600); line-height:1.5; max-width:360px; margin:0 auto;">
-                    Instant identity verification. Scan your Ghana Card or National ID & perform a quick selfie check in under 60 seconds.
-                </p>
-            </div>
+    openModal(`
+        <div style="padding:20px; text-align:center;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:1.8rem; color:var(--accent);"></i>
+            <p style="margin-top:10px; font-weight:600; font-size:0.85rem;">Checking KYC Status...</p>
+        </div>
+    `);
 
-            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px; margin-bottom:18px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:0.75rem; font-weight:700; color:#0F172A;">
-                    <i class="fa-solid fa-bolt" style="color:var(--accent);"></i> Fast, Automated & Secure
-                </div>
-                <div style="font-size:0.72rem; color:#64748B; line-height:1.4;">
-                    Your identity is verified securely via automated identity protocols. Verification badges update automatically upon completion.
-                </div>
-            </div>
+    API.getKycStatus().then(res => {
+        const kycStatus = (res?.kyc_status || 'NOT_STARTED').toUpperCase();
+        const isVerified = (res?.is_verified || kycStatus === 'APPROVED' || kycStatus === 'VERIFIED');
 
+        let statusHeader = `
+            <div style="width:64px; height:64px; border-radius:50%; background:rgba(242, 167, 53, 0.12); display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; color:var(--accent); font-size:1.8rem;">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3 style="font-family:'Fraunces',serif; margin-bottom:6px; font-size:1.25rem;">Automated Identity Verification</h3>
+            <p style="font-size:0.78rem; color:var(--gray-600); line-height:1.5; max-width:360px; margin:0 auto;">
+                Instant identity verification. Scan your Ghana Card or National ID & perform a quick selfie check in under 60 seconds.
+            </p>
+        `;
+
+        let actionArea = `
             <button class="btn btn-primary btn-full" id="didit-start-btn" onclick="startDiditKycFlow()" style="padding:12px; font-weight:800; font-size:0.88rem; border-radius:12px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3);">
                 <i class="fa-solid fa-bolt"></i> Start Automated Verification
             </button>
-        </div>
-    `;
-    openModal(html);
+        `;
+
+        if (isVerified) {
+            statusHeader = `
+                <div style="width:64px; height:64px; border-radius:50%; background:#D1FAE5; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; color:#10B981; font-size:1.8rem;">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h3 style="font-family:'Fraunces',serif; margin-bottom:6px; font-size:1.25rem; color:#065F46;">✓ Identity Verified</h3>
+                <p style="font-size:0.8rem; color:#047857; font-weight:600; margin:0 auto;">
+                    Your account has been fully verified via automated identity protocols.
+                </p>
+            `;
+            actionArea = `
+                <button class="btn btn-secondary btn-full" disabled style="padding:12px; font-weight:800; opacity:0.85; border-radius:12px; background:#10B981; color:#fff;">
+                    <i class="fa-solid fa-user-shield"></i> Account Fully Verified
+                </button>
+            `;
+        } else if (kycStatus === 'UNDER_REVIEW') {
+            statusHeader = `
+                <div style="width:64px; height:64px; border-radius:50%; background:#FEF3C7; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; color:#D97706; font-size:1.8rem;">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <h3 style="font-family:'Fraunces',serif; margin-bottom:6px; font-size:1.25rem; color:#92400E;">Verification Under Review</h3>
+                <p style="font-size:0.8rem; color:#B45309; line-height:1.4; margin:0 auto;">
+                    Your identity verification is currently being processed by Didit. Verification badges update automatically upon completion.
+                </p>
+            `;
+            actionArea = `
+                <button class="btn btn-secondary btn-full" disabled style="padding:12px; font-weight:700; border-radius:12px; background:#F59E0B; color:#fff;">
+                    <i class="fa-solid fa-hourglass-half"></i> Under Active Review
+                </button>
+            `;
+        } else if (kycStatus === 'IN_PROGRESS') {
+            actionArea = `
+                <button class="btn btn-primary btn-full" id="didit-start-btn" onclick="startDiditKycFlow()" style="padding:12px; font-weight:800; font-size:0.88rem; border-radius:12px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3);">
+                    <i class="fa-solid fa-play"></i> Resume Active Verification
+                </button>
+            `;
+        } else if (kycStatus === 'REJECTED' || kycStatus === 'DECLINED') {
+            actionArea = `
+                <div style="background:#FEE2E2; color:#991B1B; padding:10px 14px; border-radius:8px; font-size:0.78rem; font-weight:600; margin-bottom:12px;">
+                    Previous verification was declined. Please ensure your Ghana Card photo is clear and valid.
+                </div>
+                <button class="btn btn-primary btn-full" id="didit-start-btn" onclick="startDiditKycFlow()" style="padding:12px; font-weight:800; font-size:0.88rem; border-radius:12px;">
+                    <i class="fa-solid fa-rotate-right"></i> Retry Verification
+                </button>
+            `;
+        }
+
+        const html = `
+            <div style="padding:10px;">
+                <div style="text-align:center; margin-bottom:18px;">
+                    ${statusHeader}
+                </div>
+
+                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px; margin-bottom:18px;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:0.75rem; font-weight:700; color:#0F172A;">
+                        <i class="fa-solid fa-bolt" style="color:var(--accent);"></i> Fast, Automated & Secure
+                    </div>
+                    <div style="font-size:0.72rem; color:#64748B; line-height:1.4;">
+                        Your identity is verified securely via automated identity protocols. Verification badges update automatically upon completion.
+                    </div>
+                </div>
+
+                ${actionArea}
+            </div>
+        `;
+        openModal(html);
+    }).catch(err => {
+        openModal(`
+            <div style="padding:20px; text-align:center;">
+                <p style="color:#DC2626; font-size:0.85rem; font-weight:600;">Failed to load KYC status: ${escapeHtml(err.message || 'Network error')}</p>
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        `);
+    });
 }
 
 window.checkPostSignupKycPrompt = function() {
@@ -5389,6 +5463,10 @@ window.startDiditKycFlow = function(e) {
                 } else if (typeof renderDiditKycScreen !== 'function') {
                     window.location.href = res.url;
                 }
+            } else if (res && res.is_verified) {
+                if (typeof showToast === 'function') showToast(res.error || 'Your account is already verified.', 'success');
+                else showPushNotification('Account Verified', 'Your identity has already been verified.');
+                closeModal();
             } else {
                 throw new Error(res?.error || 'Could not retrieve verification session URL.');
             }
@@ -5398,7 +5476,7 @@ window.startDiditKycFlow = function(e) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Retry Verification';
             }
-            showPushNotification('Verification Error', err.message || 'Could not initialize verification.');
+            showPushNotification('Verification Notice', err.message || 'Could not initialize verification.');
         });
 };
 
@@ -5460,7 +5538,8 @@ window.pollDiditKycStatus = function(sessionId) {
         }
 
         API.checkDiditKyc(sessionId).then(res => {
-            if (res && res.status === 'Approved') {
+            const st = (res?.status || res?.kyc_status || '').toUpperCase();
+            if (st === 'APPROVED' || st === 'VERIFIED' || res?.is_verified) {
                 clearInterval(window._diditPollInterval);
                 window._diditPollInterval = null;
                 showPushNotification('Identity Verified 🎉', 'Your verification was completed successfully!');
@@ -5470,7 +5549,7 @@ window.pollDiditKycStatus = function(sessionId) {
                     if (typeof navigateTo === 'function') navigateTo('vendor-dash');
                     else if (typeof renderVendorDashScreen === 'function') renderVendorDashScreen(state.user || {});
                 });
-            } else if (res && res.status === 'Declined') {
+            } else if (st === 'DECLINED' || st === 'REJECTED' || st === 'FAILED') {
                 clearInterval(window._diditPollInterval);
                 window._diditPollInterval = null;
                 showPushNotification('Verification Declined', 'Verification could not be completed. Please try again.');

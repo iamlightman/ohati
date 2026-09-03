@@ -179,24 +179,19 @@ try {
 } catch (Exception $e) {}
 
 // Dynamic column updates for users & activity tracking
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN last_active VARCHAR(50) DEFAULT ''");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("ALTER TABLE vendors ADD COLUMN last_active VARCHAR(50) DEFAULT ''");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN referral_code VARCHAR(50) DEFAULT NULL");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN referred_by INT DEFAULT 0");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN referral_balance FLOAT DEFAULT 0");
-} catch (Exception $e) {}
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN status VARCHAR(30) DEFAULT 'active'");
-} catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN last_active VARCHAR(50) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN last_active VARCHAR(50) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN referral_code VARCHAR(50) DEFAULT NULL"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN referred_by INT DEFAULT 0"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN referral_balance FLOAT DEFAULT 0"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN status VARCHAR(30) DEFAULT 'active'"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN kyc_verified_at VARCHAR(50) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_session_id VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_decision VARCHAR(100) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_session_id VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_decision VARCHAR(100) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $e) {}
 
 $pdo->exec("CREATE TABLE IF NOT EXISTS auth_tokens (
     id $AI,
@@ -617,10 +612,34 @@ try {
 try {
     $pdo->exec("ALTER TABLE advertisements ADD COLUMN popup_count INT DEFAULT 0");
 } catch (Exception $e) {}
-try {
-    $pdo->exec("ALTER TABLE advertisements ADD COLUMN payment_status VARCHAR(30) DEFAULT 'pending'");
-} catch (Exception $e) {}
+// ── DIDIT KYC MIGRATIONS & TABLES ──────────────────────────────────────────
+try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_session_id VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_decision VARCHAR(100) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN kyc_verified_at VARCHAR(50) DEFAULT ''"); } catch (Exception $e) {}
 
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_session_id VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_decision VARCHAR(100) DEFAULT ''"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $e) {}
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS processed_didit_webhooks (
+    id $AI,
+    event_id VARCHAR(255) UNIQUE NOT NULL,
+    session_id VARCHAR(255) DEFAULT '',
+    status VARCHAR(100) DEFAULT '',
+    created_at $NOW
+)");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS kyc_verifications_history (
+    id $AI,
+    user_id INT NOT NULL,
+    vendor_id INT DEFAULT 0,
+    session_id VARCHAR(255) DEFAULT '',
+    event_id VARCHAR(255) DEFAULT '',
+    status VARCHAR(100) DEFAULT '',
+    decision TEXT DEFAULT NULL,
+    created_at $NOW
+)");
 
 // ── REVIEWS ────────────────────────────────────────────────────────────────
 $pdo->exec("CREATE TABLE IF NOT EXISTS reviews (

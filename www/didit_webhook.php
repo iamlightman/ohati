@@ -14,24 +14,24 @@ if (empty($rawBody)) {
 }
 
 $headers = getallheaders();
-$sig = $_SERVER['HTTP_X_SIGNATURE_V2'] ?? $headers['X-Signature-V2'] ?? $headers['x-signature-v2'] ?? '';
+$sig = $_SERVER['HTTP_X_SIGNATURE_V2'] ?? $_SERVER['HTTP_X_SIGNATURE'] ?? $headers['X-Signature-V2'] ?? $headers['X-Signature'] ?? $headers['x-signature-v2'] ?? $headers['x-signature'] ?? '';
 $ts = $_SERVER['HTTP_X_TIMESTAMP'] ?? $headers['X-Timestamp'] ?? $headers['x-timestamp'] ?? 0;
 
 // 1. Freshness check (300 seconds window)
 if (!empty($ts) && abs(time() - intval($ts)) > 300) {
     http_response_code(401);
-    echo "stale";
+    echo "stale timestamp";
     exit;
 }
 
-// 2. Verify X-Signature-V2 HMAC-SHA256
-$isValid = DiditHelper::verifyWebhookSignature($rawBody, $sig, $ts);
-
-// Allow test webhook bypass if header is missing during manual console ping test
-if (!$isValid && !empty($sig)) {
-    http_response_code(401);
-    echo "bad sig";
-    exit;
+// 2. Strict Webhook Signature Verification
+if (defined('DIDIT_WEBHOOK_SECRET') && !empty(DIDIT_WEBHOOK_SECRET)) {
+    $isValid = DiditHelper::verifyWebhookSignature($rawBody, $sig, $ts);
+    if (!$isValid) {
+        http_response_code(401);
+        echo "bad signature";
+        exit;
+    }
 }
 
 $parsed = json_decode($rawBody, true);
@@ -41,20 +41,21 @@ if (!$parsed) {
     exit;
 }
 
-// 4. Idempotency check on event_id
+// 3. Extract Didit Payload Fields
 $eventId = $parsed['event_id'] ?? '';
 $sessionId = $parsed['session_id'] ?? '';
 $status = $parsed['status'] ?? '';
 $vendorData = $parsed['vendor_data'] ?? '';
 $decision = $parsed['decision'] ?? null;
 
+// 4. Idempotency Check on event_id
 if (!empty($eventId)) {
     try {
         $chk = $pdo->prepare("SELECT event_id FROM processed_didit_webhooks WHERE event_id = ?");
         $chk->execute([$eventId]);
         if ($chk->fetch()) {
             http_response_code(200);
-            echo "ok";
+            echo "ok (duplicate event)";
             exit;
         }
 
@@ -63,7 +64,7 @@ if (!empty($eventId)) {
     } catch (Exception $e) {}
 }
 
-// Extract user_id & vendor_id from vendor_data (format: user_12 or user_12_vendor_5)
+// 5. Extract user_id & vendor_id from vendor_data (format: user_12 or user_12_vendor_5)
 $userId = 0;
 $vendorId = 0;
 
@@ -97,36 +98,54 @@ if ($userId <= 0 && $vendorId <= 0) {
 }
 
 $decisionJson = !empty($decision) ? json_encode($decision) : null;
+$nowStr = date('Y-m-d H:i:s');
 
-// 5. Case-sensitive status handling
-switch ($status) {
-    case 'Approved':
-        // Update User
+// 6. Case-Insensitive Status & Decision Mapping
+$statusLower = strtolower(trim($status));
+
+switch ($statusLower) {
+    case 'approved':
+    case 'verified':
+        // Automatic Approval: Update User
         if ($userId > 0) {
-            $updU = $pdo->prepare("UPDATE users SET kyc_status = 'approved', didit_session_id = ?, didit_decision = 'Approved', didit_verification_data = ? WHERE id = ?");
-            $updU->execute([$sessionId, $decisionJson, $userId]);
+            $updU = $pdo->prepare("UPDATE users SET kyc_status = 'approved', kyc_verified_at = ?, didit_session_id = ?, didit_decision = 'Approved', didit_verification_data = ? WHERE id = ?");
+            $updU->execute([$nowStr, $sessionId, $decisionJson, $userId]);
         }
         // Update Vendor
         if ($vendorId > 0 || $userId > 0) {
             $updV = $pdo->prepare("UPDATE vendors SET verification_status = 'verified', verification_badge = CASE WHEN verification_badge = 'gold' THEN 'gold' ELSE 'blue' END, verified = 1, didit_session_id = ?, didit_decision = 'Approved', didit_verification_data = ? WHERE (user_id = ? AND user_id > 0) OR (id = ? AND id > 0)");
             $updV->execute([$sessionId, $decisionJson, $userId, $vendorId]);
         }
+        // Log History
+        try {
+            $pdo->prepare("INSERT INTO kyc_verifications_history (user_id, vendor_id, session_id, event_id, status, decision) VALUES (?, ?, ?, ?, 'Approved', ?)")
+                ->execute([$userId, $vendorId, $sessionId, $eventId, $decisionJson]);
+        } catch (Exception $eLog) {}
         break;
 
-    case 'Declined':
+    case 'declined':
+    case 'rejected':
+    case 'failed':
         if ($userId > 0) {
             $updU = $pdo->prepare("UPDATE users SET kyc_status = 'rejected', didit_session_id = ?, didit_decision = 'Declined', didit_verification_data = ? WHERE id = ?");
             $updU->execute([$sessionId, $decisionJson, $userId]);
         }
         if ($vendorId > 0 || $userId > 0) {
-            $updV = $pdo->prepare("UPDATE vendors SET verification_status = 'rejected', didit_session_id = ?, didit_decision = 'Declined' WHERE (user_id = ? AND user_id > 0) OR (id = ? AND id > 0)");
+            $updV = $pdo->prepare("UPDATE vendors SET verification_status = 'rejected', verified = 0, didit_session_id = ?, didit_decision = 'Declined' WHERE (user_id = ? AND user_id > 0) OR (id = ? AND id > 0)");
             $updV->execute([$sessionId, $userId, $vendorId]);
         }
+        try {
+            $pdo->prepare("INSERT INTO kyc_verifications_history (user_id, vendor_id, session_id, event_id, status, decision) VALUES (?, ?, ?, ?, 'Declined', ?)")
+                ->execute([$userId, $vendorId, $sessionId, $eventId, $decisionJson]);
+        } catch (Exception $eLog) {}
         break;
 
-    case 'In Review':
+    case 'in review':
+    case 'in_review':
+    case 'processing':
+    case 'under_review':
         if ($userId > 0) {
-            $updU = $pdo->prepare("UPDATE users SET kyc_status = 'pending_verification', didit_session_id = ?, didit_decision = 'In Review' WHERE id = ?");
+            $updU = $pdo->prepare("UPDATE users SET kyc_status = 'under_review', didit_session_id = ?, didit_decision = 'In Review' WHERE id = ?");
             $updU->execute([$sessionId, $userId]);
         }
         if ($vendorId > 0 || $userId > 0) {
@@ -135,25 +154,31 @@ switch ($status) {
         }
         break;
 
-    case 'Resubmitted':
+    case 'kyc expired':
+    case 'expired':
         if ($userId > 0) {
-            $pdo->prepare("UPDATE users SET kyc_status = 'pending_verification' WHERE id = ?")->execute([$userId]);
+            $pdo->prepare("UPDATE users SET kyc_status = 'expired', didit_decision = 'Expired' WHERE id = ?")->execute([$userId]);
         }
-        $pdo->prepare("UPDATE vendors SET verification_status = 'pending' WHERE user_id = ? OR id = ?")->execute([$userId, $vendorId]);
+        if ($vendorId > 0 || $userId > 0) {
+            $pdo->prepare("UPDATE vendors SET verification_status = 'expired', didit_decision = 'Expired' WHERE (user_id = ? AND user_id > 0) OR (id = ? AND id > 0)")->execute([$userId, $vendorId]);
+        }
         break;
 
-    case 'Kyc Expired':
-    case 'Expired':
+    case 'cancelled':
+    case 'abandoned':
         if ($userId > 0) {
-            $pdo->prepare("UPDATE users SET kyc_status = 'expired' WHERE id = ?")->execute([$userId]);
+            $pdo->prepare("UPDATE users SET kyc_status = 'cancelled', didit_decision = 'Cancelled' WHERE id = ?")->execute([$userId]);
+        }
+        if ($vendorId > 0 || $userId > 0) {
+            $pdo->prepare("UPDATE vendors SET verification_status = 'cancelled', didit_decision = 'Cancelled' WHERE (user_id = ? AND user_id > 0) OR (id = ? AND id > 0)")->execute([$userId, $vendorId]);
         }
         break;
 
     default:
-        // "Not Started" | "In Progress" | "Awaiting User" | "Abandoned"
+        // Other statuses
         break;
 }
 
-// 6. Return HTTP 200 within 5 seconds
+// 7. Return HTTP 200 OK
 http_response_code(200);
 echo "ok";

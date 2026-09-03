@@ -1471,31 +1471,84 @@ case 'init_didit_kyc':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true);
     $uid = intval($_SESSION['user']['id'] ?? $token_uid ?? $input['user_id'] ?? 0);
-    if ($uid <= 0) {
-        $uCheck = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetch();
-        if ($uCheck) $uid = intval($uCheck['id']);
-    }
     if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
 
     require_once __DIR__ . '/didit_helper.php';
+
+    // 1. Fetch current user from database
+    $uStmt = $pdo->prepare("SELECT id, kyc_status, didit_session_id, didit_decision FROM users WHERE id = ?");
+    $uStmt->execute([$uid]);
+    $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($userRow && (strtolower($userRow['kyc_status']) === 'approved' || strtolower($userRow['kyc_status']) === 'verified')) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Identity Verified: Your account has already been verified.',
+            'kyc_status' => 'VERIFIED',
+            'is_verified' => true
+        ]);
+        break;
+    }
+
     $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
     $v_stmt->execute([$uid]);
     $v_row = $v_stmt->fetch();
     $vendorId = $v_row ? intval($v_row['id']) : null;
+
+    // 2. Prevent duplicate active session creation
+    $existingSessionId = $userRow['didit_session_id'] ?? '';
+    if (!empty($existingSessionId)) {
+        try {
+            $existingDecision = DiditHelper::fetchSessionDecision($existingSessionId);
+            if ($existingDecision && !empty($existingDecision['status'])) {
+                $eStatus = strtolower($existingDecision['status']);
+                if ($eStatus === 'approved' || $eStatus === 'verified') {
+                    $pdo->prepare("UPDATE users SET kyc_status = 'approved', didit_decision = 'Approved' WHERE id = ?")->execute([$uid]);
+                    if ($vendorId) $pdo->prepare("UPDATE vendors SET verification_status = 'verified', verified = 1 WHERE id = ?")->execute([$vendorId]);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Identity Verified: Your account has already been verified.',
+                        'kyc_status' => 'VERIFIED',
+                        'is_verified' => true
+                    ]);
+                    break;
+                } else if ($eStatus === 'in review' || $eStatus === 'processing' || $eStatus === 'under_review') {
+                    $pdo->prepare("UPDATE users SET kyc_status = 'under_review', didit_decision = 'In Review' WHERE id = ?")->execute([$uid]);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Verification Under Review: Your identity verification is currently being processed by Didit.',
+                        'kyc_status' => 'UNDER_REVIEW',
+                        'session_id' => $existingSessionId
+                    ]);
+                    break;
+                } else if ($eStatus === 'not started' || $eStatus === 'in progress' || $eStatus === 'awaiting user') {
+                    $resumeUrl = "https://verification.didit.me/v3/session/" . urlencode($existingSessionId);
+                    echo json_encode([
+                        'success' => true,
+                        'resumed' => true,
+                        'url' => $resumeUrl,
+                        'session_id' => $existingSessionId
+                    ]);
+                    break;
+                }
+            }
+        } catch (Exception $ex) {}
+    }
 
     try {
         $session = DiditHelper::createSession($uid, $vendorId);
         $sessionId = $session['session_id'];
         $url = $session['url'];
 
-        // Save session_id in database without falsely setting status to pending before scanning
-        $pdo->prepare("UPDATE users SET didit_session_id = ?, didit_decision = 'Not Started' WHERE id = ?")->execute([$sessionId, $uid]);
+        // Record session_id and update status to in_progress
+        $pdo->prepare("UPDATE users SET didit_session_id = ?, kyc_status = 'in_progress', didit_decision = 'In Progress' WHERE id = ?")->execute([$sessionId, $uid]);
         if ($vendorId) {
-            $pdo->prepare("UPDATE vendors SET didit_session_id = ?, didit_decision = 'Not Started' WHERE id = ?")->execute([$sessionId, $vendorId]);
+            $pdo->prepare("UPDATE vendors SET didit_session_id = ?, verification_status = 'pending', didit_decision = 'In Progress' WHERE id = ?")->execute([$sessionId, $vendorId]);
         }
 
         $_SESSION['user']['didit_session_id'] = $sessionId;
-        $_SESSION['user']['didit_decision'] = 'Not Started';
+        $_SESSION['user']['kyc_status'] = 'in_progress';
+        $_SESSION['user']['didit_decision'] = 'In Progress';
 
         echo json_encode([
             'success' => true,
@@ -1510,42 +1563,58 @@ case 'init_didit_kyc':
     break;
 
 case 'check_didit_kyc':
+case 'get_kyc_status':
     $uid = intval($_SESSION['user']['id'] ?? 0);
     if ($uid <= 0) { http_response_code(401); echo json_encode(['error' => 'Authentication required']); exit; }
 
-    $input = json_decode(file_get_contents('php://input'), true);
-    $sessionId = clean($input['session_id'] ?? ($_SESSION['user']['didit_session_id'] ?? ''));
+    $uStmt = $pdo->prepare("SELECT u.id, u.kyc_status, u.kyc_verified_at, u.didit_session_id, u.didit_decision, v.verification_status, v.verification_badge, v.verified FROM users u LEFT JOIN vendors v ON u.id = v.user_id WHERE u.id = ?");
+    $uStmt->execute([$uid]);
+    $user = $uStmt->fetch(PDO::FETCH_ASSOC);
 
-    if (empty($sessionId)) {
-        echo json_encode(['success' => false, 'status' => 'not_started']);
+    if (!$user) {
+        echo json_encode(['success' => false, 'error' => 'User not found']);
         break;
     }
 
-    require_once __DIR__ . '/didit_helper.php';
-    $decision = DiditHelper::fetchSessionDecision($sessionId);
+    $sessionId = $user['didit_session_id'] ?? '';
+    if (!empty($sessionId)) {
+        require_once __DIR__ . '/didit_helper.php';
+        $decision = DiditHelper::fetchSessionDecision($sessionId);
 
-    if ($decision && !empty($decision['status'])) {
-        $status = $decision['status'];
-        if ($status === 'Approved') {
-            $pdo->prepare("UPDATE users SET kyc_status = 'approved', didit_decision = 'Approved' WHERE id = ?")->execute([$uid]);
-            $pdo->prepare("UPDATE vendors SET verification_status = 'verified', verification_badge = CASE WHEN verification_badge = 'gold' THEN 'gold' ELSE 'blue' END, verified = 1 WHERE user_id = ?")->execute([$uid]);
-            $_SESSION['user']['kyc_status'] = 'approved';
-            $_SESSION['user']['didit_decision'] = 'Approved';
-        } else if ($status === 'Declined') {
-            $pdo->prepare("UPDATE users SET kyc_status = 'rejected', didit_decision = 'Declined' WHERE id = ?")->execute([$uid]);
-            $pdo->prepare("UPDATE vendors SET verification_status = 'rejected', didit_decision = 'Declined' WHERE user_id = ?")->execute([$uid]);
-            $_SESSION['user']['kyc_status'] = 'rejected';
-            $_SESSION['user']['didit_decision'] = 'Declined';
-        } else if ($status === 'In Review') {
-            $pdo->prepare("UPDATE users SET kyc_status = 'pending_verification', didit_decision = 'In Review' WHERE id = ?")->execute([$uid]);
-            $pdo->prepare("UPDATE vendors SET verification_status = 'pending', didit_decision = 'In Review' WHERE user_id = ?")->execute([$uid]);
-            $_SESSION['user']['kyc_status'] = 'pending_verification';
-            $_SESSION['user']['didit_decision'] = 'In Review';
+        if ($decision && !empty($decision['status'])) {
+            $dStatus = strtolower($decision['status']);
+            $nowStr = date('Y-m-d H:i:s');
+            if ($dStatus === 'approved' || $dStatus === 'verified') {
+                $pdo->prepare("UPDATE users SET kyc_status = 'approved', kyc_verified_at = ?, didit_decision = 'Approved' WHERE id = ?")->execute([$nowStr, $uid]);
+                $pdo->prepare("UPDATE vendors SET verification_status = 'verified', verification_badge = CASE WHEN verification_badge = 'gold' THEN 'gold' ELSE 'blue' END, verified = 1 WHERE user_id = ?")->execute([$uid]);
+                $user['kyc_status'] = 'approved';
+                $user['verified'] = 1;
+                $_SESSION['user']['kyc_status'] = 'approved';
+            } else if ($dStatus === 'declined' || $dStatus === 'rejected') {
+                $pdo->prepare("UPDATE users SET kyc_status = 'rejected', didit_decision = 'Declined' WHERE id = ?")->execute([$uid]);
+                $pdo->prepare("UPDATE vendors SET verification_status = 'rejected', verified = 0 WHERE user_id = ?")->execute([$uid]);
+                $user['kyc_status'] = 'rejected';
+                $_SESSION['user']['kyc_status'] = 'rejected';
+            } else if ($dStatus === 'in review' || $dStatus === 'processing') {
+                $pdo->prepare("UPDATE users SET kyc_status = 'under_review', didit_decision = 'In Review' WHERE id = ?")->execute([$uid]);
+                $user['kyc_status'] = 'under_review';
+                $_SESSION['user']['kyc_status'] = 'under_review';
+            } else if ($dStatus === 'expired') {
+                $pdo->prepare("UPDATE users SET kyc_status = 'expired', didit_decision = 'Expired' WHERE id = ?")->execute([$uid]);
+                $user['kyc_status'] = 'expired';
+                $_SESSION['user']['kyc_status'] = 'expired';
+            }
         }
-        echo json_encode(['success' => true, 'status' => $status, 'decision' => $decision]);
-    } else {
-        echo json_encode(['success' => true, 'status' => $_SESSION['user']['kyc_status'] ?? 'pending_verification']);
     }
+
+    echo json_encode([
+        'success' => true,
+        'user_id' => $uid,
+        'kyc_status' => strtoupper($user['kyc_status'] ?: 'NOT_STARTED'),
+        'is_verified' => (strtolower($user['kyc_status']) === 'approved' || strtolower($user['kyc_status']) === 'verified' || intval($user['verified']) === 1),
+        'didit_session_id' => $user['didit_session_id'],
+        'didit_decision' => $user['didit_decision']
+    ]);
     break;
 
 

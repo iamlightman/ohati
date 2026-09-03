@@ -1536,7 +1536,16 @@ case 'init_didit_kyc':
                     ]);
                     break;
                 } else if ($eStatus === 'not started' || $eStatus === 'in progress' || $eStatus === 'awaiting user') {
-                    $resumeUrl = "https://verification.didit.me/v3/session/" . urlencode($existingSessionId);
+                    $resumeUrl = !empty($existingDecision['url']) ? $existingDecision['url'] : (!empty($existingDecision['session_url']) ? $existingDecision['session_url'] : '');
+                    if (empty($resumeUrl)) {
+                        $newSession = DiditHelper::createSession($uid, $vendorId);
+                        $existingSessionId = $newSession['session_id'];
+                        $resumeUrl = $newSession['url'];
+                        $pdo->prepare("UPDATE users SET didit_session_id = ?, kyc_status = 'in_progress', didit_decision = 'In Progress' WHERE id = ?")->execute([$existingSessionId, $uid]);
+                        if ($vendorId) {
+                            $pdo->prepare("UPDATE vendors SET didit_session_id = ?, verification_status = 'pending', didit_decision = 'In Progress' WHERE id = ?")->execute([$existingSessionId, $vendorId]);
+                        }
+                    }
                     echo json_encode([
                         'success' => true,
                         'resumed' => true,

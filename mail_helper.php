@@ -39,50 +39,50 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
         ]
     ]);
 
-    // Candidate 1: Primary configured port
+    // Candidate 1: Primary Host Port 587 (TLS) - Fastest TCP STARTTLS Handshake
     $candidates[] = [
         'host' => $smtp_host,
-        'port' => $smtp_port,
-        'secure' => ($smtp_port == 465) ? 'ssl' : 'tls',
+        'port' => 587,
+        'secure' => 'tls',
         'auth' => true,
-        'desc' => 'Primary SMTP (' . $smtp_host . ':' . $smtp_port . ')'
+        'desc' => 'Primary High-Speed TLS (' . $smtp_host . ':587)'
     ];
 
-    // Candidate 2: Alternative port on primary host
-    if ($smtp_port == 587) {
-        $candidates[] = [
-            'host' => $smtp_host,
-            'port' => 465,
-            'secure' => 'ssl',
-            'auth' => true,
-            'desc' => 'Primary Host Port 465 (SSL)'
-        ];
-    } elseif ($smtp_port == 465) {
-        $candidates[] = [
-            'host' => $smtp_host,
-            'port' => 587,
-            'secure' => 'tls',
-            'auth' => true,
-            'desc' => 'Primary Host Port 587 (TLS)'
-        ];
-    }
+    // Candidate 2: Primary Host Port 465 (SSL)
+    $candidates[] = [
+        'host' => $smtp_host,
+        'port' => 465,
+        'secure' => 'ssl',
+        'auth' => true,
+        'desc' => 'Primary Direct SSL (' . $smtp_host . ':465)'
+    ];
 
+    // Candidate 3: Global DNS Fallback
     if ($smtp_host !== 'stardust.globaldnsnetwork.com') {
         $candidates[] = [
             'host' => 'stardust.globaldnsnetwork.com',
-            'port' => 465,
-            'secure' => 'ssl',
-            'auth' => true,
-            'desc' => 'Global DNS Network Fallback Port 465 (SSL)'
-        ];
-        $candidates[] = [
-            'host' => 'stardust.globaldnsnetwork.com',
             'port' => 587,
             'secure' => 'tls',
             'auth' => true,
-            'desc' => 'Global DNS Network Fallback Port 587 (TLS)'
+            'desc' => 'Global DNS Network Fallback (587 TLS)'
+        ];
+        $candidates[] = [
+            'host' => 'stardust.globaldnsnetwork.com',
+            'port' => 465,
+            'secure' => 'ssl',
+            'auth' => true,
+            'desc' => 'Global DNS Network Fallback (465 SSL)'
         ];
     }
+
+    // Candidate 4: Localhost Direct MTA
+    $candidates[] = [
+        'host' => '127.0.0.1',
+        'port' => 25,
+        'secure' => 'none',
+        'auth' => false,
+        'desc' => 'Localhost Direct MTA (Port 25)'
+    ];
 
     $log("Attempting SMTP email delivery to: {$to}");
 
@@ -98,7 +98,7 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
 
         $socket = @stream_socket_client(
             $protocol . $chost . ':' . $cport,
-            $errno, $errstr, 1.5,
+            $errno, $errstr, 2.0,
             STREAM_CLIENT_CONNECT, $context
         );
 
@@ -109,7 +109,7 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
 
         $get_response = function($socket) {
             $response = "";
-            stream_set_timeout($socket, 1);
+            stream_set_timeout($socket, 2);
             while (!feof($socket) && ($line = fgets($socket, 515)) !== false) {
                 $response .= $line;
                 $meta = stream_get_meta_data($socket);
@@ -224,21 +224,24 @@ function send_smtp_mail($to, $subject, $message_body, $from_name = 'Ohati Suppor
                 continue;
             }
 
-            // Step 8: SEND BODY
+            // Step 8: SEND BODY & ANTI-SPAM HEADERS
             $headers = implode("\r\n", [
                 'MIME-Version: 1.0',
                 'Content-Type: text/html; charset=utf-8',
                 'Content-Transfer-Encoding: 8bit',
                 'To: <' . $to . '>',
-                'From: ' . $from_name . ' <' . $from_email . '>',
-                'Reply-To: ' . $from_name . ' <' . $from_email . '>',
+                'From: "' . addslashes($from_name) . '" <' . $from_email . '>',
+                'Reply-To: "' . addslashes($from_name) . '" <' . $from_email . '>',
+                'Sender: <' . $from_email . '>',
+                'Return-Path: <' . $from_email . '>',
                 'Subject: ' . $subject,
                 'X-Priority: 1 (Highest)',
                 'X-MSMail-Priority: High',
                 'Importance: High',
+                'X-Mailer: Ohati Engine/3.9',
                 'X-Auto-Response-Suppress: All',
                 'Date: ' . date('r'),
-                'Message-ID: <' . time() . '-' . md5($to . $subject) . '@ohati.com>'
+                'Message-ID: <' . time() . '.' . uniqid() . '@ohati.com>'
             ]);
 
             $normalized_body = str_replace(["\r\n", "\r", "\n"], "\r\n", $message_body);

@@ -1889,10 +1889,13 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
     API.post('verify_otp', {
         target: draft.email || draft.phone,
         code: otp
-    }).then(() => {
+    }).then(otpRes => {
+        if (otpRes && otpRes.user) {
+            return otpRes;
+        }
         return API.post('register', draft);
     }).then(res => {
-        if (res.user) {
+        if (res && res.user) {
             state.user = res.user;
             const token = res.auth_token || res.token;
             if (token) localStorage.setItem('ohati_auth_token', token);
@@ -1900,62 +1903,17 @@ window.handleMandatoryOTPVerifySubmit = function (e) {
             if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
             else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
             if (typeof updateAppHeader === 'function') updateAppHeader();
-
-            Promise.allSettled([
-                API.getCategories(),
-                API.getVendors(),
-                API.getVendors({ premium_only: 1 }),
-                API.get('get_advertisements'),
-                API.getPopularVendors(),
-                API.getBookings(),
-                API.getFavorites(),
-                API.getEvent(),
-                API.get('get_faqs')
-            ]).then(results => {
-                state.categories = results[0].status === 'fulfilled' ? results[0].value : [];
-                state.vendors = results[1].status === 'fulfilled' ? results[1].value : [];
-                state.bookings = results[5].status === 'fulfilled' ? results[5].value : [];
-                state.favorites = results[6].status === 'fulfilled' ? results[6].value : [];
-
-                window.location.reload();
-            });
+            window.location.reload();
         } else {
             unlockOTP();
-            throw new Error(res.error || 'Registration failed.');
+            throw new Error((res && res.error) ? res.error : 'Registration failed.');
         }
     }).catch(err => {
-        // If registration detected an existing account, log user into existing account via verified OTP
-        if (err && (err.account_exists || (err.message && err.message.toLowerCase().includes('already exists')))) {
-            return API.post('login', {
-                identifier: draft.email || draft.phone,
-                otp: otp
-            }).then(loginRes => {
-                if (loginRes.user) {
-                    state.user = loginRes.user;
-                    const token = loginRes.auth_token || loginRes.token;
-                    if (token) localStorage.setItem('ohati_auth_token', token);
-                    localStorage.setItem('ohati_user_session', JSON.stringify(loginRes.user));
-                    if (typeof window.clearAllAuthOverlays === 'function') window.clearAllAuthOverlays();
-                    else if (typeof window.unlockMandatoryAuthScreen === 'function') window.unlockMandatoryAuthScreen();
-                    if (typeof updateAppHeader === 'function') updateAppHeader();
-                    window.location.reload();
-                } else {
-                    unlockOTP();
-                    if (errBox) {
-                        errBox.textContent = err.message || 'Account already registered. Please log in with your password.';
-                        errBox.style.display = 'block';
-                    }
-                }
-            }).catch(loginErr => {
-                unlockOTP();
-                if (errBox) {
-                    errBox.textContent = err.message || loginErr.message || 'Account already registered. Please log in with your password.';
-                    errBox.style.display = 'block';
-                }
-            });
-        }
         unlockOTP();
-        if (errBox) { errBox.textContent = err.message || 'Invalid or expired OTP code.'; errBox.style.display = 'block'; }
+        if (errBox) {
+            errBox.textContent = (err && err.error) ? err.error : (err && err.message ? err.message : 'Registration failed. Please try again.');
+            errBox.style.display = 'block';
+        }
     });
 };
 

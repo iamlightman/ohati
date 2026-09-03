@@ -536,3 +536,6 @@
 [2026-09-03 13:59:01] Attempting SMTP email delivery to: ceyeqdigital@gmail.com
 [2026-09-03 13:59:01] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
 [2026-09-03 13:59:07] SMTP email delivered successfully to: ceyeqdigital@gmail.com
+[2026-09-03 14:09:18] Attempting SMTP email delivery to: admin@ohati.com
+[2026-09-03 14:09:19] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-03 14:09:22] SMTP email delivered successfully to: admin@ohati.com

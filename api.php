@@ -1342,7 +1342,8 @@ case 'forgot_password':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     
     $input = json_decode(file_get_contents('php://input'), true);
-    $target_raw = trim($input['target'] ?? $input['email'] ?? '');
+    if (!is_array($input)) $input = $_POST;
+    $target_raw = trim($input['target'] ?? $input['email'] ?? $_POST['target'] ?? $_POST['email'] ?? '');
     $target_email = strtolower($target_raw);
 
     $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE LOWER(TRIM(email)) = ? OR LOWER(email) = ? LIMIT 1");
@@ -1362,18 +1363,32 @@ case 'forgot_password':
             $expires_str = date('Y-m-d H:i:s', time() + 86400); // 24 hours
             $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
-            // Ensure password_resets table exists
-            $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                token_hash VARCHAR(64) NOT NULL,
-                expires_at DATETIME NOT NULL,
-                created_at DATETIME NOT NULL,
-                used TINYINT(1) DEFAULT 0,
-                ip_address VARCHAR(45) DEFAULT '',
-                KEY idx_token (token_hash),
-                KEY idx_user (user_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            // Ensure password_resets table exists cross-database
+            $is_sqlite = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+            if ($is_sqlite) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INT NOT NULL,
+                    token_hash VARCHAR(64) NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    used TINYINT(1) DEFAULT 0,
+                    ip_address VARCHAR(45) DEFAULT ''
+                );");
+                try { $pdo->exec("CREATE INDEX IF NOT EXISTS idx_pw_token ON password_resets(token_hash);"); } catch (Throwable $eIdx) {}
+            } else {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    token_hash VARCHAR(64) NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    used TINYINT(1) DEFAULT 0,
+                    ip_address VARCHAR(45) DEFAULT '',
+                    KEY idx_pw_token (token_hash),
+                    KEY idx_pw_user (user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            }
 
             // Invalidate existing unused tokens for this user
             $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0")->execute([$user['id']]);
@@ -1452,7 +1467,6 @@ case 'forgot_password':
         } catch (Exception $eMail) {
             error_log("Password reset email dispatch error: " . $eMail->getMessage());
         }
-    }
 
     echo json_encode([
         'success' => true,

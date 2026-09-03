@@ -1345,24 +1345,17 @@ case 'forgot_password':
     $target_raw = trim($input['target'] ?? $input['email'] ?? '');
     $target_email = strtolower($target_raw);
 
-    // Uniform anti-enumeration message returned for all requests
-    $generic_response = [
-        'success' => true,
-        'message' => "If an account exists with this email address, we've sent you a password reset link. Please check your inbox and follow the link to create a new password."
-    ];
-
-    if (empty($target_email) || filter_var($target_email, FILTER_VALIDATE_EMAIL) === false) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Please enter a valid email address.']);
-        exit;
-    }
-
     $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE LOWER(TRIM(email)) = ? OR LOWER(email) = ? LIMIT 1");
     $stmt->execute([$target_email, $target_email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && !empty($user['email'])) {
-        try {
+    if (!$user || empty($user['email'])) {
+        http_response_code(404);
+        echo json_encode(['error' => 'No account found with this email address. Please check your spelling or register for a new account.']);
+        exit;
+    }
+
+    try {
             $raw_token = bin2hex(random_bytes(32)); // 64 hex chars
             $token_hash = hash('sha256', $raw_token);
             $now_str = date('Y-m-d H:i:s');
@@ -1461,7 +1454,10 @@ case 'forgot_password':
         }
     }
 
-    echo json_encode($generic_response);
+    echo json_encode([
+        'success' => true,
+        'message' => 'Password reset link sent to your registered email address (' . htmlspecialchars($user['email']) . '). Please check your inbox.'
+    ]);
     break;
 
 case 'reset_password':

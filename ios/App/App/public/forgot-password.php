@@ -1,5 +1,5 @@
 <?php
-// forgot-password.php — Ohati Standalone Password Reset Request Page
+// forgot-password.php — Ohati Official Password Reset Request Page
 session_start();
 if (isset($_SESSION['user'])) {
     header('Location: index.php');
@@ -12,7 +12,7 @@ if (isset($_SESSION['user'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password — Ohati</title>
-    <link rel="stylesheet" href="style.css?v=3.9.1">
+    <link rel="stylesheet" href="style.css?v=3.9.2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="auth-page">
@@ -22,10 +22,11 @@ if (isset($_SESSION['user'])) {
                 <img src="img/logo black transparent.png" alt="Ohati Logo" class="auth-logo" id="auth-logo-img">
             </div>
 
+            <!-- Form State -->
             <div id="step-forgot">
-                <div class="auth-modal-header" style="text-align: center;">
+                <div class="auth-modal-header">
                     <h2 class="auth-modal-title">Reset Your Password</h2>
-                    <p class="auth-modal-subtitle">Enter your registered email address to receive a password reset link.</p>
+                    <p class="auth-modal-subtitle">Enter your registered email address to receive a reset link</p>
                 </div>
                 <form onsubmit="handleForgotSubmit(event)">
                     <div class="form-group mb-16">
@@ -37,12 +38,38 @@ if (isset($_SESSION['user'])) {
                     <button type="button" class="btn btn-ghost btn-full mt-8" onclick="window.location.href='login.php'">Back to Login</button>
                 </form>
             </div>
+
+            <!-- Success Sent State -->
+            <div id="step-forgot-sent" style="display:none;">
+                <div class="auth-modal-header" style="text-align: center;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; background: #D1FAE5; color: #10B981; display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; margin: 0 auto 12px auto;">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </div>
+                    <h2 class="auth-modal-title" style="color: var(--primary);">Reset Link Sent</h2>
+                    <p class="auth-modal-subtitle" style="font-size: 0.88rem; color: var(--gray-600); line-height: 1.5; margin-top: 8px;">
+                        If an account exists with <strong id="sent-email-display">this email address</strong>, we've sent a password reset link to your email.
+                    </p>
+                </div>
+
+                <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 14px 16px; margin: 16px 0; font-size: 0.82rem; color: #4B5563; line-height: 1.5; text-align: left;">
+                    <div style="font-weight: 700; color: #1F2937; margin-bottom: 4px;">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--accent); margin-right: 6px;"></i> Security Instructions:
+                    </div>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Check your inbox and click the <strong>Reset Password</strong> button.</li>
+                        <li>The link will expire in <strong>24 hours</strong> and can only be used once.</li>
+                        <li>If you don't see the email, please check your spam or junk folder.</li>
+                    </ul>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-full" onclick="window.location.href='login.php'"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i> Return to Login</button>
+            </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="js/utils.js?v=3.9.1"></script>
-    <script src="js/api.js?v=3.9.1"></script>
+    <script src="js/utils.js?v=3.9.2"></script>
+    <script src="js/api.js?v=3.9.2"></script>
     <script>
         function handleForgotSubmit(e) {
             e.preventDefault();
@@ -62,18 +89,9 @@ if (isset($_SESSION['user'])) {
 
             API.forgotPassword(target)
                 .then(res => {
-                    const msg = (res && res.message) ? res.message : "If an account exists with this email address, we've sent you a password reset link. Please check your inbox.";
-                    const card = document.getElementById('step-forgot');
-                    if (card) {
-                        card.innerHTML = `
-                            <div class="auth-modal-header" style="text-align: center;">
-                                <div style="font-size: 2.8rem; color: #E05A47; margin-bottom: 12px;"><i class="fa-solid fa-paper-plane"></i></div>
-                                <h2 class="auth-modal-title" style="margin-bottom: 8px;">Reset Link Sent</h2>
-                                <p class="auth-modal-subtitle" style="font-size: 0.9rem; line-height: 1.5; color: var(--gray-600); max-width: 360px; margin: 0 auto 20px auto;">${msg}</p>
-                            </div>
-                            <button type="button" class="btn btn-primary btn-full" onclick="window.location.href='login.php'">Proceed to Login</button>
-                        `;
-                    }
+                    document.getElementById('sent-email-display').textContent = target;
+                    document.getElementById('step-forgot').style.display = 'none';
+                    document.getElementById('step-forgot-sent').style.display = 'block';
                 })
                 .catch(e => {
                     if (submitBtn) {

@@ -14,6 +14,13 @@ workflows:
       node: latest
       xcode: latest
       cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
     scripts:
       - name: Install npm dependencies & Initialize iOS project
         script: |
@@ -133,6 +140,13 @@ workflows:
     environment:
       node: latest
       java: 17
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
     scripts:
       - name: Install npm dependencies & Initialize Android project
         script: |

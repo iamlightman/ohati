@@ -103,15 +103,42 @@ window.normalizeUserSession = function() {
         const raw = localStorage.getItem('ohati_user_session');
         if (!raw) return;
         const u = JSON.parse(raw);
+        let changed = false;
         if (u && u.avatar) {
             const resolved = window.resolveImageUrl(u.avatar);
             if (resolved !== u.avatar) {
                 u.avatar = resolved;
-                localStorage.setItem('ohati_user_session', JSON.stringify(u));
+                changed = true;
             }
             if (typeof window.state !== 'undefined' && window.state.user) {
                 window.state.user.avatar = resolved;
             }
+        }
+        if (u && u.cover_photo) {
+            const resolvedCover = window.resolveImageUrl(u.cover_photo, 'cover');
+            if (resolvedCover !== u.cover_photo) {
+                u.cover_photo = resolvedCover;
+                changed = true;
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.cover_photo = resolvedCover;
+            }
+        }
+        if (u && u.vendor_cover_photo) {
+            const resolvedVendorCover = window.resolveImageUrl(u.vendor_cover_photo, 'cover');
+            if (resolvedVendorCover !== u.vendor_cover_photo) {
+                u.vendor_cover_photo = resolvedVendorCover;
+                changed = true;
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.vendor_cover_photo = resolvedVendorCover;
+            }
+        }
+        if (typeof window.state !== 'undefined' && window.state.vendor && window.state.vendor.cover_photo) {
+            window.state.vendor.cover_photo = window.resolveImageUrl(window.state.vendor.cover_photo, 'cover');
+        }
+        if (changed) {
+            localStorage.setItem('ohati_user_session', JSON.stringify(u));
         }
     } catch (e) {}
 };

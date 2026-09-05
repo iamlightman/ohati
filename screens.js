@@ -1342,7 +1342,7 @@ function renderRecommendationCard(v) {
     return `
         <div class="recommendation-card" onclick="viewVendorDetails(${v.id})" style="flex:0 0 180px; background:#fff; border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:var(--shadow-sm); transition:transform 0.2s ease;">
             <div style="position:relative; height:105px; background:var(--gray-100);">
-                <img src="${v.cover_photo || 'img/default-cover.jpg'}" style="width:100%; height:100%; object-fit:cover; display:block;">
+                <img src="${window.resolveImageUrl(v.cover_photo, 'cover')}" onerror="window.handleImageError(this, 'cover')" style="width:100%; height:100%; object-fit:cover; display:block;">
                 ${isPromoted ? `
                     <span style="position:absolute; top:6px; left:6px; background:var(--accent); color:#fff; font-size:0.55rem; font-weight:800; padding:2px 6px; border-radius:4px; display:flex; align-items:center; gap:2px;">
                         <i class="fa-solid fa-crown" style="font-size:0.5rem;"></i> Promoted
@@ -3690,7 +3690,7 @@ function renderFavoritesScreen(favorites) {
         <div class="favorites-grid">
             ${favorites.map(f => `
                 <div class="fav-card" onclick="viewVendorDetails(${f.id})" style="position:relative;">
-                    <img class="fav-cover" src="${f.cover_photo || 'img/default-cover.jpg'}" alt="">
+                    <img class="fav-cover" src="${window.resolveImageUrl(f.cover_photo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="">
                     <button onclick="shareVendorProfile(state.favorites.find(x => x.id === ${f.id}), event)" style="position:absolute; top:8px; right:8px; border:none; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); color:#1B2B4B; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:var(--shadow-sm); z-index:5;">
                         <i class="fa-solid fa-share-nodes"></i>
                     </button>
@@ -7432,7 +7432,7 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                 <div class="form-group mb-16">
                     <label class="form-label">Cover Banner</label>
                     <div style="position:relative; height:120px; border-radius:12px; overflow:hidden; background:var(--gray-100); border:1px solid var(--gray-200);">
-                        <img id="profile-edit-cover-preview" src="${v?.cover_photo || 'img/default-cover.jpg'}" style="width:100%; height:100%; object-fit:cover;">
+                        <img id="profile-edit-cover-preview" src="${window.resolveImageUrl(v?.cover_photo, 'cover')}" onerror="window.handleImageError(this, 'cover')" style="width:100%; height:100%; object-fit:cover;">
                         <label style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.6); color:white; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">
                             <i class="fa-solid fa-camera"></i> Change Cover
                             <input type="file" accept="image/*" onchange="handleCoverPhotoSelect(event)" style="display:none;">
@@ -8277,12 +8277,13 @@ function handleCoverPhotoSelect(event) {
     .then(res => {
         if (res.success && (res.cover_photo || res.url)) {
             const savedUrl = res.cover_photo || res.url;
+            const resolvedUrl = window.resolveImageUrl(savedUrl, 'cover');
             if (!state.vendor) state.vendor = {};
             if (!state.user) state.user = {};
-            state.vendor.cover_photo = savedUrl;
-            state.user.vendor_cover_photo = savedUrl;
-            state.user.cover_photo = savedUrl;
-            if (preview) preview.src = savedUrl;
+            state.vendor.cover_photo = resolvedUrl;
+            state.user.vendor_cover_photo = resolvedUrl;
+            state.user.cover_photo = resolvedUrl;
+            if (preview) preview.src = resolvedUrl;
             try {
                 localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
                 localStorage.setItem('oh_user', JSON.stringify(state.user));

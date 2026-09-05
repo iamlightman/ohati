@@ -21,36 +21,37 @@ window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
     
     let trimmed = url.trim();
 
-    // Strip accidental local webview/dev server prefixes
-    if (trimmed.startsWith('capacitor://localhost/')) {
-        trimmed = trimmed.replace('capacitor://localhost/', '');
-    } else if (trimmed.startsWith('http://localhost/')) {
-        trimmed = trimmed.replace('http://localhost/', '');
-    } else if (trimmed.startsWith('http://127.0.0.1/')) {
-        trimmed = trimmed.replace('http://127.0.0.1/', '');
-    }
-
-    if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return fallback;
     if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
 
-    // Upgrade http:// to https:// for secure remote webviews (except local environment)
-    if (trimmed.startsWith('http://') && !trimmed.includes('localhost') && !trimmed.includes('127.0.0.1')) {
-        trimmed = 'https://' + trimmed.substring(7);
+    // Handle full HTTP / HTTPS URLs directly
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        if (trimmed.startsWith('http://') && !trimmed.includes('localhost') && !trimmed.includes('127.0.0.1')) {
+            trimmed = 'https://' + trimmed.substring(7);
+        }
+        try {
+            return encodeURI(decodeURI(trimmed));
+        } catch (e) {
+            return encodeURI(trimmed);
+        }
     }
 
-    if (trimmed.startsWith('https://') || (trimmed.startsWith('http://') && (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')))) {
-        return encodeURI(trimmed);
+    // Handle Capacitor localhost URL
+    if (trimmed.startsWith('capacitor://localhost/')) {
+        trimmed = trimmed.replace('capacitor://localhost/', '');
     }
-    
+
     let domainPrefix = '';
+    let appDir = '';
     if (window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
-        const pathName = window.location.pathname || '';
-        const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
+        const rawPathName = window.location.pathname || '';
+        let pathName = rawPathName;
+        try { pathName = decodeURIComponent(rawPathName); } catch (e) {}
+        appDir = pathName.substring(0, pathName.lastIndexOf('/')).replace(/\/$/, '');
         domainPrefix = window.location.origin + appDir;
     } else if (typeof window.getOhatiApiBaseUrl === 'function') {
         const apiBase = window.getOhatiApiBaseUrl();
         if (apiBase && apiBase.includes('://')) {
-            domainPrefix = apiBase.split('/api.php')[0];
+            domainPrefix = apiBase.split('/api.php')[0].replace(/\/$/, '');
         }
     }
     
@@ -58,8 +59,23 @@ window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
         domainPrefix = 'https://ohati.com';
     }
 
-    const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
-    return encodeURI(`${domainPrefix}/${cleanPath}`);
+    let cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    try { cleanPath = decodeURIComponent(cleanPath); } catch (e) {}
+
+    // Strip accidental appDir duplication if cleanPath starts with it
+    if (appDir && appDir !== '') {
+        const cleanAppDir = appDir.replace(/^\//, '');
+        if (cleanPath.toLowerCase().startsWith(cleanAppDir.toLowerCase() + '/')) {
+            cleanPath = cleanPath.substring(cleanAppDir.length + 1);
+        }
+    }
+
+    const fullUrl = `${domainPrefix}/${cleanPath}`;
+    try {
+        return encodeURI(decodeURI(fullUrl));
+    } catch (e) {
+        return encodeURI(fullUrl);
+    }
 };
 
 /**
@@ -87,15 +103,42 @@ window.normalizeUserSession = function() {
         const raw = localStorage.getItem('ohati_user_session');
         if (!raw) return;
         const u = JSON.parse(raw);
+        let changed = false;
         if (u && u.avatar) {
             const resolved = window.resolveImageUrl(u.avatar);
             if (resolved !== u.avatar) {
                 u.avatar = resolved;
-                localStorage.setItem('ohati_user_session', JSON.stringify(u));
+                changed = true;
             }
             if (typeof window.state !== 'undefined' && window.state.user) {
                 window.state.user.avatar = resolved;
             }
+        }
+        if (u && u.cover_photo) {
+            const resolvedCover = window.resolveImageUrl(u.cover_photo, 'cover');
+            if (resolvedCover !== u.cover_photo) {
+                u.cover_photo = resolvedCover;
+                changed = true;
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.cover_photo = resolvedCover;
+            }
+        }
+        if (u && u.vendor_cover_photo) {
+            const resolvedVendorCover = window.resolveImageUrl(u.vendor_cover_photo, 'cover');
+            if (resolvedVendorCover !== u.vendor_cover_photo) {
+                u.vendor_cover_photo = resolvedVendorCover;
+                changed = true;
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.vendor_cover_photo = resolvedVendorCover;
+            }
+        }
+        if (typeof window.state !== 'undefined' && window.state.vendor && window.state.vendor.cover_photo) {
+            window.state.vendor.cover_photo = window.resolveImageUrl(window.state.vendor.cover_photo, 'cover');
+        }
+        if (changed) {
+            localStorage.setItem('ohati_user_session', JSON.stringify(u));
         }
     } catch (e) {}
 };

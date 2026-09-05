@@ -68,8 +68,9 @@ if (!function_exists('resolve_vendor_logo')) {
 
 if (!function_exists('resolve_vendor_cover')) {
     function resolve_vendor_cover($category, $current_cover = '') {
-        if (!empty($current_cover) && strpos($current_cover, 'data:image/svg+xml') === false) {
-            return $current_cover;
+        $trimmed = trim((string)$current_cover);
+        if (!empty($trimmed) && $trimmed !== 'null' && $trimmed !== 'undefined' && strpos($trimmed, 'data:image/svg+xml') === false) {
+            return $trimmed;
         }
         if ($category === 'Chilling Services') {
             return 'img/chill/services.jpg';

@@ -1,7 +1,7 @@
-window.DEFAULT_USER_AVATAR = "img/default-avatar.png";
+window.DEFAULT_USER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='avatarGrad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%231B2B4B'/><stop offset='100%' stop-color='%230F172A'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23avatarGrad)'/><circle cx='50' cy='38' r='18' fill='%23F2A735'/><path d='M 20 84 C 20 64, 32 58, 50 58 C 68 58, 80 64, 80 84 Z' fill='%23F2A735'/></svg>";
 window.DEFAULT_BUSINESS_COVER = "img/default-cover.jpg";
 window.DEFAULT_VENDOR_COVER = "img/default-cover.jpg";
-window.LOCAL_FALLBACK_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
+window.LOCAL_FALLBACK_SVG = window.DEFAULT_USER_AVATAR;
 
 /**
  * Universal Authoritative Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
@@ -103,15 +103,42 @@ window.normalizeUserSession = function() {
         const raw = localStorage.getItem('ohati_user_session');
         if (!raw) return;
         const u = JSON.parse(raw);
+        let changed = false;
         if (u && u.avatar) {
             const resolved = window.resolveImageUrl(u.avatar);
             if (resolved !== u.avatar) {
                 u.avatar = resolved;
-                localStorage.setItem('ohati_user_session', JSON.stringify(u));
+                changed = true;
             }
             if (typeof window.state !== 'undefined' && window.state.user) {
                 window.state.user.avatar = resolved;
             }
+        }
+        if (u && u.cover_photo) {
+            const resolvedCover = window.resolveImageUrl(u.cover_photo, 'cover');
+            if (resolvedCover !== u.cover_photo) {
+                u.cover_photo = resolvedCover;
+                changed = true;
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.cover_photo = resolvedCover;
+            }
+        }
+        if (u && u.vendor_cover_photo) {
+            const resolvedVendorCover = window.resolveImageUrl(u.vendor_cover_photo, 'cover');
+            if (resolvedVendorCover !== u.vendor_cover_photo) {
+                u.vendor_cover_photo = resolvedVendorCover;
+                changed = true;
+            }
+            if (typeof window.state !== 'undefined' && window.state.user) {
+                window.state.user.vendor_cover_photo = resolvedVendorCover;
+            }
+        }
+        if (typeof window.state !== 'undefined' && window.state.vendor && window.state.vendor.cover_photo) {
+            window.state.vendor.cover_photo = window.resolveImageUrl(window.state.vendor.cover_photo, 'cover');
+        }
+        if (changed) {
+            localStorage.setItem('ohati_user_session', JSON.stringify(u));
         }
     } catch (e) {}
 };

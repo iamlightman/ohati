@@ -1,6 +1,6 @@
 {
   "name": "ohati-mobile",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "description": "Ohati Event Vendor Marketplace Mobile App",
   "main": "index.php",
   "scripts": {

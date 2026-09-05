@@ -57,9 +57,9 @@ workflows:
           xcode-project use-profiles --project "ios/App/App.xcodeproj"
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 3)
-          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 3 ]; then
-            LATEST_BUILD_NUMBER=3
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 30)
+          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 30 ]; then
+            LATEST_BUILD_NUMBER=30
           fi
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
           

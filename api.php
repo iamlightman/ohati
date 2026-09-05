@@ -4012,10 +4012,24 @@ case 'upload_cover_image':
     $v_chk->execute([$uid]);
     $v_id = $v_chk->fetchColumn();
     if ($v_id) {
-        $pdo->prepare("UPDATE vendors SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $v_id]);
+        try {
+            $pdo->prepare("UPDATE vendors SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $v_id]);
+        } catch (Exception $eVendCol) {
+            try {
+                $pdo->exec("ALTER TABLE vendors ADD COLUMN cover_photo VARCHAR(500) DEFAULT ''");
+                $pdo->prepare("UPDATE vendors SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $v_id]);
+            } catch (Exception $eVendCol2) {}
+        }
         if (isset($_SESSION['vendor'])) $_SESSION['vendor']['cover_photo'] = $cover_url;
     }
-    $pdo->prepare("UPDATE users SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $uid]);
+    try {
+        $pdo->prepare("UPDATE users SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $uid]);
+    } catch (Exception $eCol) {
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN cover_photo VARCHAR(500) DEFAULT ''");
+            $pdo->prepare("UPDATE users SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $uid]);
+        } catch (Exception $eCol2) {}
+    }
     if (isset($_SESSION['user'])) {
         $_SESSION['user']['cover_photo'] = $cover_url;
         $_SESSION['user']['vendor_cover_photo'] = $cover_url;

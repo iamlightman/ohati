@@ -283,7 +283,7 @@ if ($requested_vendor_id > 0) {
                     <span class="notif-badge" id="notif-badge" style="display:none;">3</span>
                 </button>
                 <button class="header-avatar-btn" id="header-avatar-btn" aria-label="Profile">
-                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>" alt="User" id="header-avatar" class="header-avatar">
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='avatarGrad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%231B2B4B'/><stop offset='100%' stop-color='%230F172A'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23avatarGrad)'/><circle cx='50' cy='38' r='18' fill='%23F2A735'/><path d='M 20 84 C 20 64, 32 58, 50 58 C 68 58, 80 64, 80 84 Z' fill='%23F2A735'/></svg>" alt="User" id="header-avatar" class="header-avatar" onerror="window.handleImageError(this, 'avatar')">
                 </button>
                 <a href="javascript:void(0)" class="desktop-nav-item sidebar-toggle-btn" id="header-sidebar-toggle-btn" aria-label="Toggle Sidebar" onclick="toggleSidebar(); event.preventDefault();" title="Menu Sidebar">
                     <i class="fa-solid fa-bars"></i>
@@ -326,6 +326,8 @@ if ($requested_vendor_id > 0) {
 
             <!-- Screen: Vendor Dashboard (for vendors) -->
             <section id="screen-vendor-dash" class="screen" style="display:none;"></section>
+            <!-- Screen: Customer Dashboard (for customers/clients) -->
+            <section id="screen-user-dash" class="screen" style="display:none;"></section>
             <section id="screen-didit-kyc" class="screen" style="display:none;"></section>
 
             <!-- Screen: Help Center -->
@@ -478,21 +480,19 @@ if ($requested_vendor_id > 0) {
                     <div class="welcome-popup-motto">Find. Compare. Book. Celebrate.</div>
                     
                     <div class="welcome-app-badges">
-                        <button class="app-badge-btn" disabled style="cursor:not-allowed; opacity:0.75;" onclick="showPushNotification('Coming Soon', 'Ohati Android app on Google Play will be available shortly!'); event.preventDefault();">
+                        <button class="app-badge-btn" onclick="openAppDownloadUrl('android'); event.preventDefault();">
                             <i class="fa-brands fa-google-play"></i>
                             <div class="app-badge-text">
                                 <span class="app-badge-sub">GET IT ON</span>
                                 <span class="app-badge-main">Google Play</span>
                             </div>
-                            <span class="badge badge-warning" style="font-size:0.6rem; padding:2px 8px; font-weight:700; background:#F59E0B; color:#fff; border-radius:10px;">COMING SOON</span>
                         </button>
-                        <button class="app-badge-btn" disabled style="cursor:not-allowed; opacity:0.75;" onclick="showPushNotification('Coming Soon', 'Ohati iOS app on App Store will be available shortly!'); event.preventDefault();">
+                        <button class="app-badge-btn" onclick="openAppDownloadUrl('ios'); event.preventDefault();">
                             <i class="fa-brands fa-apple"></i>
                             <div class="app-badge-text">
                                 <span class="app-badge-sub">Download on the</span>
                                 <span class="app-badge-main">App Store</span>
                             </div>
-                            <span class="badge badge-warning" style="font-size:0.6rem; padding:2px 8px; font-weight:700; background:#F59E0B; color:#fff; border-radius:10px;">COMING SOON</span>
                         </button>
                     </div>
 

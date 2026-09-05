@@ -98,7 +98,7 @@ function navigateTo(screenId, params = {}, options = {}) {
             (state.user.vendor_id && parseInt(state.user.vendor_id) > 0) ||
             (state.vendor && state.vendor.id > 0)
         ));
-        screenId = isVendor ? 'vendor-dash' : 'home';
+        screenId = isVendor ? 'vendor-dash' : 'user-jobs';
     }
 
     // Dismiss any open sidebar immediately on navigation entry
@@ -346,6 +346,9 @@ function navigateTo(screenId, params = {}, options = {}) {
             case 'vendor-dash':
                 initVendorDashScreen(params);
                 break;
+            case 'user-dash':
+                initUserDashScreen(params);
+                break;
             case 'vendor-ads':
                 initVendorAdsScreen(params);
                 break;
@@ -465,7 +468,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     ${activeAds.map(ad => `
                         <div class="sponsored-ad-banner" onclick="handleAdClick(${ad.id}, '${ad.destination}', ${ad.vendor_id})">
                             <div class="sponsored-ad-img-wrap">
-                                <img src="${ad.banner_url || 'img/ads/default.jpg'}" alt="${ad.title}">
+                                <img src="${window.resolveImageUrl(ad.banner_url || ad.vendor_cover || ad.cover_photo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(ad.title || 'Ad')}">
                                 <span class="sponsored-tag"><i class="fa-solid fa-rectangle-ad"></i> Sponsored</span>
                             </div>
                             <div class="sponsored-ad-content">
@@ -532,7 +535,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <i class="fa-solid ${labelIcon}"></i> ${recLabel}
                         </div>
                         <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
-                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
+                            <img src="${recVendor.logo || 'img/default-avatar.png'}" onerror="this.onerror=null; this.src='img/default-avatar.png';" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
                             <div style="flex:1; min-width:0;">
                                 <h4 style="font-family:'Fraunces',serif; font-size:0.95rem; margin:0 0 2px 0; color:var(--primary); display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     <span>${recVendor.name}</span>
@@ -572,7 +575,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
             rating: v.rating || '5.0',
             reviews: v.reviews_count || 0,
             city: v.city || v.location || 'Accra, Ghana',
-            img: v.cover_photo || v.logo || 'img/app_icon.png',
+            img: window.resolveImageUrl(v.cover_photo || v.logo, 'cover'),
             initials: initials,
             badgeClass: '',
             verification_badge: v.verification_badge || 'grey',
@@ -595,7 +598,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
         return `
             <div class="handpicked-card" onclick="${clickAction}">
                 <div class="handpicked-img-wrapper">
-                    <img src="${v.img}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600';" alt="${v.name}" class="handpicked-cover">
+                    <img src="${v.img}" onerror="this.onerror=null; this.src='img/default-cover.jpg';" alt="${v.name}" class="handpicked-cover">
                     <div class="handpicked-logo-badge ${v.badgeClass || ''}">
                         ${badgeContent}
                     </div>
@@ -1339,7 +1342,7 @@ function renderRecommendationCard(v) {
     return `
         <div class="recommendation-card" onclick="viewVendorDetails(${v.id})" style="flex:0 0 180px; background:#fff; border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:var(--shadow-sm); transition:transform 0.2s ease;">
             <div style="position:relative; height:105px; background:var(--gray-100);">
-                <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=200'}" style="width:100%; height:100%; object-fit:cover; display:block;">
+                <img src="${v.cover_photo || 'img/default-cover.jpg'}" style="width:100%; height:100%; object-fit:cover; display:block;">
                 ${isPromoted ? `
                     <span style="position:absolute; top:6px; left:6px; background:var(--accent); color:#fff; font-size:0.55rem; font-weight:800; padding:2px 6px; border-radius:4px; display:flex; align-items:center; gap:2px;">
                         <i class="fa-solid fa-crown" style="font-size:0.5rem;"></i> Promoted
@@ -1435,7 +1438,7 @@ function toggleCompareDetail(vid, e) {
                             <th style="padding:8px 6px;text-align:left;font-size:0.65rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--gray-200);min-width:70px;"></th>
                             ${allVendors.map((cv, i) => `
                                 <th style="padding:8px 6px;text-align:center;border-bottom:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};min-width:90px;cursor:pointer;" onclick="${i > 0 ? 'closeModal(); viewVendorDetails(' + cv.id + ')' : ''}">
-                                    <img src="${cv.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
+                                    <img src="${cv.logo || 'img/default-avatar.png'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
                                     <div style="font-size:0.7rem;font-weight:700;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;">${cv.name}</div>
                                     ${i === 0 ? '<span style="font-size:0.5rem;background:var(--accent);color:var(--primary-dark);padding:1px 6px;border-radius:3px;font-weight:800;text-transform:uppercase;">Current</span>' : ''}
                                 </th>
@@ -1882,7 +1885,7 @@ function loadDesktopChatPartner(vid) {
         contentPanel.innerHTML = `
             <div class="chat-screen" data-vendor-id="${v.id}">
                 <div class="chat-header">
-                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                    <img class="chat-vendor-avatar" src="${v.logo || 'img/default-avatar.png'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                         <div class="chat-vendor-name">${nameWithBadge}</div>
                         <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
@@ -2138,7 +2141,7 @@ function renderChatShell(v) {
         <div class="chat-screen" data-vendor-id="${v.id}">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="closeActiveChat()"><i class="fa-solid fa-chevron-left"></i></button>
-                <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                <img class="chat-vendor-avatar" src="${v.logo || 'img/default-avatar.png'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                 <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-name">${nameWithBadge}</div>
                     <div class="chat-vendor-status" id="chat-partner-status">${statusText}</div>
@@ -3687,7 +3690,7 @@ function renderFavoritesScreen(favorites) {
         <div class="favorites-grid">
             ${favorites.map(f => `
                 <div class="fav-card" onclick="viewVendorDetails(${f.id})" style="position:relative;">
-                    <img class="fav-cover" src="${f.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=200'}" alt="">
+                    <img class="fav-cover" src="${f.cover_photo || 'img/default-cover.jpg'}" alt="">
                     <button onclick="shareVendorProfile(state.favorites.find(x => x.id === ${f.id}), event)" style="position:absolute; top:8px; right:8px; border:none; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); color:#1B2B4B; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:var(--shadow-sm); z-index:5;">
                         <i class="fa-solid fa-share-nodes"></i>
                     </button>
@@ -4324,7 +4327,7 @@ function initCompareScreen(params = {}, targetContainer = null) {
                     <div class="compare-vendor-col">
                         <div class="compare-vendor-header" style="position:relative; padding-top:16px;">
                             <button onclick="removeCompareVendor(${v.id}, event)" style="position:absolute; right:4px; top:4px; background:none; border:none; color:var(--error); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; padding:4px;" title="Remove"><i class="fa-solid fa-circle-xmark"></i></button>
-                            <img class="compare-vendor-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
+                            <img class="compare-vendor-logo" src="${v.logo || 'img/default-avatar.png'}" alt="">
                             <div class="compare-vendor-name">${v.name}</div>
                         </div>
                         <div class="compare-row">
@@ -4709,6 +4712,263 @@ function renderKycStatusBanner(kycStatus) {
             </div>
         `;
     }
+}
+
+// ── 10.5. CUSTOMER DASHBOARD SCREEN ──────────────────────────────────────────
+function initUserDashScreen(params) {
+    const screen = document.getElementById('screen-user-dash');
+    if (!screen) return;
+
+    if (!state.user && !localStorage.getItem('ohati_user_session')) {
+        screen.innerHTML = `
+            <div class="text-center" style="padding:80px 20px;">
+                <i class="fa-solid fa-user-slash" style="font-size:3.5rem; color:var(--gray-200); margin-bottom:16px;"></i>
+                <h4>Please Sign In</h4>
+                <p class="text-sm text-muted mb-16">Sign in to access your customer dashboard.</p>
+                <button class="btn btn-primary" onclick="openLoginModal()">Sign In</button>
+            </div>
+        `;
+        return;
+    }
+
+    screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
+
+    const u = state.user || {};
+
+    // Fetch real live customer data simultaneously from backend APIs
+    Promise.allSettled([
+        API.getBookings().catch(() => []),
+        API.get('job_get_user_dashboard').catch(() => null),
+        API.getFavorites().catch(() => []),
+        API.get('get_tracker_tasks').catch(() => null)
+    ]).then(([bookingsRes, jobsRes, favsRes, plannerRes]) => {
+        const bookings = Array.isArray(bookingsRes.value) ? bookingsRes.value : [];
+        const jobsData = (jobsRes.value && jobsRes.value.success) ? jobsRes.value : { stats: {}, jobs: {} };
+        const favorites = Array.isArray(favsRes.value) ? favsRes.value : [];
+        const planner = plannerRes.value || {};
+
+        renderUserDashScreen(u, bookings, jobsData, favorites, planner);
+    });
+}
+
+function renderUserDashScreen(u, bookings = [], jobsData = {}, favorites = [], planner = {}) {
+    const screen = document.getElementById('screen-user-dash');
+    if (!screen) return;
+
+    const userName = escapeHtml(u.name || u.username || 'Valued Customer');
+    const avatarUrl = window.resolveImageUrl(u.avatar);
+
+    // Calculate real metrics (NO dummy stats)
+    const activeBookings = bookings.filter(b => (b.status || '').toLowerCase() !== 'cancelled');
+    const pendingBookingsCount = activeBookings.filter(b => (b.status || '').toLowerCase() === 'pending' || (b.status || '').toLowerCase() === 'requested').length;
+    const confirmedBookingsCount = activeBookings.filter(b => (b.status || '').toLowerCase() === 'confirmed' || (b.status || '').toLowerCase() === 'in_progress').length;
+
+    let totalSpent = 0;
+    activeBookings.forEach(b => {
+        const amt = parseFloat(b.total_paid || b.negotiated_price || b.price || 0);
+        if (!isNaN(amt)) totalSpent += amt;
+    });
+
+    const jobsStats = jobsData.stats || {};
+    const jobsList = jobsData.jobs?.all || [];
+    const openJobsCount = jobsStats.active_count || jobsList.filter(j => j.status === 'open' || j.status === 'in_review').length;
+    const totalQuotesCount = jobsStats.total_applications || 0;
+
+    const favoritesCount = favorites.length;
+    const trackerTotal = planner.total || 0;
+    const trackerCompleted = planner.completed || 0;
+    const trackerPct = planner.percentage || (trackerTotal > 0 ? Math.round((trackerCompleted / trackerTotal) * 100) : 0);
+
+    screen.innerHTML = `
+        <div class="p-section" style="padding-bottom:12px; border-bottom:1px solid var(--gray-100);">
+            <!-- Customer Welcome Header Banner -->
+            <div class="card p-16 mb-16" style="background:linear-gradient(135deg, #0F172A, #1E293B); color:#FFF; border-radius:16px; border:none; box-shadow:0 10px 25px rgba(15,23,42,0.15);">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <img src="${avatarUrl}" onerror="window.handleImageError(this, 'avatar')" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2.5px solid var(--accent, #D4AF37); box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <h3 style="margin:0; color:#FFF; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.25rem;">${userName}</h3>
+                                <span class="badge" style="background:rgba(212,175,55,0.2); color:#D4AF37; border:1px solid rgba(212,175,55,0.4); font-size:0.68rem; font-weight:700;"><i class="fa-solid fa-user-check"></i> Customer Account</span>
+                            </div>
+                            <p style="margin:4px 0 0 0; font-size:0.78rem; color:#94A3B8;">Track your event planning, active vendor bookings, service requests, and escrow payments.</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary btn-sm" onclick="navigateTo('user-jobs')" style="background:var(--accent, #D4AF37); color:#0F172A; font-weight:700; border:none;">
+                            <i class="fa-solid fa-plus-circle"></i> Request Quotes
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="navigateTo('search')" style="border-color:rgba(255,255,255,0.25); color:#FFF;">
+                            <i class="fa-solid fa-magnifying-glass"></i> Browse Vendors
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real Live Customer Metrics Grid (NO Dummy Stats) -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:20px;">
+                <!-- Metric 1: Bookings -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px; cursor:pointer;" onclick="navigateTo('bookings')">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Bookings</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${activeBookings.length}</div>
+                    <div style="font-size:0.68rem; color:var(--success); margin-top:2px; font-weight:600;">${confirmedBookingsCount} Confirmed • ${pendingBookingsCount} Pending</div>
+                </div>
+
+                <!-- Metric 2: Service Requests -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px; cursor:pointer;" onclick="navigateTo('user-jobs')">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Service Requests</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${jobsList.length}</div>
+                    <div style="font-size:0.68rem; color:var(--primary); margin-top:2px; font-weight:600;">${openJobsCount} Open • ${totalQuotesCount} Quotes Recv</div>
+                </div>
+
+                <!-- Metric 3: Favorites -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px; cursor:pointer;" onclick="navigateTo('favorites')">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Saved Vendors</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${favoritesCount}</div>
+                    <div style="font-size:0.68rem; color:var(--gray-500); margin-top:2px;">Favorites List</div>
+                </div>
+
+                <!-- Metric 4: Total Spent -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px;">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Escrow & Payments</div>
+                    <div style="font-size:1.3rem; font-weight:800; color:#059669;">GH₵${totalSpent.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2})}</div>
+                    <div style="font-size:0.68rem; color:var(--gray-500); margin-top:2px;">Protected Escrow</div>
+                </div>
+            </div>
+
+            <!-- Quick Action Links Bar -->
+            <div style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:4px;">
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('user-jobs')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> My Service Requests (${jobsList.length})
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('bookings')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-calendar-check" style="color:var(--primary);"></i> My Bookings (${activeBookings.length})
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('event')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-sliders" style="color:var(--primary);"></i> Event Planner
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('profile-edit')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-user-pen" style="color:var(--primary);"></i> Edit Profile
+                </button>
+            </div>
+
+            <!-- Section 1: Recent Vendor Bookings (Real Data) -->
+            <div class="card p-16 mb-20" style="border-radius:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h4 style="margin:0; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-calendar-check" style="color:var(--primary);"></i> Recent Vendor Bookings
+                    </h4>
+                    <a href="javascript:void(0)" onclick="navigateTo('bookings')" style="font-size:0.78rem; font-weight:700; color:var(--primary);">View All (${bookings.length}) <i class="fa-solid fa-arrow-right"></i></a>
+                </div>
+
+                ${activeBookings.length > 0 ? `
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${activeBookings.slice(0, 4).map(b => {
+                            const vName = escapeHtml(b.vendor_name || 'Vendor');
+                            const vCat = escapeHtml(b.vendor_category || 'Event Service');
+                            const bLogo = window.resolveImageUrl(b.vendor_logo);
+                            const bStatus = (b.status || 'Pending').toLowerCase();
+                            
+                            let bBadgeClass = 'badge-warning';
+                            if (bStatus === 'confirmed' || bStatus === 'in_progress') bBadgeClass = 'badge-success';
+                            else if (bStatus === 'completed') bBadgeClass = 'badge-primary';
+                            else if (bStatus === 'cancelled') bBadgeClass = 'badge-danger';
+
+                            const bPrice = parseFloat(b.negotiated_price || b.price || 0);
+
+                            return `
+                                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--gray-50); border-radius:10px; border:1px solid var(--gray-200); gap:12px; flex-wrap:wrap;">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <img src="${bLogo}" onerror="window.handleImageError(this, 'avatar')" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid var(--gray-300);">
+                                        <div>
+                                            <div style="font-weight:700; font-size:0.9rem; color:var(--gray-900);">${vName}</div>
+                                            <div style="font-size:0.75rem; color:var(--gray-500);">${vCat} • ${escapeHtml(b.event_date || 'Date TBD')}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <div style="text-align:right;">
+                                            <div style="font-weight:800; font-size:0.9rem; color:var(--gray-900);">GH₵${bPrice.toLocaleString('en-US')}</div>
+                                            <span class="badge ${bBadgeClass}" style="font-size:0.65rem; text-transform:capitalize;">${escapeHtml(b.status || 'Pending')}</span>
+                                        </div>
+                                        <button class="btn btn-outline btn-xs" onclick="navigateTo('bookings', { id: ${b.id} })">View</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div style="text-align:center; padding:30px 15px; color:var(--gray-500);">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:10px; display:block;"></i>
+                        <h5 style="margin:0 0 4px 0; color:var(--gray-700);">No active vendor bookings</h5>
+                        <p style="font-size:0.78rem; margin:0 0 12px 0;">Find top rated photographers, caterers, DJs, and event planners for your upcoming event.</p>
+                        <button class="btn btn-primary btn-sm" onclick="navigateTo('search')"><i class="fa-solid fa-magnifying-glass"></i> Explore Vendors</button>
+                    </div>
+                `}
+            </div>
+
+            <!-- Section 2: Active Service Requests & Quotes (Real Data) -->
+            <div class="card p-16 mb-20" style="border-radius:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h4 style="margin:0; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-briefcase" style="color:var(--primary);"></i> My Posted Service Requests
+                    </h4>
+                    <button class="btn btn-primary btn-xs" onclick="navigateTo('user-jobs')">+ Post New Request</button>
+                </div>
+
+                ${jobsList.length > 0 ? `
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${jobsList.slice(0, 3).map(j => {
+                            const jTitle = escapeHtml(j.title || 'Event Service Request');
+                            const jCat = escapeHtml(j.category || 'General');
+                            const jApps = parseInt(j.applications_count || 0);
+
+                            return `
+                                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--gray-50); border-radius:10px; border:1px solid var(--gray-200); gap:12px; flex-wrap:wrap;">
+                                    <div>
+                                        <div style="font-weight:700; font-size:0.88rem; color:var(--gray-900);">${jTitle}</div>
+                                        <div style="font-size:0.75rem; color:var(--gray-500);">${jCat} • Budget: GH₵${parseFloat(j.budget_min || 0).toLocaleString()} - GH₵${parseFloat(j.budget_max || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <span class="badge badge-primary" style="font-size:0.7rem;"><i class="fa-solid fa-paper-plane"></i> ${jApps} Quotes</span>
+                                        <button class="btn btn-outline btn-xs" onclick="navigateTo('user-jobs', { id: ${j.id} })">Manage</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div style="text-align:center; padding:30px 15px; color:var(--gray-500);">
+                        <i class="fa-solid fa-folder-open" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:10px; display:block;"></i>
+                        <h5 style="margin:0 0 4px 0; color:var(--gray-700);">No service requests posted</h5>
+                        <p style="font-size:0.78rem; margin:0 0 12px 0;">Post a job with your budget and details to receive competitive quotes from verified vendors.</p>
+                        <button class="btn btn-primary btn-sm" onclick="navigateTo('user-jobs')">+ Post a Job Now</button>
+                    </div>
+                `}
+            </div>
+
+            <!-- Section 3: Event Planner & Checklist Summary -->
+            ${trackerTotal > 0 ? `
+                <div class="card p-16" style="border-radius:14px; background:linear-gradient(135deg, #F8FAFC, #EFF6FF); border:1px solid #BFDBFE;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1E3A8A; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-list-check" style="color:#2563EB;"></i> Event Planning Progress
+                        </h4>
+                        <a href="javascript:void(0)" onclick="navigateTo('event')" style="font-size:0.75rem; font-weight:700; color:#2563EB;">Open Planner <i class="fa-solid fa-chevron-right"></i></a>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                        <div style="flex:1; background:#E2E8F0; height:8px; border-radius:4px; overflow:hidden;">
+                            <div style="width:${trackerPct}%; background:#2563EB; height:100%; transition:width 0.3s ease;"></div>
+                        </div>
+                        <span style="font-weight:800; font-size:0.85rem; color:#1E3A8A;">${trackerPct}%</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:#475569; display:flex; justify-content:space-between;">
+                        <span>Tasks Completed: <strong>${trackerCompleted} of ${trackerTotal}</strong></span>
+                        ${planner.budget ? `<span>Est. Budget: <strong>GH₵${parseFloat(planner.budget.estimated || 0).toLocaleString()}</strong></span>` : ''}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
 // ── 11. VENDOR DASHBOARD SCREEN ──────────────────────────────────────────
@@ -6336,13 +6596,12 @@ function renderPromoPackages() {
     const platinumReach = state.settings?.ad_plan_platinum_reach || "200,000+ planners";
 
     container.innerHTML = `
-        <div class="p-section" style="padding-top:0;">
             <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); padding:20px 24px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25); margin-bottom:20px; box-shadow:0 8px 24px rgba(11, 31, 58, 0.12);">
-                <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800; margin-bottom:4px;">
+                <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#FBBF24; font-weight:800; margin-bottom:6px;">
                     <i class="fa-solid fa-bullhorn"></i> High-Impact Exposure
                 </div>
-                <h4 style="font-family:'Fraunces',serif; font-size:1.25rem; font-weight:700; margin:0 0 6px 0;">Select an Advertising Plan</h4>
-                <p style="font-size:0.78rem; opacity:0.88; margin:0; line-height:1.4; max-width:600px;">Pick a promotional tier to spotlight your services to thousands of active Ghanaian event planners across Accra, Kumasi, Takoradi, and nationwide.</p>
+                <h4 style="font-family:'Fraunces',serif; font-size:1.3rem; font-weight:800; margin:0 0 6px 0; color:#FFFFFF !important;">Select an Advertising Plan</h4>
+                <p style="font-size:0.82rem; color:#F1F5F9 !important; opacity:1; margin:0; line-height:1.5; max-width:600px;">Pick a promotional tier to spotlight your services to thousands of active Ghanaian event planners across Accra, Kumasi, Takoradi, and nationwide.</p>
             </div>
 
             <div class="promo-packages-grid" style="display:flex; flex-direction:column; gap:16px;">
@@ -6387,8 +6646,8 @@ function renderPromoPackages() {
                 </div>
 
                 <!-- Premium -->
-                <div class="card" style="padding:20px; border-radius:16px; border:1px solid var(--accent); background:linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%); box-shadow:0 6px 20px rgba(242, 167, 53, 0.12); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
-                    <div style="position:absolute; top:-11px; right:16px; background:linear-gradient(135deg, var(--accent) 0%, #D97706 100%); color:#0B1F3A; font-size:0.58rem; font-weight:900; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">Most Popular</div>
+                <div class="card" style="padding:20px; border-radius:16px; border:1px solid #D97706; background:linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%); box-shadow:0 6px 20px rgba(217, 119, 6, 0.12); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+                    <div style="position:absolute; top:-11px; right:16px; background:linear-gradient(135deg, #D97706 0%, #B45309 100%); color:#FFFFFF; font-size:0.58rem; font-weight:900; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">Most Popular</div>
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                             <div>
@@ -6404,7 +6663,7 @@ function renderPromoPackages() {
                             <li>Estimated reach: <strong>${premiumReach}</strong></li>
                         </ul>
                     </div>
-                    <button class="btn btn-primary btn-sm btn-full" style="background:linear-gradient(135deg, var(--accent) 0%, #D97706 100%); color:#0B1F3A; border:none; border-radius:10px; font-weight:800; padding:10px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3);" onclick="purchasePromoPackage('Premium', 30, ${premiumPrice})">Buy Premium</button>
+                    <button class="btn btn-primary btn-sm btn-full" style="background:linear-gradient(135deg, #D97706 0%, #B45309 100%); color:#FFFFFF; border:none; border-radius:10px; font-weight:800; padding:10px; box-shadow:0 4px 12px rgba(217, 119, 6, 0.3);" onclick="purchasePromoPackage('Premium', 30, ${premiumPrice})">Buy Premium</button>
                 </div>
 
                 <!-- Platinum -->
@@ -6414,9 +6673,9 @@ function renderPromoPackages() {
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                             <div>
                                 <h3 style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin:0 0 2px 0;">Platinum</h3>
-                                <span style="font-size:0.65rem; color:var(--accent); font-weight:700; background:rgba(242, 167, 53, 0.15); padding:2px 8px; border-radius:6px;">90 Days (35% Off)</span>
+                                <span style="font-size:0.65rem; color:#FBBF24; font-weight:800; background:rgba(251, 191, 36, 0.2); padding:2px 8px; border-radius:6px;">90 Days (35% Off)</span>
                             </div>
-                            <div style="font-size:1.25rem; font-weight:800; color:var(--accent);">GH₵ ${platinumPrice}</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:#FBBF24;">GH₵ ${platinumPrice}</div>
                         </div>
                         <ul style="font-size:0.75rem; color:#E2E8F0; padding-left:18px; margin-bottom:16px; line-height:1.6; list-style-type:disc;">
                             <li>Maximum top-tier placement everywhere</li>
@@ -6448,11 +6707,11 @@ function renderPromoAnalytics() {
         container.innerHTML = `
             <div class="p-section" style="display:flex; flex-direction:column; gap:16px;">
                 <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); padding:20px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25);">
-                    <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800; margin-bottom:4px;">
+                    <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#FBBF24; font-weight:800; margin-bottom:6px;">
                         <i class="fa-solid fa-chart-pie"></i> Performance Intelligence
                     </div>
-                    <h4 style="font-family:'Fraunces',serif; font-size:1.2rem; margin:0 0 6px 0;">Promotion Analytics & ROI</h4>
-                    <p style="font-size:0.75rem; opacity:0.85; margin:0; line-height:1.4;">Live tracking of impression reach, conversion clicks, and engagement performance for all your active Ghana advertising campaigns.</p>
+                    <h4 style="font-family:'Fraunces',serif; font-size:1.3rem; font-weight:800; margin:0 0 6px 0; color:#FFFFFF !important;">Promotion Analytics & ROI</h4>
+                    <p style="font-size:0.82rem; color:#F1F5F9 !important; opacity:1; margin:0; line-height:1.5;">Live tracking of impression reach, conversion clicks, and engagement performance for all your active Ghana advertising campaigns.</p>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -6486,7 +6745,8 @@ function renderPromoAnalytics() {
 }
 
 function purchasePromoPackage(packageName, days, price) {
-    window.currentAdBannerBase64 = 'img/ads/default.jpg';
+    const userCover = state.vendor?.cover_photo || state.user?.cover_photo || state.user?.avatar || state.vendor?.logo;
+    window.currentAdBannerBase64 = userCover ? window.resolveImageUrl(userCover, 'cover') : window.DEFAULT_VENDOR_COVER;
     window.currentAdCost = price;
     window.currentAdDuration = days;
     window._adReceiptData = '';
@@ -6507,23 +6767,23 @@ function purchasePromoPackage(packageName, days, price) {
             </div>
             
             <!-- Live Ad Banner Preview -->
-            <div class="card p-12 mb-16" style="border:1px solid var(--accent); background:var(--gray-50); border-radius:12px;">
-                <div style="font-size:0.7rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:4px;">
+            <div class="card p-12 mb-16" style="border:1px solid #D97706; background:#FFFBEB; border-radius:12px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#B45309; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:4px;">
                     <i class="fa-solid fa-eye"></i> Live Advertisement Preview
                 </div>
                 <div class="sponsored-card" style="border-radius:12px; overflow:hidden; border:1px solid var(--gray-200); background:var(--white); box-shadow:var(--shadow-sm);">
                     <div style="position:relative; height:120px; background:var(--gray-100);">
-                        <img id="preview-ad-banner" src="${window.currentAdBannerBase64}" style="width:100%; height:100%; object-fit:cover; display:block;">
-                        <span style="position:absolute; top:8px; left:8px; background:var(--accent); color:#fff; font-size:0.6rem; font-weight:800; padding:3px 6px; border-radius:4px; display:flex; align-items:center; gap:4px;">
+                        <img id="preview-ad-banner" src="${window.currentAdBannerBase64}" onerror="window.handleImageError(this, 'cover')" style="width:100%; height:100%; object-fit:cover; display:block;">
+                        <span style="position:absolute; top:8px; left:8px; background:#0F172A; color:#FBBF24; font-size:0.65rem; font-weight:800; padding:4px 8px; border-radius:6px; display:flex; align-items:center; gap:4px; border:1px solid #F59E0B;">
                             <i class="fa-solid fa-rectangle-ad"></i> Sponsored
                         </span>
                     </div>
                     <div style="padding:12px;">
                         <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Summer Bridal Special</h4>
-                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
+                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-600); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.7rem; color:var(--gray-400);"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
-                            <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:4px 10px; font-size:0.7rem; font-weight:700; background:var(--accent); border-color:var(--accent);">Learn More</button>
+                            <span style="font-size:0.75rem; color:#475569; font-weight:600;"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
+                            <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:5px 12px; font-size:0.7rem; font-weight:800; background:#0F172A; color:#FFFFFF; border:none;">Learn More</button>
                         </div>
                     </div>
                 </div>
@@ -6940,7 +7200,10 @@ function updateAdPreview() {
     const ctaVal = document.getElementById('ad-cta-text').value;
 
     const previewBanner = document.getElementById('preview-ad-banner');
-    if (previewBanner) previewBanner.src = window.currentAdBannerBase64 || 'img/ads/default.jpg';
+    if (previewBanner) {
+        const currentImg = window.currentAdBannerBase64 || state.vendor?.cover_photo || state.user?.cover_photo || state.user?.avatar;
+        previewBanner.src = window.resolveImageUrl(currentImg, 'cover');
+    }
     document.getElementById('preview-ad-title').textContent = titleVal;
     document.getElementById('preview-ad-desc').textContent = descVal;
     document.getElementById('preview-ad-location').textContent = locVal === 'All' ? 'All Locations' : locVal + ' only';
@@ -6970,7 +7233,7 @@ function payForAdCampaign() {
         vendor_id: state.user.vendor_id,
         title: title,
         description: desc,
-        banner_url: window.currentAdBannerBase64 || 'img/ads/default.jpg',
+        banner_url: window.currentAdBannerBase64 || state.vendor?.cover_photo || state.user?.cover_photo || 'img/default-cover.jpg',
         placement: placement,
         duration_days: duration,
         cost: cost,
@@ -7812,7 +8075,7 @@ window.saveEditedPhoto = function() {
                 }
 
                 closeModal();
-                showPushNotification('Profile Picture Saved 🎉', 'Your profile picture has been updated permanently.');
+                showPushNotification('Profile Picture Saved 🎉', 'Your profile picture has been updated.');
             })
             .catch(err => {
                 if (applyBtn) {
@@ -8008,7 +8271,7 @@ function handleCoverPhotoSelect(event) {
                     localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
                 } catch(eIgn) {}
             }
-            showPushNotification('Cover Photo Saved', 'Cover banner updated permanently.');
+            showPushNotification('Cover Photo Saved', 'Cover banner updated.');
         }).catch(err => {
             if (preview && oldSrc) preview.src = oldSrc;
             showPushNotification('Upload Failed', err.message || 'Could not save cover image.');

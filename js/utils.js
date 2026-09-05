@@ -1,47 +1,98 @@
-window.DEFAULT_USER_AVATAR = "profile-icon.jpg";
-window.DEFAULT_BUSINESS_COVER = "profile-icon.jpg";
+window.DEFAULT_USER_AVATAR = "img/default-avatar.png";
+window.DEFAULT_BUSINESS_COVER = "img/default-cover.jpg";
+window.DEFAULT_VENDOR_COVER = "img/default-cover.jpg";
+window.LOCAL_FALLBACK_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23081729'/><circle cx='50' cy='38' r='18' fill='%23FFFFFF'/><path d='M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z' fill='%23FFFFFF'/></svg>";
 
 /**
- * Universal Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
- * Converts relative paths (uploads/avatars/...) into absolute HTTPS domain URLs.
+ * Universal Authoritative Image URL Resolver for Cross-Platform WebViews (iOS, Android, Web)
+ * Normalizes relative paths, local prefixes, and missing values into absolute HTTPS domain URLs.
  */
-window.resolveImageUrl = function(url, defaultFallback = null) {
-    const fallback = defaultFallback || window.DEFAULT_USER_AVATAR;
-    if (!url || typeof url !== 'string' || !url.trim()) return fallback;
+window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
+    let fallback = window.DEFAULT_USER_AVATAR || 'img/default-avatar.png';
+    if (typeOrFallback === 'cover' || typeOrFallback === 'vendor_cover') {
+        fallback = window.DEFAULT_VENDOR_COVER || 'img/default-cover.jpg';
+    } else if (typeof typeOrFallback === 'string' && (typeOrFallback.startsWith('http') || typeOrFallback.startsWith('data:'))) {
+        fallback = typeOrFallback;
+    }
+
+    if (!url || typeof url !== 'string' || !url.trim() || url.trim() === 'null' || url.trim() === 'undefined') {
+        return fallback;
+    }
     
     let trimmed = url.trim();
+
     if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
-    
-    const isCapacitorNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
-    const isIOS = isCapacitorNative && (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') || navigator.userAgent.includes('iPod') || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios'));
 
-    // Upgrade http:// to https:// on iOS or in secure native contexts to prevent ATS/mixed-content blocks
-    if ((isIOS || window.location.protocol === 'https:') && trimmed.startsWith('http://')) {
-        trimmed = 'https://' + trimmed.substring(7);
-    }
-
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return encodeURI(trimmed);
-    
-    let domainPrefix = '';
-    if (typeof window.getOhatiApiBaseUrl === 'function') {
-        const apiBase = window.getOhatiApiBaseUrl();
-        if (apiBase && apiBase.includes('://')) {
-            domainPrefix = apiBase.split('/api.php')[0];
+    // Handle full HTTP / HTTPS URLs directly
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        if (trimmed.startsWith('http://') && !trimmed.includes('localhost') && !trimmed.includes('127.0.0.1')) {
+            trimmed = 'https://' + trimmed.substring(7);
+        }
+        try {
+            return encodeURI(decodeURI(trimmed));
+        } catch (e) {
+            return encodeURI(trimmed);
         }
     }
-    
-    if (!domainPrefix && typeof window.location !== 'undefined' && window.location.origin && window.location.origin !== 'null' && !window.location.origin.includes('capacitor://') && !window.location.origin.includes('file://')) {
-        const pathName = window.location.pathname || '';
-        const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
+
+    // Handle Capacitor localhost URL
+    if (trimmed.startsWith('capacitor://localhost/')) {
+        trimmed = trimmed.replace('capacitor://localhost/', '');
+    }
+
+    let domainPrefix = '';
+    let appDir = '';
+    if (window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
+        const rawPathName = window.location.pathname || '';
+        let pathName = rawPathName;
+        try { pathName = decodeURIComponent(rawPathName); } catch (e) {}
+        appDir = pathName.substring(0, pathName.lastIndexOf('/')).replace(/\/$/, '');
         domainPrefix = window.location.origin + appDir;
+    } else if (typeof window.getOhatiApiBaseUrl === 'function') {
+        const apiBase = window.getOhatiApiBaseUrl();
+        if (apiBase && apiBase.includes('://')) {
+            domainPrefix = apiBase.split('/api.php')[0].replace(/\/$/, '');
+        }
     }
     
     if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://')) {
         domainPrefix = 'https://ohati.com';
     }
 
-    const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
-    return encodeURI(`${domainPrefix}/${cleanPath}`);
+    let cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    try { cleanPath = decodeURIComponent(cleanPath); } catch (e) {}
+
+    // Strip accidental appDir duplication if cleanPath starts with it
+    if (appDir && appDir !== '') {
+        const cleanAppDir = appDir.replace(/^\//, '');
+        if (cleanPath.toLowerCase().startsWith(cleanAppDir.toLowerCase() + '/')) {
+            cleanPath = cleanPath.substring(cleanAppDir.length + 1);
+        }
+    }
+
+    const fullUrl = `${domainPrefix}/${cleanPath}`;
+    try {
+        return encodeURI(decodeURI(fullUrl));
+    } catch (e) {
+        return encodeURI(fullUrl);
+    }
+};
+
+/**
+ * Universal Image Error Fallback Handler
+ * Prevents broken image icons and infinite loops across Web, iOS, and Android
+ */
+window.handleImageError = function(imgEl, type = 'avatar') {
+    if (!imgEl) return;
+    imgEl.onerror = null; // Prevent infinite fallback loops
+    let fallback = (type === 'cover' || type === 'vendor_cover') ? window.DEFAULT_VENDOR_COVER : window.DEFAULT_USER_AVATAR;
+    imgEl.src = fallback;
+    
+    // Safety net: Use SVG data URI if default network JPG fails
+    imgEl.onerror = function() {
+        this.onerror = null;
+        this.src = window.LOCAL_FALLBACK_SVG;
+    };
 };
 
 /**
@@ -749,10 +800,404 @@ window.OhatiNavManager = {
 
         // 10. Default Navigation Stack Back
         if (typeof navigateBack === 'function') {
-            navigateBack();
+           // Native platform back button default behavior
+           navigateBack();
         }
-        return true;
+        return false;
     }
+};
+
+// ── Cover Photo Cropper Modal ────────────────────────────────────────────────
+window.openCoverCropperModal = function(fileOrDataUrl, onCropComplete) {
+    const processImage = function(srcUrl) {
+        let zoom = 1.0;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'coverCropperModal';
+        modalDiv.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(8,23,41,0.92); z-index:9999999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; backdrop-filter:blur(6px);';
+        
+        modalDiv.innerHTML = `
+            <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.15); border-radius:20px; width:100%; max-width:580px; padding:24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="font-family:'Fraunces',serif; font-size:1.25rem; font-weight:800; margin:0; color:#FFF;">
+                        <i class="fa-solid fa-crop-simple" style="color:var(--accent, #F2A735); margin-right:8px;"></i> Crop & Position Cover Banner
+                    </h3>
+                    <button type="button" onclick="closeCoverCropperModal()" style="background:none; border:none; color:#94A3B8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p style="font-size:0.8rem; color:#94A3B8; margin:0 0 16px 0;">Slide towards <strong style="color:var(--accent, #F2A735);">+</strong> to zoom in. Drag image to reposition inside cover frame.</p>
+
+                <div id="crop-viewport" style="position:relative; width:100%; height:220px; border-radius:14px; overflow:hidden; border:2px solid var(--accent, #F2A735); background:#000; cursor:grab; margin-bottom:14px; user-select:none; display:flex; align-items:center; justify-content:center;">
+                    <img id="crop-source-img" src="${srcUrl}" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) scale(1); max-width:none; max-height:none; opacity:0; transition:opacity 0.15s; pointer-events:none;">
+                    <div style="position:absolute; top:10px; left:10px; padding:4px 10px; background:rgba(11,31,58,0.85); border-radius:20px; font-size:0.7rem; font-weight:800; color:#F2A735; border:1px solid rgba(242,167,53,0.3); pointer-events:none;">
+                        <i class="fa-solid fa-eye"></i> Cover Banner Frame
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:12px;">
+                    <span style="font-size:0.85rem; font-weight:800; color:#94A3B8;">-</span>
+                    <input type="range" id="crop-zoom-slider" min="0.05" max="3.0" step="0.01" value="0.05" style="flex:1; cursor:pointer;">
+                    <span style="font-size:1.1rem; font-weight:800; color:var(--accent, #F2A735);">+</span>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn btn-outline btn-full" onclick="closeCoverCropperModal()" style="border-color:rgba(255,255,255,0.2); color:#FFF;">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-full" id="btn-do-crop" style="font-weight:800;">
+                        <i class="fa-solid fa-check" style="margin-right:6px;"></i> Crop & Apply Cover
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modalDiv);
+
+        const imgEl = document.getElementById('crop-source-img');
+        const viewport = document.getElementById('crop-viewport');
+        const zoomSlider = document.getElementById('crop-zoom-slider');
+
+        function updateTransform() {
+            if (imgEl) {
+                imgEl.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${zoom})`;
+            }
+        }
+
+        const loadedMeasurer = new Image();
+        loadedMeasurer.onload = function() {
+            const nw = loadedMeasurer.naturalWidth || 800;
+            const nh = loadedMeasurer.naturalHeight || 600;
+            const vpW = viewport.clientWidth || 530;
+            const vpH = viewport.clientHeight || 220;
+
+            imgEl.style.width = nw + 'px';
+            imgEl.style.height = nh + 'px';
+
+            const scaleW = vpW / nw;
+            const scaleH = vpH / nh;
+            const containScale = Math.min(scaleW, scaleH);
+            const coverScale = Math.max(scaleW, scaleH);
+
+            const minScale = Math.round(containScale * 100) / 100 || 0.05;
+            const maxScale = Math.round(Math.max(coverScale * 3, containScale * 4) * 100) / 100 || 3.0;
+
+            zoom = minScale;
+            offsetX = 0;
+            offsetY = 0;
+
+            if (zoomSlider) {
+                zoomSlider.min = minScale;
+                zoomSlider.max = maxScale;
+                zoomSlider.step = (maxScale - minScale) / 100;
+                zoomSlider.value = minScale;
+            }
+
+            imgEl.style.opacity = '1';
+            updateTransform();
+        };
+        loadedMeasurer.src = srcUrl;
+
+        if (zoomSlider) {
+            zoomSlider.addEventListener('input', function() {
+                zoom = parseFloat(this.value);
+                updateTransform();
+            });
+        }
+
+        if (viewport) {
+            viewport.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startX = e.clientX - offsetX;
+                startY = e.clientY - offsetY;
+                viewport.style.cursor = 'grabbing';
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                offsetX = e.clientX - startX;
+                offsetY = e.clientY - startY;
+                updateTransform();
+            });
+
+            window.addEventListener('mouseup', function() {
+                isDragging = false;
+                if (viewport) viewport.style.cursor = 'grab';
+            });
+
+            viewport.addEventListener('touchstart', function(e) {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - offsetX;
+                    startY = e.touches[0].clientY - offsetY;
+                }
+            });
+
+            viewport.addEventListener('touchmove', function(e) {
+                if (isDragging && e.touches.length === 1) {
+                    offsetX = e.touches[0].clientX - startX;
+                    offsetY = e.touches[0].clientY - startY;
+                    updateTransform();
+                }
+            });
+
+            viewport.addEventListener('touchend', function() {
+                isDragging = false;
+            });
+        }
+
+        const cropBtn = document.getElementById('btn-do-crop');
+        if (cropBtn) {
+            cropBtn.onclick = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1200;
+                canvas.height = 550;
+                const ctx = canvas.getContext('2d');
+
+                const loadedImg = new Image();
+                loadedImg.crossOrigin = "anonymous";
+                loadedImg.onload = function() {
+                    ctx.fillStyle = '#0F1923';
+                    ctx.fillRect(0, 0, 1200, 550);
+
+                    const vpRect = viewport.getBoundingClientRect();
+                    const imgRect = imgEl.getBoundingClientRect();
+
+                    const scaleFactor = 1200 / (vpRect.width || 530);
+
+                    const drawW = imgRect.width * scaleFactor;
+                    const drawH = imgRect.height * scaleFactor;
+
+                    const dx = (imgRect.left + (imgRect.width / 2)) - (vpRect.left + (vpRect.width / 2));
+                    const dy = (imgRect.top + (imgRect.height / 2)) - (vpRect.top + (vpRect.height / 2));
+
+                    const drawX = (600 + (dx * scaleFactor)) - (drawW / 2);
+                    const drawY = (275 + (dy * scaleFactor)) - (drawH / 2);
+
+                    ctx.drawImage(loadedImg, drawX, drawY, drawW, drawH);
+                    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+                    
+                    closeCoverCropperModal();
+                    if (typeof onCropComplete === 'function') {
+                        onCropComplete(croppedDataUrl);
+                    }
+                };
+                loadedImg.src = srcUrl;
+            };
+        }
+    };
+
+    if (typeof fileOrDataUrl === 'string') {
+        processImage(fileOrDataUrl);
+    } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            processImage(e.target.result);
+        };
+        reader.readAsDataURL(fileOrDataUrl);
+    }
+};
+
+window.closeCoverCropperModal = function() {
+    const el = document.getElementById('coverCropperModal');
+    if (el) el.remove();
+};
+
+// ── Profile Avatar Cropper Modal ─────────────────────────────────────────────
+window.openAvatarCropperModal = function(fileOrDataUrl, onCropComplete) {
+    const processImage = function(srcUrl) {
+        let zoom = 1.0;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'avatarCropperModal';
+        modalDiv.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(8,23,41,0.92); z-index:9999999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; backdrop-filter:blur(6px);';
+        
+        modalDiv.innerHTML = `
+            <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.15); border-radius:20px; width:100%; max-width:440px; padding:24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="font-family:'Fraunces',serif; font-size:1.2rem; font-weight:800; margin:0; color:#FFF;">
+                        <i class="fa-solid fa-user-gear" style="color:var(--accent, #F2A735); margin-right:8px;"></i> Crop Profile Picture
+                    </h3>
+                    <button type="button" onclick="closeAvatarCropperModal()" style="background:none; border:none; color:#94A3B8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p style="font-size:0.8rem; color:#94A3B8; margin:0 0 16px 0;">Slide towards <strong style="color:var(--accent, #F2A735);">+</strong> to zoom in. Drag image to adjust profile position.</p>
+
+                <div style="display:flex; justify-content:center; margin-bottom:16px;">
+                    <div id="avatar-crop-viewport" style="position:relative; width:220px; height:220px; border-radius:50%; overflow:hidden; border:4px solid var(--accent, #F2A735); background:#000; cursor:grab; user-select:none; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;">
+                        <img id="avatar-crop-source-img" src="${srcUrl}" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) scale(1); max-width:none; max-height:none; opacity:0; transition:opacity 0.15s; pointer-events:none;">
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:12px;">
+                    <span style="font-size:0.85rem; font-weight:800; color:#94A3B8;">-</span>
+                    <input type="range" id="avatar-crop-zoom-slider" min="0.05" max="3.0" step="0.01" value="0.05" style="flex:1; cursor:pointer;">
+                    <span style="font-size:1.1rem; font-weight:800; color:var(--accent, #F2A735);">+</span>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn btn-outline btn-full" onclick="closeAvatarCropperModal()" style="border-color:rgba(255,255,255,0.2); color:#FFF;">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-full" id="btn-do-avatar-crop" style="font-weight:800;">
+                        <i class="fa-solid fa-check" style="margin-right:6px;"></i> Crop & Apply Profile
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modalDiv);
+
+        const imgEl = document.getElementById('avatar-crop-source-img');
+        const viewport = document.getElementById('avatar-crop-viewport');
+        const zoomSlider = document.getElementById('avatar-crop-zoom-slider');
+
+        function updateTransform() {
+            if (imgEl) {
+                imgEl.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${zoom})`;
+            }
+        }
+
+        const loadedMeasurer = new Image();
+        loadedMeasurer.onload = function() {
+            const nw = loadedMeasurer.naturalWidth || 400;
+            const nh = loadedMeasurer.naturalHeight || 400;
+            const vpW = viewport.clientWidth || 220;
+            const vpH = viewport.clientHeight || 220;
+
+            imgEl.style.width = nw + 'px';
+            imgEl.style.height = nh + 'px';
+
+            const scaleW = vpW / nw;
+            const scaleH = vpH / nh;
+            const containScale = Math.min(scaleW, scaleH);
+            const coverScale = Math.max(scaleW, scaleH);
+
+            const minScale = Math.round(containScale * 100) / 100 || 0.05;
+            const maxScale = Math.round(Math.max(coverScale * 3, containScale * 4) * 100) / 100 || 3.0;
+
+            zoom = minScale;
+            offsetX = 0;
+            offsetY = 0;
+
+            if (zoomSlider) {
+                zoomSlider.min = minScale;
+                zoomSlider.max = maxScale;
+                zoomSlider.step = (maxScale - minScale) / 100;
+                zoomSlider.value = minScale;
+            }
+
+            imgEl.style.opacity = '1';
+            updateTransform();
+        };
+        loadedMeasurer.src = srcUrl;
+
+        if (zoomSlider) {
+            zoomSlider.addEventListener('input', function() {
+                zoom = parseFloat(this.value);
+                updateTransform();
+            });
+        }
+
+        if (viewport) {
+            viewport.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startX = e.clientX - offsetX;
+                startY = e.clientY - offsetY;
+                viewport.style.cursor = 'grabbing';
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                offsetX = e.clientX - startX;
+                offsetY = e.clientY - startY;
+                updateTransform();
+            });
+
+            window.addEventListener('mouseup', function() {
+                isDragging = false;
+                if (viewport) viewport.style.cursor = 'grab';
+            });
+
+            viewport.addEventListener('touchstart', function(e) {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - offsetX;
+                    startY = e.touches[0].clientY - offsetY;
+                }
+            });
+
+            viewport.addEventListener('touchmove', function(e) {
+                if (isDragging && e.touches.length === 1) {
+                    offsetX = e.touches[0].clientX - startX;
+                    offsetY = e.touches[0].clientY - startY;
+                    updateTransform();
+                }
+            });
+
+            viewport.addEventListener('touchend', function() {
+                isDragging = false;
+            });
+        }
+
+        const cropBtn = document.getElementById('btn-do-avatar-crop');
+        if (cropBtn) {
+            cropBtn.onclick = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 600;
+                canvas.height = 600;
+                const ctx = canvas.getContext('2d');
+
+                const loadedImg = new Image();
+                loadedImg.crossOrigin = "anonymous";
+                loadedImg.onload = function() {
+                    ctx.fillStyle = '#0F1923';
+                    ctx.fillRect(0, 0, 600, 600);
+
+                    const vpRect = viewport.getBoundingClientRect();
+                    const imgRect = imgEl.getBoundingClientRect();
+
+                    const scaleFactor = 600 / (vpRect.width || 220);
+
+                    const drawW = imgRect.width * scaleFactor;
+                    const drawH = imgRect.height * scaleFactor;
+
+                    const dx = (imgRect.left + (imgRect.width / 2)) - (vpRect.left + (vpRect.width / 2));
+                    const dy = (imgRect.top + (imgRect.height / 2)) - (vpRect.top + (vpRect.height / 2));
+
+                    const drawX = (300 + (dx * scaleFactor)) - (drawW / 2);
+                    const drawY = (300 + (dy * scaleFactor)) - (drawH / 2);
+
+                    ctx.drawImage(loadedImg, drawX, drawY, drawW, drawH);
+                    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+                    
+                    closeAvatarCropperModal();
+                    if (typeof onCropComplete === 'function') {
+                        onCropComplete(croppedDataUrl);
+                    }
+                };
+                loadedImg.src = srcUrl;
+            };
+        }
+    };
+
+    if (typeof fileOrDataUrl === 'string') {
+        processImage(fileOrDataUrl);
+    } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            processImage(e.target.result);
+        };
+        reader.readAsDataURL(fileOrDataUrl);
+    }
+};
+
+window.closeAvatarCropperModal = function() {
+    const el = document.getElementById('avatarCropperModal');
+    if (el) el.remove();
 };
 
 

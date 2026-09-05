@@ -569,3 +569,527 @@
 [2026-09-03 18:42:18] Attempting SMTP email delivery to: ohatiwebsite@gmail.com
 [2026-09-03 18:42:18] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
 [2026-09-03 18:42:22] SMTP email delivered successfully to: ohatiwebsite@gmail.com
+[2026-09-05 00:25:13] Attempting SMTP email delivery to: ohatiwebsite@gmail.com
+[2026-09-05 00:25:13] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 00:25:16] GREETING failed: 
+[2026-09-05 00:25:16] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 00:25:21] SMTP email delivered successfully to: ohatiwebsite@gmail.com
+[2026-09-05 01:23:44] Attempting SMTP email delivery to: audit_cust1@ohati.com
+[2026-09-05 01:23:44] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:23:48] SMTP email delivered successfully to: audit_cust1@ohati.com
+[2026-09-05 01:23:50] Attempting SMTP email delivery to: audit_vendor1@ohati.com
+[2026-09-05 01:23:50] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:23:53] GREETING failed: 
+[2026-09-05 01:23:53] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 01:23:55] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:23:55] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 01:23:59] AUTH PASS failed: 
+[2026-09-05 01:23:59] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 01:24:01] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:24:01] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 01:31:50] Attempting SMTP email delivery to: ceyeqdigital@gmail.com
+[2026-09-05 01:31:50] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:31:54] SMTP email delivered successfully to: ceyeqdigital@gmail.com
+[2026-09-05 01:32:11] Attempting SMTP email delivery to: diabaessence2025@gmail.com
+[2026-09-05 01:32:11] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:32:13] GREETING failed: 
+[2026-09-05 01:32:13] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 01:32:15] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:32:15] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 01:32:20] AUTH PASS failed: 535 Incorrect authentication data
+[2026-09-05 01:32:20] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 01:32:22] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:32:22] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 01:32:24] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:32:24] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 01:32:24] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 01:32:24] PHP mail() FAILED fallback for: diabaessence2025@gmail.com
+[2026-09-05 01:41:26] Attempting SMTP email delivery to: diabaessence2025@gmail.com
+[2026-09-05 01:41:26] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:41:28] GREETING failed: 
+[2026-09-05 01:41:28] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 01:41:30] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:41:30] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 01:41:32] GREETING failed: 
+[2026-09-05 01:41:32] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 01:41:34] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:41:34] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 01:41:36] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 01:41:36] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 01:41:36] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 01:41:36] PHP mail() FAILED fallback for: diabaessence2025@gmail.com
+[2026-09-05 01:42:46] Attempting SMTP email delivery to: diabaessence2025@gmail.com
+[2026-09-05 01:42:46] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:42:50] SMTP email delivered successfully to: diabaessence2025@gmail.com
+[2026-09-05 01:46:00] Attempting SMTP email delivery to: ohatiwebsite@gmail.com
+[2026-09-05 01:46:00] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 01:46:04] SMTP email delivered successfully to: ohatiwebsite@gmail.com
+[2026-09-05 02:24:45] Attempting SMTP email delivery to: authtest_1788575084@ohati-test.com
+[2026-09-05 02:24:45] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:24:49] SMTP email delivered successfully to: authtest_1788575084@ohati-test.com
+[2026-09-05 02:29:06] Attempting SMTP email delivery to: authtest_1788575345@ohati-test.com
+[2026-09-05 02:29:06] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:29:10] SMTP email delivered successfully to: authtest_1788575345@ohati-test.com
+[2026-09-05 02:32:53] Attempting SMTP email delivery to: authtest_1788575572@ohati-test.com
+[2026-09-05 02:32:53] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:32:57] SMTP email delivered successfully to: authtest_1788575572@ohati-test.com
+[2026-09-05 02:33:23] Attempting SMTP email delivery to: authtest_1788575602@ohati-test.com
+[2026-09-05 02:33:23] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:33:31] GREETING failed: 
+[2026-09-05 02:33:31] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:33:39] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:33:39] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:33:44] AUTH PASS failed: 535 Incorrect authentication data
+[2026-09-05 02:33:44] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:33:52] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:33:52] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:33:54] Connection failed: [10061] No connection could be made because the target machine actively refused it
+[2026-09-05 02:33:54] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:33:54] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:33:54] PHP mail() FAILED fallback for: authtest_1788575602@ohati-test.com
+[2026-09-05 02:34:16] Attempting SMTP email delivery to: authtest_1788575655@ohati-test.com
+[2026-09-05 02:34:16] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:34:19] SMTP email delivered successfully to: authtest_1788575655@ohati-test.com
+[2026-09-05 02:37:25] Attempting SMTP email delivery to: authtest_1788575844@ohati-test.com
+[2026-09-05 02:37:25] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:37:29] SMTP email delivered successfully to: authtest_1788575844@ohati-test.com
+[2026-09-05 02:38:11] Attempting SMTP email delivery to: authtest_1788575890@ohati-test.com
+[2026-09-05 02:38:11] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:38:19] GREETING failed: 
+[2026-09-05 02:38:19] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:38:27] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:38:27] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:38:35] GREETING failed: 
+[2026-09-05 02:38:35] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:38:43] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:38:43] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:38:46] Connection failed: [10061] No connection could be made because the target machine actively refused it
+[2026-09-05 02:38:46] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:38:46] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:38:46] PHP mail() FAILED fallback for: authtest_1788575890@ohati-test.com
+[2026-09-05 02:39:08] Attempting SMTP email delivery to: authtest_1788575947659@ohati-test.com
+[2026-09-05 02:39:08] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:39:16] GREETING failed: 
+[2026-09-05 02:39:16] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:39:24] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:39:24] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:39:33] GREETING failed: 
+[2026-09-05 02:39:33] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:39:41] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:39:41] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:39:43] Connection failed: [10061] No connection could be made because the target machine actively refused it
+[2026-09-05 02:39:43] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:39:43] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:39:43] PHP mail() FAILED fallback for: authtest_1788575947659@ohati-test.com
+[2026-09-05 02:40:15] Attempting SMTP email delivery to: fullaudit_1788576014@ohati-test.com
+[2026-09-05 02:40:15] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:40:23] GREETING failed: 
+[2026-09-05 02:40:23] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:40:31] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:40:31] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:40:36] AUTH PASS failed: 535 Incorrect authentication data
+[2026-09-05 02:40:36] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:40:44] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:40:44] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:40:46] Connection failed: [10061] No connection could be made because the target machine actively refused it
+[2026-09-05 02:40:46] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:40:46] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:40:46] PHP mail() FAILED fallback for: fullaudit_1788576014@ohati-test.com
+[2026-09-05 02:41:51] Attempting SMTP email delivery to: httpaudit_1788576110430@ohati-test.com
+[2026-09-05 02:41:51] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:41:55] SMTP email delivered successfully to: httpaudit_1788576110430@ohati-test.com
+[2026-09-05 02:42:56] Attempting SMTP email delivery to: httpaudit_1788576175665@ohati-test.com
+[2026-09-05 02:42:56] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:43:04] GREETING failed: 
+[2026-09-05 02:43:04] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:43:12] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:43:12] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:43:17] AUTH PASS failed: 535 Incorrect authentication data
+[2026-09-05 02:43:17] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:43:25] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:43:25] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:43:27] Connection failed: [10061] No connection could be made because the target machine actively refused it
+[2026-09-05 02:43:27] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:43:27] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:43:27] PHP mail() FAILED fallback for: httpaudit_1788576175665@ohati-test.com
+[2026-09-05 02:45:26] Attempting SMTP email delivery to: httpaudit_1788576325568@ohati-test.com
+[2026-09-05 02:45:26] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:45:34] GREETING failed: 
+[2026-09-05 02:45:34] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:45:36] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:45:36] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:45:41] AUTH PASS failed: 535 Incorrect authentication data
+[2026-09-05 02:45:41] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:45:42] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:45:42] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:45:44] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:45:44] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:45:44] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:45:44] Local environment detected. Email logged into mail_log.txt successfully for: httpaudit_1788576325568@ohati-test.com
+[2026-09-05 02:46:06] Attempting SMTP email delivery to: httpaudit_1788576365841@ohati-test.com
+[2026-09-05 02:46:06] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:46:10] SMTP email delivered successfully to: httpaudit_1788576365841@ohati-test.com
+[2026-09-05 02:47:23] Attempting SMTP email delivery to: httpaudit_1788576442825@ohati-test.com
+[2026-09-05 02:47:23] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:47:27] SMTP email delivered successfully to: httpaudit_1788576442825@ohati-test.com
+[2026-09-05 02:47:28] Attempting SMTP email delivery to: ohatiwebsite@gmail.com
+[2026-09-05 02:47:28] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:47:36] GREETING failed: 
+[2026-09-05 02:47:36] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:47:38] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:47:38] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:47:42] AUTH PASS failed: 535 Incorrect authentication data
+[2026-09-05 02:47:42] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:47:43] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:47:43] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:47:45] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:47:45] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:47:45] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:47:45] Local environment detected. Email logged into mail_log.txt successfully for: ohatiwebsite@gmail.com
+[2026-09-05 02:48:00] Attempting SMTP email delivery to: httpaudit_1788576479781@ohati-test.com
+[2026-09-05 02:48:00] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:48:08] GREETING failed: 
+[2026-09-05 02:48:08] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:48:09] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:48:09] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:48:17] GREETING failed: 
+[2026-09-05 02:48:17] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:48:19] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:48:19] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:48:20] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:48:20] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:48:20] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:48:20] Local environment detected. Email logged into mail_log.txt successfully for: httpaudit_1788576479781@ohati-test.com
+[2026-09-05 02:48:21] Attempting SMTP email delivery to: ohatiwebsite@gmail.com
+[2026-09-05 02:48:21] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 02:48:29] GREETING failed: 
+[2026-09-05 02:48:29] Trying Primary Direct SSL (mail.ohati.com:465) -> ssl://mail.ohati.com:465...
+[2026-09-05 02:48:31] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:48:31] Trying Global DNS Network Fallback (587 TLS) -> tcp://stardust.globaldnsnetwork.com:587...
+[2026-09-05 02:48:35] Local environment: Email logged to mail_log.txt for httpaudit_1788576515513@ohati-test.com
+[2026-09-05 02:48:35] TO: httpaudit_1788576515513@ohati-test.com
+SUBJECT: Ohati Dual Verification Code: 746230
+BODY:
+<html><body style='font-family:sans-serif; background-color:#f6f9fc; padding:30px; color:#333;'><div style='max-width:550px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #e4e8eb;'><div style='text-align:center; background-color:#1B2B4B; padding:20px; border-radius:8px 8px 0 0; margin:-30px -30px 25px -30px;'><h1 style='color:#fff; margin:0; font-size:24px; letter-spacing:2px;'>OHATI</h1><p style='color:#c5a880; margin:5px 0 0 0; font-size:11px; text-transform:uppercase; letter-spacing:1px;'>Find. Compare. Book. Celebrate.</p></div><h2 style='color:#1B2B4B; margin-top:0; font-size:20px;'>Dual Account Verification</h2><p style='font-size:15px; margin-bottom:20px;'>Welcome! To complete your verification, please enter the 6-digit verification code below (sent to your phone & email):</p><div style='background-color:#f4f6f8; border-radius:8px; padding:20px; text-align:center; margin-bottom:20px; border:1px solid #e9ecef;'><span style='font-size:32px; font-weight:bold; letter-spacing:6px; color:#1B2B4B; font-family:monospace;'>746230</span></div><p style='font-size:13px; color:#666;'>This code is valid for 10 minutes. If you did not request this code, please ignore this message.</p><div style='border-top:1px solid #eee; margin-top:25px; padding-top:15px; font-size:12px; color:#7f8c8d; text-align:center;'><p>Ghana's Trusted Event Vendor Marketplace</p><p>&copy; 2026 Ohati. All rights reserved.</p></div></div></body></html>
+========================================
+[2026-09-05 02:48:36] Local environment: Email logged to mail_log.txt for ohatiwebsite@gmail.com
+[2026-09-05 02:48:36] TO: ohatiwebsite@gmail.com
+SUBJECT: Ohati Notification: New Customer Registration (Audit Tester)
+BODY:
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='utf-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>New Customer Registration (Audit Tester)</title>
+    </head>
+    <body style='margin:0; padding:0; background-color:#F4F6F9; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:#1F2937;'>
+        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='table-layout:fixed; background-color:#F4F6F9; padding:40px 10px;'>
+            <tr>
+                <td align='center'>
+                    <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:580px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.05); border:1px solid #E5E7EB;'>
+                        <!-- Header -->
+                        <tr>
+                            <td style='background:linear-gradient(135deg, #111827 0%, #1F2937 100%); padding:28px 32px; text-align:center;'>
+                                <div style='font-size:26px; font-weight:900; color:#E05A47; letter-spacing:-0.5px;'>OHATI<span style='color:#ffffff; font-weight:300;'>.GH</span></div>
+                                <div style='font-size:11px; color:#9CA3AF; text-transform:uppercase; letter-spacing:2px; margin-top:4px;'>Official Platform Notification</div>
+                            </td>
+                        </tr>
+                        <!-- Body -->
+                        <tr>
+                            <td style='padding:36px 32px;'>
+                                <div style='display:inline-block; background-color:rgba(37,99,235,0.12); color:#2563EB; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;'>PLATFORM ALERT</div>
+                                <h2 style='margin:0 0 12px 0; font-size:22px; font-weight:800; color:#111827;'>Hello, Ohati Administrator</h2>
+                                <h3 style='margin:0 0 16px 0; font-size:16px; font-weight:600; color:#4B5563;'>New Customer Registration (Audit Tester)</h3>
+                                <div style='background-color:#F9FAFB; border-left:4px solid #E05A47; padding:16px 20px; border-radius:8px; margin:20px 0; font-size:14px; line-height:1.6; color:#374151;'>
+                                    <p>A new <strong>customer</strong> account has registered on Ohati Ghana.</p><p><strong>Name:</strong> Audit Tester</p><p><strong>Email:</strong> httpaudit_1788576515513@ohati-test.com</p><p><strong>Phone:</strong> +233510599696</p>
+                                </div>
+                                
+                                <div style='margin-top:32px; padding-top:20px; border-top:1px solid #F3F4F6; font-size:13px; color:#6B7280; line-height:1.5;'>
+                                    Need help or have questions? Contact our 24/7 Support Team at <a href='mailto:contact@ohati.com' style='color:#E05A47; text-decoration:none;'>contact@ohati.com</a>.
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style='background-color:#F9FAFB; padding:20px 32px; text-align:center; border-top:1px solid #E5E7EB; font-size:12px; color:#9CA3AF;'>
+                                &copy; 2026 Ohati Ghana Platform. All rights reserved.<br>
+                                Airport City, Accra, Ghana.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+========================================
+[2026-09-05 02:48:37] Local environment: Email logged to mail_log.txt for httpaudit_1788576515513@ohati-test.com
+[2026-09-05 02:48:37] TO: httpaudit_1788576515513@ohati-test.com
+SUBJECT: Reset your Ohati password
+BODY:
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0'/><title>Reset Your Ohati Password</title></head><body style='margin:0; padding:0; background-color:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#F3F4F6; table-layout:fixed; padding:30px 10px;'><tr><td align='center'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:560px; background-color:#FFFFFF; border-radius:18px; border:1px solid #E5E7EB; box-shadow:0 10px 30px rgba(0,0,0,0.06); overflow:hidden;'><tr><td align='center' style='background:#111827; padding:32px 24px; text-align:center;'><h1 style='color:#FFFFFF; font-size:26px; font-weight:900; margin:0; letter-spacing:3px; font-family:sans-serif;'>OHATI</h1><p style='color:#F2A735; font-size:12px; margin:6px 0 0 0; text-transform:uppercase; letter-spacing:1.5px; font-weight:700;'>Secure Account Password Reset</p></td></tr><tr><td style='padding:36px 32px; background-color:#FFFFFF;'><h2 style='color:#111827; font-size:20px; font-weight:800; margin:0 0 16px 0;'>Reset Your Password</h2><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 16px 0;'>Hello <strong>Audit Tester</strong>,</p><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 24px 0;'>We received a request to reset the password for your Ohati account. Click the button below to create your new password:</p><table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'><tr><td align='center'><a href='https://ohati.com/reset_password.php?token=aff123dd916149d5205c7b900a1ad3b4422d3b1d54bb519e487997fae0e89f39' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a></td></tr></table><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; margin:24px 0;'><tr><td style='padding:14px 16px; color:#92400E; font-size:13px; line-height:1.5;'><strong>⚠️ Security Notice:</strong> This reset link will expire in <strong>24 hours</strong> and can only be used once.</td></tr></table><p style='color:#6B7280; font-size:13px; line-height:1.5; margin:24px 0 8px 0;'>If the button above does not work, copy and paste this link into your browser address bar:</p><div style='background-color:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px 14px; font-size:12px; color:#4B5563; word-break:break-all; font-family:monospace; line-height:1.4;'>https://ohati.com/reset_password.php?token=aff123dd916149d5205c7b900a1ad3b4422d3b1d54bb519e487997fae0e89f39</div><p style='color:#9CA3AF; font-size:12px; line-height:1.5; margin:28px 0 0 0; border-top:1px solid #F3F4F6; padding-top:20px;'>If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p></td></tr><tr><td align='center' style='background-color:#F9FAFB; padding:24px 32px; border-top:1px solid #E5E7EB; text-align:center;'><p style='color:#6B7280; font-size:12px; margin:0 0 6px 0; font-weight:600;'>Ohati Event Marketplace & Professional Network</p><p style='color:#9CA3AF; font-size:11px; margin:0;'>&copy; 2026 Ohati Inc. All rights reserved. &bull; <a href='https://ohati.com' style='color:#E05A47; text-decoration:none; font-weight:600;'>ohati.com</a></p></td></tr></table></td></tr></table></body></html>
+========================================
+[2026-09-05 02:48:39] GREETING failed: 
+[2026-09-05 02:48:39] Trying Global DNS Network Fallback (465 SSL) -> ssl://stardust.globaldnsnetwork.com:465...
+[2026-09-05 02:48:40] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:48:40] Trying Localhost Direct MTA (Port 25) -> tcp://127.0.0.1:25...
+[2026-09-05 02:48:42] Connection failed: [10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+[2026-09-05 02:48:42] All SMTP candidates failed. Attempting PHP mail() fallback...
+[2026-09-05 02:48:42] PHP mail() fallback skipped (sendmail unconfigured on host).
+[2026-09-05 02:48:42] Local environment detected. Email logged into mail_log.txt successfully for: ohatiwebsite@gmail.com
+[2026-09-05 02:55:31] Local environment: Email logged to mail_log.txt for httpaudit_1788576930373@ohati-test.com
+[2026-09-05 02:55:31] TO: httpaudit_1788576930373@ohati-test.com
+SUBJECT: Ohati Dual Verification Code: 453497
+BODY:
+<html><body style='font-family:sans-serif; background-color:#f6f9fc; padding:30px; color:#333;'><div style='max-width:550px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #e4e8eb;'><div style='text-align:center; background-color:#1B2B4B; padding:20px; border-radius:8px 8px 0 0; margin:-30px -30px 25px -30px;'><h1 style='color:#fff; margin:0; font-size:24px; letter-spacing:2px;'>OHATI</h1><p style='color:#c5a880; margin:5px 0 0 0; font-size:11px; text-transform:uppercase; letter-spacing:1px;'>Find. Compare. Book. Celebrate.</p></div><h2 style='color:#1B2B4B; margin-top:0; font-size:20px;'>Dual Account Verification</h2><p style='font-size:15px; margin-bottom:20px;'>Welcome! To complete your verification, please enter the 6-digit verification code below (sent to your phone & email):</p><div style='background-color:#f4f6f8; border-radius:8px; padding:20px; text-align:center; margin-bottom:20px; border:1px solid #e9ecef;'><span style='font-size:32px; font-weight:bold; letter-spacing:6px; color:#1B2B4B; font-family:monospace;'>453497</span></div><p style='font-size:13px; color:#666;'>This code is valid for 10 minutes. If you did not request this code, please ignore this message.</p><div style='border-top:1px solid #eee; margin-top:25px; padding-top:15px; font-size:12px; color:#7f8c8d; text-align:center;'><p>Ghana's Trusted Event Vendor Marketplace</p><p>&copy; 2026 Ohati. All rights reserved.</p></div></div></body></html>
+========================================
+[2026-09-05 02:55:32] Local environment: Email logged to mail_log.txt for ohatiwebsite@gmail.com
+[2026-09-05 02:55:32] TO: ohatiwebsite@gmail.com
+SUBJECT: Ohati Notification: New Customer Registration (Audit Tester)
+BODY:
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='utf-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>New Customer Registration (Audit Tester)</title>
+    </head>
+    <body style='margin:0; padding:0; background-color:#F4F6F9; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:#1F2937;'>
+        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='table-layout:fixed; background-color:#F4F6F9; padding:40px 10px;'>
+            <tr>
+                <td align='center'>
+                    <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:580px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.05); border:1px solid #E5E7EB;'>
+                        <!-- Header -->
+                        <tr>
+                            <td style='background:linear-gradient(135deg, #111827 0%, #1F2937 100%); padding:28px 32px; text-align:center;'>
+                                <div style='font-size:26px; font-weight:900; color:#E05A47; letter-spacing:-0.5px;'>OHATI<span style='color:#ffffff; font-weight:300;'>.GH</span></div>
+                                <div style='font-size:11px; color:#9CA3AF; text-transform:uppercase; letter-spacing:2px; margin-top:4px;'>Official Platform Notification</div>
+                            </td>
+                        </tr>
+                        <!-- Body -->
+                        <tr>
+                            <td style='padding:36px 32px;'>
+                                <div style='display:inline-block; background-color:rgba(37,99,235,0.12); color:#2563EB; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;'>PLATFORM ALERT</div>
+                                <h2 style='margin:0 0 12px 0; font-size:22px; font-weight:800; color:#111827;'>Hello, Ohati Administrator</h2>
+                                <h3 style='margin:0 0 16px 0; font-size:16px; font-weight:600; color:#4B5563;'>New Customer Registration (Audit Tester)</h3>
+                                <div style='background-color:#F9FAFB; border-left:4px solid #E05A47; padding:16px 20px; border-radius:8px; margin:20px 0; font-size:14px; line-height:1.6; color:#374151;'>
+                                    <p>A new <strong>customer</strong> account has registered on Ohati Ghana.</p><p><strong>Name:</strong> Audit Tester</p><p><strong>Email:</strong> httpaudit_1788576930373@ohati-test.com</p><p><strong>Phone:</strong> +233510887170</p>
+                                </div>
+                                
+                                <div style='margin-top:32px; padding-top:20px; border-top:1px solid #F3F4F6; font-size:13px; color:#6B7280; line-height:1.5;'>
+                                    Need help or have questions? Contact our 24/7 Support Team at <a href='mailto:contact@ohati.com' style='color:#E05A47; text-decoration:none;'>contact@ohati.com</a>.
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style='background-color:#F9FAFB; padding:20px 32px; text-align:center; border-top:1px solid #E5E7EB; font-size:12px; color:#9CA3AF;'>
+                                &copy; 2026 Ohati Ghana Platform. All rights reserved.<br>
+                                Airport City, Accra, Ghana.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+========================================
+[2026-09-05 02:55:33] Local environment: Email logged to mail_log.txt for httpaudit_1788576930373@ohati-test.com
+[2026-09-05 02:55:33] TO: httpaudit_1788576930373@ohati-test.com
+SUBJECT: Reset your Ohati password
+BODY:
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0'/><title>Reset Your Ohati Password</title></head><body style='margin:0; padding:0; background-color:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#F3F4F6; table-layout:fixed; padding:30px 10px;'><tr><td align='center'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:560px; background-color:#FFFFFF; border-radius:18px; border:1px solid #E5E7EB; box-shadow:0 10px 30px rgba(0,0,0,0.06); overflow:hidden;'><tr><td align='center' style='background:#111827; padding:32px 24px; text-align:center;'><h1 style='color:#FFFFFF; font-size:26px; font-weight:900; margin:0; letter-spacing:3px; font-family:sans-serif;'>OHATI</h1><p style='color:#F2A735; font-size:12px; margin:6px 0 0 0; text-transform:uppercase; letter-spacing:1.5px; font-weight:700;'>Secure Account Password Reset</p></td></tr><tr><td style='padding:36px 32px; background-color:#FFFFFF;'><h2 style='color:#111827; font-size:20px; font-weight:800; margin:0 0 16px 0;'>Reset Your Password</h2><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 16px 0;'>Hello <strong>Audit Tester</strong>,</p><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 24px 0;'>We received a request to reset the password for your Ohati account. Click the button below to create your new password:</p><table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'><tr><td align='center'><a href='https://ohati.com/reset_password.php?token=689eebdc27b2e6768ba89b4a7dc74617b072fb47613b079c0bfe9cbc50226d7e' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a></td></tr></table><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; margin:24px 0;'><tr><td style='padding:14px 16px; color:#92400E; font-size:13px; line-height:1.5;'><strong>⚠️ Security Notice:</strong> This reset link will expire in <strong>24 hours</strong> and can only be used once.</td></tr></table><p style='color:#6B7280; font-size:13px; line-height:1.5; margin:24px 0 8px 0;'>If the button above does not work, copy and paste this link into your browser address bar:</p><div style='background-color:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px 14px; font-size:12px; color:#4B5563; word-break:break-all; font-family:monospace; line-height:1.4;'>https://ohati.com/reset_password.php?token=689eebdc27b2e6768ba89b4a7dc74617b072fb47613b079c0bfe9cbc50226d7e</div><p style='color:#9CA3AF; font-size:12px; line-height:1.5; margin:28px 0 0 0; border-top:1px solid #F3F4F6; padding-top:20px;'>If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p></td></tr><tr><td align='center' style='background-color:#F9FAFB; padding:24px 32px; border-top:1px solid #E5E7EB; text-align:center;'><p style='color:#6B7280; font-size:12px; margin:0 0 6px 0; font-weight:600;'>Ohati Event Marketplace & Professional Network</p><p style='color:#9CA3AF; font-size:11px; margin:0;'>&copy; 2026 Ohati Inc. All rights reserved. &bull; <a href='https://ohati.com' style='color:#E05A47; text-decoration:none; font-weight:600;'>ohati.com</a></p></td></tr></table></td></tr></table></body></html>
+========================================
+[2026-09-05 02:59:45] Local environment: Email logged to mail_log.txt for diabaessence2025@gmail.com
+[2026-09-05 02:59:45] TO: diabaessence2025@gmail.com
+SUBJECT: Ohati Dual Verification Code: 751269
+BODY:
+<html><body style='font-family:sans-serif; background-color:#f6f9fc; padding:30px; color:#333;'><div style='max-width:550px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #e4e8eb;'><div style='text-align:center; background-color:#1B2B4B; padding:20px; border-radius:8px 8px 0 0; margin:-30px -30px 25px -30px;'><h1 style='color:#fff; margin:0; font-size:24px; letter-spacing:2px;'>OHATI</h1><p style='color:#c5a880; margin:5px 0 0 0; font-size:11px; text-transform:uppercase; letter-spacing:1px;'>Find. Compare. Book. Celebrate.</p></div><h2 style='color:#1B2B4B; margin-top:0; font-size:20px;'>Dual Account Verification</h2><p style='font-size:15px; margin-bottom:20px;'>Welcome! To complete your verification, please enter the 6-digit verification code below (sent to your phone & email):</p><div style='background-color:#f4f6f8; border-radius:8px; padding:20px; text-align:center; margin-bottom:20px; border:1px solid #e9ecef;'><span style='font-size:32px; font-weight:bold; letter-spacing:6px; color:#1B2B4B; font-family:monospace;'>751269</span></div><p style='font-size:13px; color:#666;'>This code is valid for 10 minutes. If you did not request this code, please ignore this message.</p><div style='border-top:1px solid #eee; margin-top:25px; padding-top:15px; font-size:12px; color:#7f8c8d; text-align:center;'><p>Ghana's Trusted Event Vendor Marketplace</p><p>&copy; 2026 Ohati. All rights reserved.</p></div></div></body></html>
+========================================
+[2026-09-05 03:04:00] Local environment: Email logged to mail_log.txt for ohatiwebsite@gmail.com
+[2026-09-05 03:04:00] TO: ohatiwebsite@gmail.com
+SUBJECT: Reset your Ohati password
+BODY:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Reset Your Ohati Password</title>
+</head>
+<body style='margin:0; padding:0; background-color:#0F172A; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:#F8FAFC;'>
+    <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#0F172A; table-layout:fixed; padding:40px 16px;'>
+        <tr>
+            <td align='center'>
+                <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:560px; background-color:#1E293B; border-radius:24px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); overflow:hidden;'>
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td align='center' style='background:linear-gradient(135deg, #1B2B4B 0%, #0F172A 100%); padding:36px 32px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08);'>
+                            <div style='display:inline-block; padding:12px 20px; background:rgba(242,167,53,0.1); border:1px solid rgba(242,167,53,0.3); border-radius:16px; margin-bottom:12px;'>
+                                <span style='font-family:Georgia, serif; font-size:28px; font-weight:900; color:#F2A735; letter-spacing:2px;'>OHATI</span>
+                            </div>
+                            <div style='font-size:12px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:2px;'>Secure Account Verification</div>
+                        </td>
+                    </tr>
+                    <!-- Main Body -->
+                    <tr>
+                        <td style='padding:40px 36px;'>
+                            <h2 style='margin:0 0 12px 0; font-size:24px; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px;'>Password Reset Request</h2>
+                            <p style='font-size:15px; line-height:1.6; color:#CBD5E1; margin:0 0 20px 0;'>Hi <strong style='color:#FFFFFF;'>Ohati Admin</strong>,</p>
+                            <p style='font-size:15px; line-height:1.6; color:#94A3B8; margin:0 0 28px 0;'>
+                                We received a request to reset the password associated with your Ohati account. Click the button below to establish a new password securely:
+                            </p>
+                            <!-- CTA Button -->
+                            <table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'>
+                                <tr>
+                                    <td align='center'>
+                                        <a href='https://ohati.com/reset_password.php?token=b74bd157b9fd3b8b19f826f6b3cd837a824b53063d6a5cd756cb6c108efa27fc' target='_blank' style='background:linear-gradient(135deg, #F2A735, #D98E1C); color:#000000; font-size:16px; font-weight:900; text-decoration:none; padding:16px 40px; border-radius:14px; display:inline-block; box-shadow:0 10px 25px rgba(242,167,53,0.3); letter-spacing:0.5px;'>Reset Password &rarr;</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- Security Notice Box -->
+                            <div style='background-color:rgba(242,167,53,0.08); border:1px solid rgba(242,167,53,0.25); border-radius:14px; padding:16px 20px; margin:28px 0; font-size:13px; line-height:1.5; color:#FCD34D;'>
+                                <strong>⚠️ Security Notice:</strong> This reset link is valid for <strong>24 hours</strong> and can only be used once. If you did not make this request, you can safely disregard this message.
+                            </div>
+                            <p style='font-size:13px; color:#64748B; margin:24px 0 8px 0;'>Having trouble with the button? Copy and paste this URL into your web browser:</p>
+                            <div style='background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; font-size:12px; color:#94A3B8; word-break:break-all; font-family:monospace;'>https://ohati.com/reset_password.php?token=b74bd157b9fd3b8b19f826f6b3cd837a824b53063d6a5cd756cb6c108efa27fc</div>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td align='center' style='background-color:#0F172A; padding:24px 32px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;'>
+                            <p style='font-size:12px; font-weight:700; color:#64748B; margin:0 0 4px 0;'>Ohati — Find. Compare. Book. Celebrate.</p>
+                            <p style='font-size:11px; color:#475569; margin:0;'>&copy; 2026 Ohati Global Digital Services. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+========================================
+[2026-09-05 03:11:54] Local environment: Email logged to mail_log.txt for demo.customer@ohati.com
+[2026-09-05 03:11:54] TO: demo.customer@ohati.com
+SUBJECT: Reset your Ohati password
+BODY:
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0'/><title>Reset Your Ohati Password</title></head><body style='margin:0; padding:0; background-color:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#F3F4F6; table-layout:fixed; padding:30px 10px;'><tr><td align='center'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:560px; background-color:#FFFFFF; border-radius:18px; border:1px solid #E5E7EB; box-shadow:0 10px 30px rgba(0,0,0,0.06); overflow:hidden;'><tr><td align='center' style='background:#111827; padding:32px 24px; text-align:center;'><h1 style='color:#FFFFFF; font-size:26px; font-weight:900; margin:0; letter-spacing:3px; font-family:sans-serif;'>OHATI</h1><p style='color:#F2A735; font-size:12px; margin:6px 0 0 0; text-transform:uppercase; letter-spacing:1.5px; font-weight:700;'>Secure Account Password Reset</p></td></tr><tr><td style='padding:36px 32px; background-color:#FFFFFF;'><h2 style='color:#111827; font-size:20px; font-weight:800; margin:0 0 16px 0;'>Reset Your Password</h2><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 16px 0;'>Hello <strong>App Review Customer</strong>,</p><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 24px 0;'>We received a request to reset the password for your Ohati account. Click the button below to create your new password:</p><table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'><tr><td align='center'><a href='https://ohati.com/reset_password.php?token=835659ccb31275dbbd08beaaf4c128a641df56f8fc6ecede1a04d353b73d460f' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a></td></tr></table><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; margin:24px 0;'><tr><td style='padding:14px 16px; color:#92400E; font-size:13px; line-height:1.5;'><strong>⚠️ Security Notice:</strong> This reset link will expire in <strong>24 hours</strong> and can only be used once.</td></tr></table><p style='color:#6B7280; font-size:13px; line-height:1.5; margin:24px 0 8px 0;'>If the button above does not work, copy and paste this link into your browser address bar:</p><div style='background-color:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px 14px; font-size:12px; color:#4B5563; word-break:break-all; font-family:monospace; line-height:1.4;'>https://ohati.com/reset_password.php?token=835659ccb31275dbbd08beaaf4c128a641df56f8fc6ecede1a04d353b73d460f</div><p style='color:#9CA3AF; font-size:12px; line-height:1.5; margin:28px 0 0 0; border-top:1px solid #F3F4F6; padding-top:20px;'>If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p></td></tr><tr><td align='center' style='background-color:#F9FAFB; padding:24px 32px; border-top:1px solid #E5E7EB; text-align:center;'><p style='color:#6B7280; font-size:12px; margin:0 0 6px 0; font-weight:600;'>Ohati Event Marketplace & Professional Network</p><p style='color:#9CA3AF; font-size:11px; margin:0;'>&copy; 2026 Ohati Inc. All rights reserved. &bull; <a href='https://ohati.com' style='color:#E05A47; text-decoration:none; font-weight:600;'>ohati.com</a></p></td></tr></table></td></tr></table></body></html>
+========================================
+[2026-09-05 03:12:18] Local environment: Email logged to mail_log.txt for demo.customer@ohati.com
+[2026-09-05 03:12:18] TO: demo.customer@ohati.com
+SUBJECT: Reset your Ohati password
+BODY:
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0'/><title>Reset Your Ohati Password</title></head><body style='margin:0; padding:0; background-color:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#F3F4F6; table-layout:fixed; padding:30px 10px;'><tr><td align='center'><table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width:560px; background-color:#FFFFFF; border-radius:18px; border:1px solid #E5E7EB; box-shadow:0 10px 30px rgba(0,0,0,0.06); overflow:hidden;'><tr><td align='center' style='background:#111827; padding:32px 24px; text-align:center;'><h1 style='color:#FFFFFF; font-size:26px; font-weight:900; margin:0; letter-spacing:3px; font-family:sans-serif;'>OHATI</h1><p style='color:#F2A735; font-size:12px; margin:6px 0 0 0; text-transform:uppercase; letter-spacing:1.5px; font-weight:700;'>Secure Account Password Reset</p></td></tr><tr><td style='padding:36px 32px; background-color:#FFFFFF;'><h2 style='color:#111827; font-size:20px; font-weight:800; margin:0 0 16px 0;'>Reset Your Password</h2><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 16px 0;'>Hello <strong>App Review Customer</strong>,</p><p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 24px 0;'>We received a request to reset the password for your Ohati account. Click the button below to create your new password:</p><table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'><tr><td align='center'><a href='http://localhost/c eye q portfolio/portfolio/demo/a ohati app/reset_password.php?token=83f332c098b70f2625fbf192054efe876ff3adb74ca7cc8e344b8c7ca45edd1b' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a></td></tr></table><table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; margin:24px 0;'><tr><td style='padding:14px 16px; color:#92400E; font-size:13px; line-height:1.5;'><strong>⚠️ Security Notice:</strong> This reset link will expire in <strong>24 hours</strong> and can only be used once.</td></tr></table><p style='color:#6B7280; font-size:13px; line-height:1.5; margin:24px 0 8px 0;'>If the button above does not work, copy and paste this link into your browser address bar:</p><div style='background-color:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px 14px; font-size:12px; color:#4B5563; word-break:break-all; font-family:monospace; line-height:1.4;'>http://localhost/c eye q portfolio/portfolio/demo/a ohati app/reset_password.php?token=83f332c098b70f2625fbf192054efe876ff3adb74ca7cc8e344b8c7ca45edd1b</div><p style='color:#9CA3AF; font-size:12px; line-height:1.5; margin:28px 0 0 0; border-top:1px solid #F3F4F6; padding-top:20px;'>If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p></td></tr><tr><td align='center' style='background-color:#F9FAFB; padding:24px 32px; border-top:1px solid #E5E7EB; text-align:center;'><p style='color:#6B7280; font-size:12px; margin:0 0 6px 0; font-weight:600;'>Ohati Event Marketplace & Professional Network</p><p style='color:#9CA3AF; font-size:11px; margin:0;'>&copy; 2026 Ohati Inc. All rights reserved. &bull; <a href='https://ohati.com' style='color:#E05A47; text-decoration:none; font-weight:600;'>ohati.com</a></p></td></tr></table></td></tr></table></body></html>
+========================================
+[2026-09-05 03:18:06] Local environment: Email logged to mail_log.txt for demo.customer@ohati.com
+[2026-09-05 03:18:06] TO: demo.customer@ohati.com
+SUBJECT: Ohati Event Jobs: Job Posted Successfully! 🎉
+BODY:
+<div style='font-family: Arial, sans-serif; padding: 24px; color: #1B2B4B; background: #F8FAFC; border-radius: 12px;'>
+                    <div style='text-align: center; margin-bottom: 20px;'>
+                        <h2 style='color: #F2A735; margin: 0;'>Ohati Event Jobs</h2>
+                        <span style='font-size: 0.85rem; color: #64748B;'>Ghana's Premier Event Marketplace</span>
+                    </div>
+                    <div style='background: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>
+                        <h3 style='color: #1B2B4B; margin-top: 0;'>Job Posted Successfully! 🎉</h3>
+                        <p>Hi App Review Customer,</p>
+                        <p style='font-size: 0.95rem; line-height: 1.5; color: #334155;'>Your job listing &#039;Wedding DJ &amp; Sound System Needed 1788578286&#039; is live.</p>
+                    </div>
+                    <div style='text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94A3B8;'>
+                        Log in to your Ohati dashboard to manage your jobs and proposals.
+                    </div>
+                </div>
+========================================
+[2026-09-05 03:18:06] Local environment: Email logged to mail_log.txt for demo.customer@ohati.com
+[2026-09-05 03:18:06] TO: demo.customer@ohati.com
+SUBJECT: Ohati Event Jobs: New Proposal Received! 📩
+BODY:
+<div style='font-family: Arial, sans-serif; padding: 24px; color: #1B2B4B; background: #F8FAFC; border-radius: 12px;'>
+                    <div style='text-align: center; margin-bottom: 20px;'>
+                        <h2 style='color: #F2A735; margin: 0;'>Ohati Event Jobs</h2>
+                        <span style='font-size: 0.85rem; color: #64748B;'>Ghana's Premier Event Marketplace</span>
+                    </div>
+                    <div style='background: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>
+                        <h3 style='color: #1B2B4B; margin-top: 0;'>New Proposal Received! 📩</h3>
+                        <p>Hi App Review Customer,</p>
+                        <p style='font-size: 0.95rem; line-height: 1.5; color: #334155;'>Chill &amp; Serve Ghana submitted a proposal quote of GHS 3,200.00.</p>
+                    </div>
+                    <div style='text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94A3B8;'>
+                        Log in to your Ohati dashboard to manage your jobs and proposals.
+                    </div>
+                </div>
+========================================
+[2026-09-05 03:18:06] Local environment: Email logged to mail_log.txt for demo.vendor@ohati.com
+[2026-09-05 03:18:06] TO: demo.vendor@ohati.com
+SUBJECT: Ohati Event Jobs: Proposal Submitted! 🚀
+BODY:
+<div style='font-family: Arial, sans-serif; padding: 24px; color: #1B2B4B; background: #F8FAFC; border-radius: 12px;'>
+                    <div style='text-align: center; margin-bottom: 20px;'>
+                        <h2 style='color: #F2A735; margin: 0;'>Ohati Event Jobs</h2>
+                        <span style='font-size: 0.85rem; color: #64748B;'>Ghana's Premier Event Marketplace</span>
+                    </div>
+                    <div style='background: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>
+                        <h3 style='color: #1B2B4B; margin-top: 0;'>Proposal Submitted! 🚀</h3>
+                        <p>Hi App Review Vendor,</p>
+                        <p style='font-size: 0.95rem; line-height: 1.5; color: #334155;'>Your proposal was sent successfully.</p>
+                    </div>
+                    <div style='text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94A3B8;'>
+                        Log in to your Ohati dashboard to manage your jobs and proposals.
+                    </div>
+                </div>
+========================================
+[2026-09-05 03:18:06] Local environment: Email logged to mail_log.txt for demo.vendor@ohati.com
+[2026-09-05 03:18:06] TO: demo.vendor@ohati.com
+SUBJECT: Ohati Event Jobs: You Have Been Hired! 🎉
+BODY:
+<div style='font-family: Arial, sans-serif; padding: 24px; color: #1B2B4B; background: #F8FAFC; border-radius: 12px;'>
+                    <div style='text-align: center; margin-bottom: 20px;'>
+                        <h2 style='color: #F2A735; margin: 0;'>Ohati Event Jobs</h2>
+                        <span style='font-size: 0.85rem; color: #64748B;'>Ghana's Premier Event Marketplace</span>
+                    </div>
+                    <div style='background: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>
+                        <h3 style='color: #1B2B4B; margin-top: 0;'>You Have Been Hired! 🎉</h3>
+                        <p>Hi App Review Vendor,</p>
+                        <p style='font-size: 0.95rem; line-height: 1.5; color: #334155;'>Congratulations! The host has hired you for &#039;Wedding DJ &amp; Sound System Needed 1788578286&#039;.</p>
+                    </div>
+                    <div style='text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94A3B8;'>
+                        Log in to your Ohati dashboard to manage your jobs and proposals.
+                    </div>
+                </div>
+========================================
+[2026-09-05 11:23:37] Local environment: Email logged to mail_log.txt for admin@ohati.com
+[2026-09-05 11:23:37] TO: admin@ohati.com
+SUBJECT: Reset Password Letter Test
+BODY:
+<h2>Password Reset</h2><p>Click link to reset: <a href='#'>Reset Password</a></p>
+========================================
+[2026-09-05 11:23:37] Local environment: Email logged to mail_log.txt for admin@ohati.com
+[2026-09-05 11:23:37] TO: admin@ohati.com
+SUBJECT: Dual OTP Verification Code: 654321
+BODY:
+<p>Your OTP code is: <strong>654321</strong></p>
+========================================
+[2026-09-05 11:33:16] Local environment: Email logged to mail_log.txt for admin@ohati.com
+[2026-09-05 11:33:16] TO: admin@ohati.com
+SUBJECT: Reset your Ohati password (Diagnostic Test)
+BODY:
+<h2>Password Reset Diagnostic</h2><p>Click <a href='https://ohati.com/reset_password.php?token=diagnostic_test'>here</a> to reset your password.</p>
+========================================
+[2026-09-05 11:42:56] Attempting SMTP email delivery to: admin@ohati.com
+[2026-09-05 11:42:56] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 11:43:01] SMTP email delivered successfully to: admin@ohati.com
+[2026-09-05 11:46:56] Attempting SMTP email delivery to: contact@ohati.com
+[2026-09-05 11:46:56] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 11:47:00] SMTP email delivered successfully to: contact@ohati.com
+[2026-09-05 11:58:53] Attempting SMTP email delivery to: contact@ohati.com
+[2026-09-05 11:58:53] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 11:58:57] SMTP email delivered successfully to: contact@ohati.com
+[2026-09-05 12:02:34] Attempting SMTP email delivery to: contact@ohati.com
+[2026-09-05 12:02:34] Trying Primary High-Speed TLS (mail.ohati.com:587) -> tcp://mail.ohati.com:587...
+[2026-09-05 12:02:38] SMTP email delivered successfully to: contact@ohati.com

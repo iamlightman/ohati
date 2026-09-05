@@ -64,7 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let startScreen = 'home';
         let startParams = {};
 
-        if (path === 'planner.php') startScreen = 'event';
+        const actionParam = urlParams.get('action');
+        if (actionParam === 'vendor-dash' || actionParam === 'dashboard') {
+            startScreen = (state.user && (state.user.active_role === 'vendor' || state.user.role === 'vendor' || state.user.has_vendor_profile)) ? 'vendor-dash' : 'user-jobs';
+        } else if (path === 'planner.php') startScreen = 'event';
         else if (path === 'search.php') startScreen = 'search';
         else if (path === 'detail.php') {
             startScreen = 'detail';

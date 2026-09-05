@@ -29,8 +29,9 @@ echo '  </url>' . "\n";
 
 // 3. Static Public Pages & Categories
 $static_pages = [
+    '/login.php' => ['freq' => 'weekly', 'prio' => '0.8'],
+    '/register.php' => ['freq' => 'weekly', 'prio' => '0.8'],
     '/blog.php' => ['freq' => 'daily', 'prio' => '0.9'],
-    '/vendor-register.php' => ['freq' => 'weekly', 'prio' => '0.8'],
     '/privacy_policy.php' => ['freq' => 'monthly', 'prio' => '0.5'],
     '/terms.php' => ['freq' => 'monthly', 'prio' => '0.5'],
     '/help.php' => ['freq' => 'monthly', 'prio' => '0.6'],

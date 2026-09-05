@@ -24,31 +24,16 @@ header('Content-Type: text/html; charset=utf-8');
         
         <div class="log-box">
             <?php
-            $category_logos = [
-                'Photography' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=400',
-                'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400',
-                'Makeup Artists' => 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=400',
-                'Event Planners' => 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400',
-                'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
-                'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
-                'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=400',
-                'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
-                'DJs' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400',
-                'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=400',
-                'MCs' => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=400',
-                'Florists' => 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=400',
-                'Car Rentals' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400',
-                'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400'
-            ];
+            $stmt = $pdo->prepare("UPDATE vendors SET logo = NULL WHERE logo LIKE '%unsplash.com%' AND name NOT LIKE '%Chill & Serve%'");
+            $stmt->execute();
+            $count = $stmt->rowCount();
+            echo "✔ Cleaned $count vendor logo(s) using Unsplash URLs<br>";
 
-            $total_updated = 0;
-            foreach ($category_logos as $cat => $logo_url) {
-                $stmt = $pdo->prepare("UPDATE vendors SET logo = ? WHERE category = ? AND name NOT LIKE '%Chill & Serve%'");
-                $stmt->execute([$logo_url, $cat]);
-                $count = $stmt->rowCount();
-                $total_updated += $count;
-                echo "✔ Updated $count vendor(s) in category '$cat'<br>";
-            }
+            $stmt_cover = $pdo->prepare("UPDATE vendors SET cover_photo = NULL WHERE cover_photo LIKE '%unsplash.com%' AND name NOT LIKE '%Chill & Serve%'");
+            $stmt_cover->execute();
+            $count_cover = $stmt_cover->rowCount();
+            echo "✔ Cleaned $count_cover vendor cover(s) using Unsplash URLs<br>";
+            $total_updated = $count + $count_cover;
 
             // Ensure Chill & Serve Ghana logo is preserved
             $stmt = $pdo->prepare("UPDATE vendors SET logo = 'img/chill/logo.jpg' WHERE name LIKE '%Chill & Serve%'");

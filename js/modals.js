@@ -216,7 +216,7 @@ function updateSidebarUI() {
                 `;
             } else {
                 navContainer.innerHTML = `
-                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo((state.user && (state.user.vendor_id || state.user.role === 'vendor' || state.user.vendor)) ? 'vendor-dash' : 'home', {}, { force: true }); toggleSidebar(false)">
+                    <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo((state.user && (state.user.vendor_id || state.user.role === 'vendor' || state.user.vendor)) ? 'vendor-dash' : 'user-jobs', {}, { force: true }); toggleSidebar(false)">
                         <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
                     </a>
                     <a href="javascript:void(0)" role="button" class="sidebar-link" onclick="navigateTo('bookings', {}, { force: true }); toggleSidebar(false)">
@@ -1021,14 +1021,11 @@ function checkAndShowGeneralSponsoredPopup() {
         // Record popup trigger count in backend
         API.get('record_ad_popup', { ad_id: ad.id });
 
-        let bannerImg = ad.banner_url || 'img/ads/default.jpg';
-        if (bannerImg && !bannerImg.startsWith('data:') && !bannerImg.startsWith('http')) {
-            bannerImg = bannerImg;
-        }
+        let bannerImg = window.resolveImageUrl(ad.banner_url || ad.vendor_cover || ad.cover_photo, 'cover');
 
         const html = `
             <div class="auth-modal-header" style="position:relative; text-align:center;">
-                <span style="background:var(--accent); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:4px; margin-bottom:8px; text-transform:uppercase;">
+                <span style="background:#0F172A; color:#FBBF24; border:1px solid #F59E0B; font-size:0.68rem; font-weight:800; padding:4px 12px; border-radius:12px; display:inline-flex; align-items:center; gap:4px; margin-bottom:8px; text-transform:uppercase;">
                     <i class="fa-solid fa-rectangle-ad"></i> Sponsored Promotion
                 </span>
                 <h2 class="auth-modal-title" style="font-family:'Fraunces', serif;">${escapeHTML(ad.title)}</h2>

@@ -76,55 +76,129 @@ function renderAuthModal() {
                 html = `
                     <div class="auth-modal-header">
                         <h2 class="auth-modal-title">Sign Up</h2>
-                        <p class="auth-modal-subtitle">Step 1: Your Information (${isVendor ? 'Event Vendor' : 'Customer'})</p>
+                        <p class="auth-modal-subtitle">Step 1 of 3: Your Information (${isVendor ? 'Event Vendor' : 'Customer'})</p>
                     </div>
-                    <div class="auth-step-indicator">
+                    <div class="auth-step-indicator mb-16">
                         <div class="auth-step-dot active"></div>
                         <div class="auth-step-dot"></div>
                         <div class="auth-step-dot"></div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">First Name</label>
-                        <input type="text" class="form-input" id="reg-fname" placeholder="First Name" value="${state.authData.fname || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Last Name</label>
-                        <input type="text" class="form-input" id="reg-lname" placeholder="Last Name" value="${state.authData.lname || ''}">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;" class="mb-14">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">First Name <span style="color:#EF4444;">*</span></label>
+                            <input type="text" class="form-input" id="reg-fname" placeholder="First Name" value="${state.authData.fname || ''}">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Last Name <span style="color:#EF4444;">*</span></label>
+                            <input type="text" class="form-input" id="reg-lname" placeholder="Last Name" value="${state.authData.lname || ''}">
+                        </div>
                     </div>
                     ${isVendor ? `
-                    <div class="form-group">
-                        <label class="form-label">Business Name <span style="color:#EF4444;">*</span></label>
-                        <input type="text" class="form-input" id="reg-bizname" placeholder="e.g. Royal Crown Event Services" value="${state.authData.bizname || state.authData.business_name || ''}">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;" class="mb-14">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Business Name <span style="color:#EF4444;">*</span></label>
+                            <input type="text" class="form-input" id="reg-bizname" placeholder="e.g. Royal Crown Events" value="${state.authData.bizname || state.authData.business_name || ''}">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Username (optional)</label>
+                            <input type="text" class="form-input" id="reg-username" placeholder="Username" value="${state.authData.username || ''}">
+                        </div>
                     </div>
-                    ` : ''}
-                    <div class="form-group">
+                    ` : `
+                    <div class="form-group mb-14">
                         <label class="form-label">Username (optional)</label>
                         <input type="text" class="form-input" id="reg-username" placeholder="Username" value="${state.authData.username || ''}">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-input" id="reg-email" placeholder="email@example.com" value="${state.authData.email || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Phone Number</label>
-                        <input type="tel" class="form-input" id="reg-phone" placeholder="e.g. +233 24 123 4567" value="${state.authData.phone || ''}">
+                    `}
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;" class="mb-14">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Email Address <span style="color:#EF4444;">*</span></label>
+                            <input type="email" class="form-input" id="reg-email" placeholder="email@example.com" value="${state.authData.email || ''}">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Phone Number <span style="color:#EF4444;">*</span></label>
+                            <input type="tel" class="form-input" id="reg-phone" placeholder="e.g. +233 24 123 4567" value="${state.authData.phone || ''}">
+                        </div>
                     </div>
                     <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
-                    <button class="btn btn-primary btn-full" onclick="submitRegisterStep1()">Next Step</button>
+                    <button class="btn btn-primary btn-full" onclick="submitRegisterStep1()">Next Step: Upload Photos</button>
                 `;
             } else if (step === 2) {
+                const avatarSrc = state.authData.avatar || 'img/default-avatar.png';
+                const coverSrc = state.authData.cover_photo || 'img/default-cover.jpg';
+                const hasAvatar = !!state.authData.avatar;
+                const hasCover = !!state.authData.cover_photo;
+
                 html = `
                     <div class="auth-modal-header">
-                        <h2 class="auth-modal-title">Create Password</h2>
-                        <p class="auth-modal-subtitle">Step 2: Choose a strong password</p>
+                        <h2 class="auth-modal-title">Upload Profile & Cover Photos</h2>
+                        <p class="auth-modal-subtitle">Step 2 of 3: Both photos are compulsory <span style="color:#EF4444;">*</span></p>
                     </div>
                     <div class="auth-step-indicator">
                         <div class="auth-step-dot done"></div>
                         <div class="auth-step-dot active"></div>
                         <div class="auth-step-dot"></div>
                     </div>
+
+                    <!-- Profile Avatar Upload Block -->
+                    <div class="form-group mb-16">
+                        <label class="form-label" style="font-weight:700;">1. Profile Picture <span style="color:#EF4444;">*</span></label>
+                        <div style="display:flex; align-items:center; gap:16px; background:#F8FAFC; padding:12px; border-radius:14px; border:1px solid #E2E8F0;">
+                            <div style="position:relative; width:68px; height:68px; border-radius:50%; overflow:hidden; border:3px solid var(--accent); flex-shrink:0; background:#E2E8F0; box-shadow:0 4px 10px rgba(0,0,0,0.08);">
+                                <img id="reg-avatar-preview" src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;">
+                            </div>
+                            <div style="flex:1;">
+                                <div id="reg-avatar-status" style="font-size:0.78rem; font-weight:700; color:${hasAvatar ? '#10B981' : '#64748B'}; margin-bottom:6px;">
+                                    ${hasAvatar ? '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Profile Photo Loaded & Cropped' : 'No profile image selected'}
+                                </div>
+                                <button type="button" class="btn btn-outline btn-sm auth-upload-btn" onclick="document.getElementById('reg-avatar-file').click()" style="font-size:0.75rem; padding:8px 14px; font-weight:700;">
+                                    <i class="fa-solid fa-camera" style="margin-right:6px;"></i> Upload & Crop Profile Photo
+                                </button>
+                                <input type="file" id="reg-avatar-file" accept="image/*" style="display:none;" onchange="handleRegFileSelect(event, 'avatar')">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cover Photo Upload Block -->
+                    <div class="form-group mb-16">
+                        <label class="form-label" style="font-weight:700;">2. Cover Photo Banner <span style="color:#EF4444;">*</span></label>
+                        <div style="position:relative; width:100%; height:170px; border-radius:14px; overflow:hidden; border:2px dashed var(--accent); background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; color:#FFF; margin-bottom:8px;">
+                            <img id="reg-cover-preview" src="${coverSrc}" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; opacity:${hasCover ? '1' : '0.45'}; transition:all 0.3s ease;">
+                            <div style="position:relative; z-index:2; padding:12px 18px; background:rgba(11,31,58,0.82); border-radius:12px; border:1px solid rgba(242,167,53,0.4); backdrop-filter:blur(4px); max-width:88%;">
+                                <div style="font-family:'Fraunces',serif; font-size:1.08rem; font-weight:800; color:#FFFFFF; margin-bottom:2px;">
+                                    <i class="fa-solid fa-image" style="color:var(--accent); margin-right:6px;"></i> Your Cover Image Here
+                                </div>
+                                <div style="font-size:0.75rem; color:#F1F5F9; margin-bottom:8px;">Upload & crop your official profile cover banner</div>
+                                <button type="button" class="btn btn-primary btn-sm auth-upload-btn" onclick="document.getElementById('reg-cover-file').click()" style="padding:8px 18px; font-weight:800; font-size:0.75rem; border-radius:8px;">
+                                    <i class="fa-solid fa-cloud-arrow-up" style="margin-right:6px;"></i> Upload & Crop Cover Image
+                                </button>
+                                <input type="file" id="reg-cover-file" accept="image/*" style="display:none;" onchange="handleRegFileSelect(event, 'cover')">
+                            </div>
+                        </div>
+                        <div id="reg-cover-status" style="font-size:0.78rem; font-weight:700; color:${hasCover ? '#10B981' : '#64748B'}; text-align:center;">
+                            ${hasCover ? '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Cover Photo Loaded & Cropped' : 'Click above to select and crop your cover image'}
+                        </div>
+                    </div>
+
+                    <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
+                    <div style="display:flex;gap:10px;">
+                        <button class="btn btn-outline btn-full" onclick="state.authStep=1; renderAuthModal();">Back</button>
+                        <button class="btn btn-primary btn-full" onclick="submitRegisterStep2()">Next Step: Password</button>
+                    </div>
+                `;
+            } else if (step === 3) {
+                html = `
+                    <div class="auth-modal-header">
+                        <h2 class="auth-modal-title">Create Password</h2>
+                        <p class="auth-modal-subtitle">Step 3 of 3: Choose a strong password</p>
+                    </div>
+                    <div class="auth-step-indicator">
+                        <div class="auth-step-dot done"></div>
+                        <div class="auth-step-dot done"></div>
+                        <div class="auth-step-dot active"></div>
+                    </div>
                     <div class="form-group">
-                        <label class="form-label">Password</label>
+                        <label class="form-label">Password <span style="color:#EF4444;">*</span></label>
                         <div class="input-group">
                             <input type="password" class="form-input" id="reg-pass" placeholder="Minimum 8 characters" oninput="checkPasswordStrengthUI()">
                             <span class="input-suffix" onclick="togglePasswordVisibility('reg-pass')"><i class="fa-solid fa-eye" id="reg-pass-eye"></i></span>
@@ -138,7 +212,7 @@ function renderAuthModal() {
                         <div class="strength-label" id="strength-label">Password strength</div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Confirm Password</label>
+                        <label class="form-label">Confirm Password <span style="color:#EF4444;">*</span></label>
                         <div class="input-group">
                             <input type="password" class="form-input" id="reg-confirm" placeholder="Confirm your password">
                             <span class="input-suffix" onclick="togglePasswordVisibility('reg-confirm')"><i class="fa-solid fa-eye" id="reg-confirm-eye"></i></span>
@@ -146,8 +220,8 @@ function renderAuthModal() {
                     </div>
                     <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
                     <div style="display:flex;gap:10px;">
-                        <button class="btn btn-outline btn-full" onclick="state.authStep=1; renderAuthModal();">Back</button>
-                        <button class="btn btn-primary btn-full" onclick="submitRegisterStep2()">Register</button>
+                        <button class="btn btn-outline btn-full" onclick="state.authStep=2; renderAuthModal();">Back</button>
+                        <button class="btn btn-primary btn-full" onclick="submitRegisterStep3()">Register Account</button>
                     </div>
                 `;
             }
@@ -203,7 +277,7 @@ function renderAuthModal() {
                 <div class="form-group">
                     <div class="flex-between">
                         <label class="form-label">Password</label>
-                        <a href="forgot-password.php" target="_blank" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="window.open('forgot-password.php', '_blank'); return false;">Forgot?</a>
+                        <a href="forgot-password.php" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="window.location.href='forgot-password.php'; return false;">Forgot?</a>
                     </div>
                     <div class="input-group">
                         <input type="password" class="form-input" id="login-pass" placeholder="Your password">
@@ -220,7 +294,7 @@ function renderAuthModal() {
             break;
 
         case 'forgot':
-            window.open('forgot-password.php', '_blank');
+            window.location.href = 'forgot-password.php';
             state.authMode = 'login';
             renderAuthModal();
             return;
@@ -349,6 +423,58 @@ function checkPasswordStrengthUI() {
     }
 }
 
+window.handleRegFileSelect = function (event, type) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (type === 'avatar' && typeof window.openAvatarCropperModal === 'function') {
+        window.openAvatarCropperModal(file, function(croppedDataUrl) {
+            state.authData.avatar = croppedDataUrl;
+            const img = document.getElementById('reg-avatar-preview');
+            if (img) img.src = croppedDataUrl;
+            const status = document.getElementById('reg-avatar-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Profile Photo Loaded & Cropped!';
+        });
+        return;
+    }
+
+    if (type === 'cover' && typeof window.openCoverCropperModal === 'function') {
+        window.openCoverCropperModal(file, function(croppedDataUrl) {
+            state.authData.cover_photo = croppedDataUrl;
+            const img = document.getElementById('reg-cover-preview');
+            if (img) {
+                img.src = croppedDataUrl;
+                img.style.opacity = '1';
+            }
+            const status = document.getElementById('reg-cover-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Cover Photo Loaded & Cropped!';
+        });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const base64 = e.target.result;
+        if (type === 'avatar') {
+            state.authData.avatar = base64;
+            const img = document.getElementById('reg-avatar-preview');
+            if (img) img.src = base64;
+            const status = document.getElementById('reg-avatar-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Profile Photo Loaded';
+        } else if (type === 'cover') {
+            state.authData.cover_photo = base64;
+            const img = document.getElementById('reg-cover-preview');
+            if (img) {
+                img.src = base64;
+                img.style.opacity = '1';
+            }
+            const status = document.getElementById('reg-cover-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Cover Photo Loaded';
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
 // Submit Register Step 1
 function submitRegisterStep1() {
     const fname = document.getElementById('reg-fname').value.trim();
@@ -385,8 +511,24 @@ function submitRegisterStep1() {
     renderAuthModal();
 }
 
-// Submit Register Step 2
+// Submit Register Step 2 (Compulsory Media Validation)
 function submitRegisterStep2() {
+    const err = document.getElementById('auth-error-msg');
+
+    if (!state.authData.avatar || !state.authData.cover_photo) {
+        if (err) {
+            err.textContent = 'Please upload both your Profile Picture and Cover Photo to continue.';
+            err.style.display = 'block';
+        }
+        return;
+    }
+
+    state.authStep = 3;
+    renderAuthModal();
+}
+
+// Submit Register Step 3 (Final Registration)
+function submitRegisterStep3() {
     const pass = document.getElementById('reg-pass').value;
     const confirm = document.getElementById('reg-confirm').value;
     const err = document.getElementById('auth-error-msg');
@@ -406,7 +548,7 @@ function submitRegisterStep2() {
 
     state.authData.password = pass;
 
-    const btn = document.querySelector('button[onclick="submitRegisterStep2()"]');
+    const btn = document.querySelector('button[onclick="submitRegisterStep3()"]');
 
     ActionLock.execute(btn, 'Creating Account...', async () => {
         const pendingRef = sessionStorage.getItem('ohati_pending_ref') || '';
@@ -417,6 +559,9 @@ function submitRegisterStep2() {
             username: state.authData.username,
             password: state.authData.password,
             role: state.authData.role,
+            avatar: state.authData.avatar,
+            cover_photo: state.authData.cover_photo,
+            business_name: state.authData.bizname || state.authData.business_name || '',
             ref: pendingRef
         };
 
@@ -720,6 +865,8 @@ function startResetOTPTimer() {
 // Log Out
 function handleLogout() {
     console.log("Signing out user...");
+    const token = localStorage.getItem('ohati_auth_token') || (state.user ? state.user.auth_token : '');
+
     state.user = null;
     state.currentUser = null;
     state.vendor = null;
@@ -740,7 +887,15 @@ function handleLogout() {
     localStorage.removeItem('ohati_vendor');
     localStorage.removeItem('ohati_notifications');
     localStorage.removeItem('ohati_stats');
-    sessionStorage.clear();
+    try { localStorage.clear(); } catch(e){}
+    try { sessionStorage.clear(); } catch(e){}
+
+    // Expire session cookie on client side if possible
+    try {
+        document.cookie.split(";").forEach(function(c) {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+    } catch(e){}
 
     const doLocalCleanup = () => {
         if (typeof updateAppHeader === 'function') updateAppHeader();
@@ -754,7 +909,9 @@ function handleLogout() {
             showMandatoryAuthLockScreen('login');
         }
 
-        showPushNotification('Signed Out', 'You have successfully signed out.');
+        if (typeof showPushNotification === 'function') {
+            showPushNotification('Signed Out', 'You have successfully signed out.');
+        }
 
         // Prevent browser Back button from revealing protected content
         if (window.history && window.history.replaceState) {
@@ -764,12 +921,12 @@ function handleLogout() {
         if (isNative) {
             window.location.href = 'index.html';
         } else {
-            window.location.reload();
+            window.location.href = 'index.php?logged_out=1';
         }
     };
 
     if (window.API && typeof API.logout === 'function') {
-        API.logout().then(() => {
+        API.logout(token).then(() => {
             doLocalCleanup();
         }).catch(() => {
             doLocalCleanup();
@@ -1564,50 +1721,110 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
             const draft = window._mandatorySignupDraft || {};
             const isVendorSelected = (draft.role === 'vendor');
             overlay.innerHTML = `
-                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:540px; padding:36px 32px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
                     <div style="width:76px; height:76px; border-radius:20px; overflow:hidden; border:2px solid var(--accent, #F2A735); margin:0 auto 16px; box-shadow:0 8px 24px rgba(242,167,53,0.25);">
                         <img src="img/app_icon.png" style="width:100%; height:100%; object-fit:cover;" alt="Ohati App Icon">
                     </div>
                     <div style="font-size:0.75rem; font-weight:800; color:var(--accent, #F2A735); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Step 1 — Basic Credentials</div>
                     <h2 style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#FFF;">Create Your Account</h2>
-                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0;">Join Ohati to discover and book verified event services</p>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 24px 0;">Join Ohati to discover and book verified event services</p>
 
-                    <form onsubmit="handleMandatorySignupSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
+                    <form onsubmit="handleMandatorySignupSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+                    <form onsubmit="handleMandatorySignupSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+                        <!-- Segmented Account Type Selector -->
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Account Role</label>
-                            <select id="m-lock-role" onchange="toggleVendorAuthFields(this.value)" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
-                                <option value="customer" ${(draft.role === 'customer' || !draft.role) ? 'selected' : ''} style="background:#0F1923; color:#FFF;">Customer (Planning Events)</option>
-                                <option value="vendor" ${(draft.role === 'vendor') ? 'selected' : ''} style="background:#0F1923; color:#FFF;">Vendor (Offering Event Services)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Full Name *</label>
-                            <input type="text" id="m-lock-name" required placeholder="John Doe" value="${draft.name || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Email Address *</label>
-                            <input type="email" id="m-lock-email" required placeholder="email@example.com" value="${draft.email || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Phone Number *</label>
-                            <input type="tel" id="m-lock-phone" required placeholder="+233 24 123 4567" value="${draft.phone || ''}" style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Password *</label>
-                            <div style="position:relative;">
-                                <input type="password" id="m-lock-pass" required placeholder="Minimum 6 characters" style="width:100%; padding:12px 40px 12px 12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                                <span onclick="togglePasswordVisibility('m-lock-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-pass-eye"></i></span>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Account Type</label>
+                            <div style="background:rgba(255,255,255,0.05); padding:4px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                                <button type="button" id="role-btn-customer" onclick="selectRolePill('customer')" style="padding:10px; border-radius:10px; border:none; background:${(draft.role === 'customer' || !draft.role) ? 'linear-gradient(135deg, var(--accent, #F2A735), #D98E1C)' : 'transparent'}; color:${(draft.role === 'customer' || !draft.role) ? '#000' : '#94A3B8'}; font-weight:800; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s ease; box-shadow:${(draft.role === 'customer' || !draft.role) ? '0 4px 12px rgba(242,167,53,0.3)' : 'none'};">
+                                    <i class="fa-solid fa-user"></i> Customer
+                                </button>
+                                <button type="button" id="role-btn-vendor" onclick="selectRolePill('vendor')" style="padding:10px; border-radius:10px; border:none; background:${(draft.role === 'vendor') ? 'linear-gradient(135deg, var(--accent, #F2A735), #D98E1C)' : 'transparent'}; color:${(draft.role === 'vendor') ? '#000' : '#94A3B8'}; font-weight:800; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s ease; box-shadow:${(draft.role === 'vendor') ? '0 4px 12px rgba(242,167,53,0.3)' : 'none'};">
+                                    <i class="fa-solid fa-store"></i> Vendor
+                                </button>
+                                <input type="hidden" id="m-lock-role" value="${draft.role || 'customer'}">
                             </div>
                         </div>
+
+                        <!-- Hero Full Width Field: Full Name -->
                         <div>
-                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Confirm Password *</label>
+                            <label style="display:block; font-size:0.78rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Full Name *</label>
                             <div style="position:relative;">
-                                <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px 40px 12px 12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
-                                <span onclick="togglePasswordVisibility('m-lock-confirm')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-confirm-eye"></i></span>
+                                <input type="text" id="m-lock-name" required placeholder="John Doe" value="${draft.name || ''}" style="width:100%; padding:12px 14px 12px 38px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                <i class="fa-solid fa-user" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--accent, #F2A735); font-size:0.85rem;"></i>
                             </div>
                         </div>
+
+                        <!-- Asymmetric Contact Row: Email & Phone -->
+                        <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:12px;">
+                            <div>
+                                <label style="display:block; font-size:0.78rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email Address *</label>
+                                <div style="position:relative;">
+                                    <input type="email" id="m-lock-email" required placeholder="name@example.com" value="${draft.email || ''}" style="width:100%; padding:12px 14px 12px 38px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                    <i class="fa-solid fa-envelope" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:0.85rem;"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.78rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Phone Number *</label>
+                                <div style="position:relative;">
+                                    <input type="tel" id="m-lock-phone" required placeholder="+233 24 123 4567" value="${draft.phone || ''}" style="width:100%; padding:12px 14px 12px 38px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                    <i class="fa-solid fa-phone" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:0.85rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Pair: Password & Confirm Password -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div>
+                                <label style="display:block; font-size:0.78rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Password *</label>
+                                <div style="position:relative;">
+                                    <input type="password" id="m-lock-pass" required placeholder="Min 6 chars" style="width:100%; padding:12px 36px 12px 38px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                    <i class="fa-solid fa-lock" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:0.85rem;"></i>
+                                    <span onclick="togglePasswordVisibility('m-lock-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-pass-eye"></i></span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.78rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Confirm Password *</label>
+                                <div style="position:relative;">
+                                    <input type="password" id="m-lock-confirm" required placeholder="Re-enter password" style="width:100%; padding:12px 36px 12px 38px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none; box-sizing:border-box;">
+                                    <i class="fa-solid fa-lock" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:0.85rem;"></i>
+                                    <span onclick="togglePasswordVisibility('m-lock-confirm')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94A3B8; z-index:5;"><i class="fa-solid fa-eye" id="m-lock-confirm-eye"></i></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Integrated Media Card (Avatar & Cover Banner for all account types) -->
+                        <div id="m-vendor-media-block" style="display:block; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:14px; box-sizing:border-box;">
+                            <div style="display:flex; align-items:center; margin-bottom:10px;">
+                                <span style="font-size:0.78rem; font-weight:700; color:#CBD5E1;"><i class="fa-solid fa-images" style="color:var(--accent, #F2A735); margin-right:6px;"></i> Branding & Media</span>
+                            </div>
+                            
+                            <div style="position:relative; width:100%; height:64px; border-radius:12px; overflow:hidden; border:1px solid rgba(242,167,53,0.35); margin-bottom:12px; display:flex; align-items:flex-end; padding:8px 12px; box-sizing:border-box;">
+                                <div id="m-cover-sample-design" style="display:${draft.cover_photo ? 'none' : 'block'}; position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #091526 0%, #15243B 45%, #2B1E0A 80%, #0F1923 100%); pointer-events:none;">
+                                    <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; border-radius:50%; background:radial-gradient(circle, rgba(242,167,53,0.25) 0%, rgba(242,167,53,0.05) 50%, transparent 80%); filter:blur(6px);"></div>
+                                    <div style="position:absolute; inset:0; background:repeating-linear-gradient(45deg, transparent, transparent 18px, rgba(255,255,255,0.02) 18px, rgba(255,255,255,0.02) 19px); opacity:0.7;"></div>
+                                    <div style="position:absolute; bottom:0; left:0; width:100%; height:2px; background:linear-gradient(90deg, transparent 0%, rgba(242,167,53,0.6) 50%, transparent 100%);"></div>
+                                </div>
+                                <img id="m-cover-preview" src="${draft.cover_photo || ''}" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:${draft.cover_photo ? 'block' : 'none'}; z-index:1;">
+                                
+                                <div style="position:relative; z-index:3; width:44px; height:44px; border-radius:50%; border:2px solid var(--accent, #F2A735); overflow:hidden; background:#1E293B; box-shadow:0 4px 12px rgba(0,0,0,0.5); flex-shrink:0;">
+                                    <img id="m-avatar-preview" src="${draft.avatar || 'img/default-avatar.png'}" style="width:100%; height:100%; object-fit:cover;">
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <button type="button" class="auth-upload-btn" onclick="document.getElementById('m-avatar-file').click()" style="font-size:0.75rem; padding:8px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#FFFFFF !important; border-radius:10px; cursor:pointer; width:100%; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s ease;">
+                                    <i class="fa-solid fa-camera" style="color:var(--accent, #F2A735);"></i> <span>${draft.avatar ? 'Change Photo' : 'Profile Photo'}</span>
+                                </button>
+                                <button type="button" class="auth-upload-btn" onclick="document.getElementById('m-cover-file').click()" style="font-size:0.75rem; padding:8px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#FFFFFF !important; border-radius:10px; cursor:pointer; width:100%; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s ease;">
+                                    <i class="fa-solid fa-image" style="color:var(--accent, #F2A735);"></i> <span>${draft.cover_photo ? 'Change Banner' : 'Cover Banner'}</span>
+                                </button>
+                            </div>
+                            <input type="file" id="m-avatar-file" accept="image/*" style="display:none;" onchange="handleMandatoryFileSelect(event, 'avatar')">
+                            <input type="file" id="m-cover-file" accept="image/*" style="display:none;" onchange="handleMandatoryFileSelect(event, 'cover')">
+                        </div>
+
                         <div id="m-lock-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
-                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">
+                        <button type="submit" id="m-lock-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:8px;">
                             ${isVendorSelected ? 'Continue to Vendor Details' : 'Send Verification Code'}
                         </button>
                     </form>
@@ -1618,7 +1835,7 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                 </div>
             `;
         } else if (mode === 'forgot') {
-            window.open('forgot-password.php', '_blank');
+            window.location.href = 'forgot-password.php';
             renderMandatoryAuthContent('login');
             return;
         } else if (mode === 'forgot-sent') {
@@ -1694,7 +1911,7 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin:0;">Password</label>
-                                <a href="forgot-password.php" target="_blank" onclick="window.open('forgot-password.php', '_blank'); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
+                                <a href="forgot-password.php" onclick="window.location.href='forgot-password.php'; return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
                             </div>
                             <div style="position:relative;">
                                 <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px 40px 13px 13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
@@ -1803,6 +2020,82 @@ window.handleMandatoryLoginSubmit = function (e) {
     });
 };
 
+window.handleMandatoryFileSelect = function (event, type) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!window._mandatorySignupDraft) window._mandatorySignupDraft = {};
+
+    if (type === 'cover' && typeof window.openCoverCropperModal === 'function') {
+        window.openCoverCropperModal(file, function(croppedDataUrl) {
+            window._mandatorySignupDraft.cover_photo = croppedDataUrl;
+            const img = document.getElementById('m-cover-preview');
+            if (img) {
+                img.src = croppedDataUrl;
+                img.style.display = 'block';
+            }
+            const sampleDesign = document.getElementById('m-cover-sample-design');
+            if (sampleDesign) sampleDesign.style.display = 'none';
+            const status = document.getElementById('m-cover-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Cover Photo Loaded & Cropped!';
+        });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const base64 = e.target.result;
+        if (type === 'avatar') {
+            window._mandatorySignupDraft.avatar = base64;
+            const img = document.getElementById('m-avatar-preview');
+            if (img) img.src = base64;
+            const status = document.getElementById('m-avatar-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Profile Photo Loaded';
+        } else if (type === 'cover') {
+            window._mandatorySignupDraft.cover_photo = base64;
+            const img = document.getElementById('m-cover-preview');
+            if (img) {
+                img.src = base64;
+                img.style.display = 'block';
+            }
+            const sampleDesign = document.getElementById('m-cover-sample-design');
+            if (sampleDesign) sampleDesign.style.display = 'none';
+            const status = document.getElementById('m-cover-status');
+            if (status) status.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Cover Photo Loaded';
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
+window.selectRolePill = function (role) {
+    const roleInput = document.getElementById('m-lock-role');
+    if (roleInput) roleInput.value = role;
+    const btnCust = document.getElementById('role-btn-customer');
+    const btnVend = document.getElementById('role-btn-vendor');
+    if (btnCust && btnVend) {
+        if (role === 'customer') {
+            btnCust.style.background = 'linear-gradient(135deg, var(--accent, #F2A735), #D98E1C)';
+            btnCust.style.color = '#000';
+            btnCust.style.boxShadow = '0 4px 12px rgba(242,167,53,0.3)';
+            btnVend.style.background = 'transparent';
+            btnVend.style.color = '#94A3B8';
+            btnVend.style.boxShadow = 'none';
+        } else {
+            btnVend.style.background = 'linear-gradient(135deg, var(--accent, #F2A735), #D98E1C)';
+            btnVend.style.color = '#000';
+            btnVend.style.boxShadow = '0 4px 12px rgba(242,167,53,0.3)';
+            btnCust.style.background = 'transparent';
+            btnCust.style.color = '#94A3B8';
+            btnCust.style.boxShadow = 'none';
+        }
+    }
+    const mediaBlock = document.getElementById('m-vendor-media-block');
+    if (mediaBlock) {
+        mediaBlock.style.display = 'block';
+    }
+    toggleVendorAuthFields(role);
+};
+
 window.toggleVendorAuthFields = function (role) {
     const btn = document.getElementById('m-lock-btn');
     if (btn) {
@@ -1845,6 +2138,11 @@ window.handleMandatorySignupSubmit = function (e) {
 
     if (password !== confirm) {
         if (errBox) { errBox.textContent = 'Passwords do not match. Please re-enter your password.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (!window._mandatorySignupDraft?.avatar || !window._mandatorySignupDraft?.cover_photo) {
+        if (errBox) { errBox.textContent = 'Please upload both your Profile Picture and Cover Photo to continue.'; errBox.style.display = 'block'; }
         return;
     }
 

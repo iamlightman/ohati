@@ -19,22 +19,9 @@ window.initChatModule = function(partnerId) {
 };
 
 window.sendTextMessage = function() {
-    const input = document.getElementById('chat-input-field');
-    if (!input || !input.value.trim() || !state.activeChatVendorId) return;
-    const msg = input.value.trim();
-    input.value = '';
-
-    API.sendMessage(state.activeChatVendorId, msg, 'text')
-        .then(res => {
-            API.getChatHistory(state.activeChatVendorId).then(history => {
-                if (typeof updateChatMessages === 'function') updateChatMessages(history);
-            });
-        })
-        .catch(err => {
-            if (typeof showPushNotification === 'function') {
-                showPushNotification('Send Failed', err.message || 'Failed to send message.');
-            }
-        });
+    if (typeof window.sendChatMessage === 'function') {
+        window.sendChatMessage();
+    }
 };
 
 window.triggerChatAttachment = function() {

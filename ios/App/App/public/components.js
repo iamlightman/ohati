@@ -610,7 +610,7 @@ function renderHomeScreen() {
             <!-- Recommended list in two columns -->
             <div class="section-header" style="margin-top: 25px;">
                 <h3>Recommended for you</h3>
-                <a href="#" class="see-all-link" id="home-see-all-recs">See all</a>
+                <a href="javascript:void(0)" class="see-all-link" id="home-see-all-recs">See all</a>
             </div>
             <div class="recommended-grid">
                 ${state.vendors.slice(0, 4).map(v => {

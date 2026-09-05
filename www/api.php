@@ -56,57 +56,25 @@ if (!function_exists('getBlockedUserIds')) {
 
 if (!function_exists('resolve_vendor_logo')) {
     function resolve_vendor_logo($category, $current_logo = '') {
-        if (!empty($current_logo) && strpos($current_logo, 'data:image/svg+xml') === false && strpos($current_logo, 'photo-1535713875002') === false) {
+        if (!empty($current_logo) && strpos($current_logo, 'unsplash.com') === false && strpos($current_logo, 'photo-') === false && strpos($current_logo, 'data:image/svg+xml') === false) {
             return $current_logo;
         }
-        $map = [
-            'Photography' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=400',
-            'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400',
-            'Makeup Artists' => 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=400',
-            'Event Planners' => 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400',
-            'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
-            'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
-            'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=400',
-            'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
-            'DJs' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400',
-            'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=400',
-            'MCs' => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=400',
-            'Florists' => 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=400',
-            'Car Rentals' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400',
-            'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400',
-            'Rental Equipment' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
-            'Juice Bar' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
-            'Chilling Services' => 'img/chill/logo.jpg'
-        ];
-        return $map[$category] ?? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';
+        if ($category === 'Chilling Services') {
+            return 'img/chill/logo.jpg';
+        }
+        return 'img/default-avatar.png';
     }
 }
 
 if (!function_exists('resolve_vendor_cover')) {
     function resolve_vendor_cover($category, $current_cover = '') {
-        if (!empty($current_cover) && strpos($current_cover, 'data:image/svg+xml') === false && strpos($current_cover, 'photo-1535713875002') === false && strpos($current_cover, 'default-cover') === false) {
+        if (!empty($current_cover) && strpos($current_cover, 'unsplash.com') === false && strpos($current_cover, 'photo-') === false && strpos($current_cover, 'data:image/svg+xml') === false) {
             return $current_cover;
         }
-        $map = [
-            'Photography' => 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800',
-            'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=800',
-            'Makeup Artists' => 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=800',
-            'Event Planners' => 'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?q=80&w=800',
-            'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=800',
-            'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=800',
-            'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=800',
-            'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800',
-            'DJs' => 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800',
-            'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=800',
-            'MCs' => 'https://images.unsplash.com/photo-1516280440614-37939bbacd6a?q=80&w=800',
-            'Florists' => 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=800',
-            'Car Rentals' => 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
-            'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=800',
-            'Rental Equipment' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=800',
-            'Juice Bar' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=800',
-            'Chilling Services' => 'img/chill/services.jpg'
-        ];
-        return $map[$category] ?? 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800';
+        if ($category === 'Chilling Services') {
+            return 'img/chill/services.jpg';
+        }
+        return 'img/default-cover.jpg';
     }
 }
 
@@ -680,6 +648,26 @@ case 'register':
         http_response_code(400); echo json_encode(['error'=>'Passwords do not match. Please verify your password.']); exit;
     }
 
+    // Process compulsory profile avatar & cover photo
+    $avatar_url = 'img/default-avatar.png';
+    $cover_url = 'img/default-cover.jpg';
+
+    $avatar_input = $input['avatar'] ?? $input['avatar_base64'] ?? null;
+    if (!empty($avatar_input)) {
+        $up_avatar = upload_media_file($avatar_input, 'avatars', 800);
+        if (!empty($up_avatar['success']) && !empty($up_avatar['url'])) {
+            $avatar_url = $up_avatar['url'];
+        }
+    }
+
+    $cover_input = $input['cover_photo'] ?? $input['cover_base64'] ?? null;
+    if (!empty($cover_input)) {
+        $up_cover = upload_media_file($cover_input, 'covers', 1920);
+        if (!empty($up_cover['success']) && !empty($up_cover['url'])) {
+            $cover_url = $up_cover['url'];
+        }
+    }
+
     try {
         try { if (!$pdo->inTransaction()) { $pdo->beginTransaction(); } } catch (Exception $eTrans) {}
 
@@ -692,8 +680,8 @@ case 'register':
                 if (intval($existing['email_verified'] ?? 0) === 0 && intval($existing['phone_verified'] ?? 0) === 0) {
                     $uid = intval($existing['id']);
                     $hash = password_hash($password, PASSWORD_BCRYPT);
-                    $pdo->prepare("UPDATE users SET name = ?, password_hash = ?, role = ? WHERE id = ?")
-                        ->execute([$name, $hash, $role, $uid]);
+                    $pdo->prepare("UPDATE users SET name = ?, password_hash = ?, role = ?, avatar = ?, cover_photo = ? WHERE id = ?")
+                        ->execute([$name, $hash, $role, $avatar_url, $cover_url, $uid]);
                     
                     if ($role === 'vendor') {
                         $bname = clean($input['business_name'] ?? $input['bname'] ?? $name);
@@ -703,17 +691,17 @@ case 'register':
                         $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
                         $v_chk->execute([$uid]);
                         if ($v_chk->fetch()) {
-                            $pdo->prepare("UPDATE vendors SET name = ?, category = ?, description = ?, location = ? WHERE user_id = ?")
-                                ->execute([$bname, $category, $desc, $loc, $uid]);
+                            $pdo->prepare("UPDATE vendors SET name = ?, category = ?, logo = ?, cover_photo = ?, description = ?, location = ? WHERE user_id = ?")
+                                ->execute([$bname, $category, $avatar_url, $cover_url, $desc, $loc, $uid]);
                         } else {
-                            $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)")
-                                ->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
+                            $pdo->prepare("INSERT INTO vendors (user_id, name, category, logo, cover_photo, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)")
+                                ->execute([$uid, $bname, $category, $avatar_url, $cover_url, $desc, $loc, $phone ?: null, $email ?: null]);
                         }
                     }
                     
                     $pdo->commit();
                     $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
-                    $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>'','kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
+                    $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>$avatar_url,'cover_photo'=>$cover_url,'vendor_cover_photo'=>$cover_url,'kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
                     $_SESSION['user'] = $user;
                     $_SESSION['user']['active_role'] = $role;
                     $auth_token = issue_auth_token($pdo, $uid, $_SERVER['HTTP_USER_AGENT'] ?? 'Mobile/Web');
@@ -745,8 +733,8 @@ case 'register':
                 if (intval($existing['email_verified'] ?? 0) === 0 && intval($existing['phone_verified'] ?? 0) === 0) {
                     $uid = intval($existing['id']);
                     $hash = password_hash($password, PASSWORD_BCRYPT);
-                    $pdo->prepare("UPDATE users SET name = ?, password_hash = ?, role = ? WHERE id = ?")
-                        ->execute([$name, $hash, $role, $uid]);
+                    $pdo->prepare("UPDATE users SET name = ?, password_hash = ?, role = ?, avatar = ?, cover_photo = ? WHERE id = ?")
+                        ->execute([$name, $hash, $role, $avatar_url, $cover_url, $uid]);
                     
                     if ($role === 'vendor') {
                         $bname = clean($input['business_name'] ?? $input['bname'] ?? $name);
@@ -756,17 +744,17 @@ case 'register':
                         $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
                         $v_chk->execute([$uid]);
                         if ($v_chk->fetch()) {
-                            $pdo->prepare("UPDATE vendors SET name = ?, category = ?, description = ?, location = ? WHERE user_id = ?")
-                                ->execute([$bname, $category, $desc, $loc, $uid]);
+                            $pdo->prepare("UPDATE vendors SET name = ?, category = ?, logo = ?, cover_photo = ?, description = ?, location = ? WHERE user_id = ?")
+                                ->execute([$bname, $category, $avatar_url, $cover_url, $desc, $loc, $uid]);
                         } else {
-                            $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)")
-                                ->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
+                            $pdo->prepare("INSERT INTO vendors (user_id, name, category, logo, cover_photo, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)")
+                                ->execute([$uid, $bname, $category, $avatar_url, $cover_url, $desc, $loc, $phone ?: null, $email ?: null]);
                         }
                     }
                     
                     $pdo->commit();
                     $my_ref_code = 'OHATI-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
-                    $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>'','kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
+                    $user = ['id'=>$uid,'name'=>$name,'email'=>$email,'phone'=>$phone,'role'=>$role,'avatar'=>$avatar_url,'cover_photo'=>$cover_url,'vendor_cover_photo'=>$cover_url,'kyc_status'=>'not_started','email_verified'=>0,'referral_code'=>$my_ref_code];
                     $_SESSION['user'] = $user;
                     $_SESSION['user']['active_role'] = $role;
                     $auth_token = issue_auth_token($pdo, $uid, $_SERVER['HTTP_USER_AGENT'] ?? 'Mobile/Web');
@@ -799,8 +787,8 @@ case 'register':
             $referrer_id = intval($r_chk->fetchColumn() ?: 0);
         }
 
-        $stmt = $pdo->prepare("INSERT INTO users (name,email,phone,password_hash,role,email_verified,referral_code,referred_by) VALUES (?,?,?,?,?,0,?,?)");
-        $stmt->execute([$name, $email ?: null, $phone ?: null, $hash, $role, $my_ref_code, $referrer_id]);
+        $stmt = $pdo->prepare("INSERT INTO users (name,email,phone,password_hash,role,avatar,cover_photo,email_verified,referral_code,referred_by) VALUES (?,?,?,?,?,?,?,0,?,?)");
+        $stmt->execute([$name, $email ?: null, $phone ?: null, $hash, $role, $avatar_url, $cover_url, $my_ref_code, $referrer_id]);
         $uid = $pdo->lastInsertId();
 
         if ($referrer_id > 0 && $referrer_id !== intval($uid)) {
@@ -838,8 +826,8 @@ case 'register':
             $loc = clean($input['location'] ?? $input['city'] ?? 'Accra, Ghana');
             
             try {
-                $v_ins = $pdo->prepare("INSERT INTO vendors (user_id, name, category, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)");
-                $v_ins->execute([$uid, $bname, $category, $desc, $loc, $phone ?: null, $email ?: null]);
+                $v_ins = $pdo->prepare("INSERT INTO vendors (user_id, name, category, logo, cover_photo, description, location, phone, email, verification_status, verification_badge, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 'grey', 1)");
+                $v_ins->execute([$uid, $bname, $category, $avatar_url, $cover_url, $desc, $loc, $phone ?: null, $email ?: null]);
             } catch (Exception $eVend) {}
         }
 
@@ -933,9 +921,9 @@ case 'login':
     if (is_string($input)) {
         $identifier = clean($input);
     } else if (is_array($input)) {
-        $identifier = clean($input['identifier'] ?? $input['email'] ?? $input['phone'] ?? $input['username'] ?? $input['user'] ?? $_POST['identifier'] ?? $_POST['email'] ?? $_POST['phone'] ?? '');
+        $identifier = clean($input['identifier'] ?? $input['email'] ?? $input['phone'] ?? $input['username'] ?? $input['user'] ?? $input['login'] ?? $_POST['identifier'] ?? $_POST['email'] ?? $_POST['phone'] ?? $_POST['login'] ?? '');
     } else {
-        $identifier = clean($_POST['identifier'] ?? $_POST['email'] ?? $_POST['phone'] ?? $_POST['username'] ?? $_GET['identifier'] ?? $_GET['email'] ?? '');
+        $identifier = clean($_POST['identifier'] ?? $_POST['email'] ?? $_POST['phone'] ?? $_POST['username'] ?? $_POST['login'] ?? $_GET['identifier'] ?? $_GET['email'] ?? '');
     }
     $password = is_array($input) ? ($input['password'] ?? $_POST['password'] ?? '') : ($_POST['password'] ?? '');
     $otp = is_array($input) ? ($input['otp'] ?? $_POST['otp'] ?? '') : ($_POST['otp'] ?? '');
@@ -1441,7 +1429,7 @@ case 'forgot_password':
                        . "<p style='color:#374151; font-size:15px; line-height:1.6; margin:0 0 24px 0;'>We received a request to reset the password for your Ohati account. Click the button below to create your new password:</p>"
 
                        . "<table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin:28px 0;'><tr><td align='center'>"
-                       . "<a href='{$reset_url}' target='_blank' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a>"
+                       . "<a href='{$reset_url}' style='background-color:#E05A47; color:#FFFFFF !important; font-size:16px; font-weight:800; text-decoration:none; padding:16px 36px; border-radius:12px; display:inline-block; letter-spacing:0.3px;'>Reset Password</a>"
                        . "</td></tr></table>"
 
                        . "<table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; margin:24px 0;'><tr>"
@@ -4262,7 +4250,7 @@ case 'advertisements':
         break;
     } else {
         // Query active, admin-approved ads that have not exceeded max_views or max_popups
-        $q = "SELECT a.*, v.name as vendor_name, v.logo as vendor_logo, v.category as vendor_category 
+        $q = "SELECT a.*, v.name as vendor_name, v.logo as vendor_logo, v.cover_photo as vendor_cover, v.category as vendor_category 
               FROM advertisements a 
               JOIN vendors v ON a.vendor_id = v.id 
               WHERE a.status = 'active' 
@@ -4314,7 +4302,7 @@ case 'create_advertisement':
     $vid = intval($input['vendor_id'] ?? 0);
     $title = clean($input['title'] ?? '');
     $desc = clean($input['description'] ?? '');
-    $banner = clean($input['banner_url'] ?? 'img/ads/default.jpg');
+    $banner = clean($input['banner_url'] ?? 'img/default-cover.jpg');
     $placement = clean($input['placement'] ?? 'home_top_banner');
     $days = intval($input['duration_days'] ?? 30);
     $cost = floatval($input['cost'] ?? 0);
@@ -4725,7 +4713,7 @@ case 'get_ad_analytics':
 
 case 'get_admin_campaigns':
     if (!isset($_SESSION['user'])) { http_response_code(401); echo json_encode(['error'=>'Not logged in.']); exit; }
-    $stmt = $pdo->query("SELECT a.*, v.name as vendor_name, v.logo as vendor_logo FROM advertisements a JOIN vendors v ON a.vendor_id = v.id ORDER BY a.id DESC");
+    $stmt = $pdo->query("SELECT a.*, v.name as vendor_name, v.logo as vendor_logo, v.cover_photo as vendor_cover FROM advertisements a JOIN vendors v ON a.vendor_id = v.id ORDER BY a.id DESC");
     echo json_encode($stmt->fetchAll());
     break;
 
@@ -5124,7 +5112,7 @@ case 'get_call_number':
 
 case 'get_admin_ads':
     if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required.']); exit; }
-    $stmt = $pdo->query("SELECT a.*, v.name as vendor_name FROM advertisements a JOIN vendors v ON a.vendor_id = v.id ORDER BY a.id DESC");
+    $stmt = $pdo->query("SELECT a.*, v.name as vendor_name, v.logo as vendor_logo, v.cover_photo as vendor_cover FROM advertisements a JOIN vendors v ON a.vendor_id = v.id ORDER BY a.id DESC");
     echo json_encode($stmt->fetchAll());
     break;
 

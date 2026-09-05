@@ -94,7 +94,7 @@ function run_notification_queue_worker($limit = 20) {
 }
 
 // Enable direct HTTP/Cron execution or CLI execution
-if (php_sapi_name() === 'cli' || isset($_GET['run']) || isset($_GET['cron'])) {
+if ((php_sapi_name() === 'cli' && basename($_SERVER['PHP_SELF'] ?? '') === 'cron_notification_worker.php') || isset($_GET['run']) || isset($_GET['cron'])) {
     header('Content-Type: application/json');
     $res = run_notification_queue_worker(intval($_GET['limit'] ?? 20));
     echo json_encode($res, JSON_PRETTY_PRINT);

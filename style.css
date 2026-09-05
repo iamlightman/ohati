@@ -5553,7 +5553,7 @@ body.auth-page {
 
 .auth-card-container {
     width: 100%;
-    max-width: 440px;
+    max-width: 520px;
     margin: auto;
 }
 
@@ -6902,6 +6902,26 @@ body.dark-theme .chat-call-action-btn {
 body.dark-theme .chat-call-action-btn:hover {
     background: var(--gray-100) !important;
     color: var(--accent) !important;
+}
+
+/* Auth Upload Buttons High Contrast Controls */
+.auth-upload-btn,
+.auth-upload-btn:hover,
+.auth-upload-btn:focus,
+.auth-upload-btn:active {
+    color: #FFFFFF !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.auth-upload-btn:hover {
+    border-color: var(--accent, #F2A735) !important;
+    background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.auth-upload-btn:active {
+    background: rgba(242, 167, 53, 0.25) !important;
+    border-color: var(--accent, #F2A735) !important;
 }
 
 /* User Account Role Badges */

@@ -2718,12 +2718,14 @@ async function sendChatMessage(vendorId) {
             const indicator = document.getElementById('chat-typing-indicator');
             if (indicator) indicator.remove();
             
-            // Render vendor reply
-            const vendorMsgEl = document.createElement('div');
-            vendorMsgEl.className = 'msg-bubble msg-vendor';
-            vendorMsgEl.innerHTML = data.vendor_reply.message.replace(/\n/g, '<br>');
-            area.appendChild(vendorMsgEl);
-            scrollToBottom('chat-msg-area');
+            // Render vendor reply if available
+            if (data && data.vendor_reply && data.vendor_reply.message) {
+                const vendorMsgEl = document.createElement('div');
+                vendorMsgEl.className = 'msg-bubble msg-vendor';
+                vendorMsgEl.innerHTML = data.vendor_reply.message.replace(/\n/g, '<br>');
+                area.appendChild(vendorMsgEl);
+                scrollToBottom('chat-msg-area');
+            }
         }, 1200);
         
     } catch (e) {
@@ -3062,13 +3064,15 @@ function updateUserSessionUI() {
     const homeGreeting = document.querySelector('.greeting-text h2');
     const homeAvatar = document.querySelector('.greeting-row img');
     
-    if (state.currentUser) {
-        if (nameEl) nameEl.innerText = state.currentUser.name;
-        if (emailEl) emailEl.innerText = state.currentUser.email || '';
-        if (avatarEl) avatarEl.src = state.currentUser.avatar || DEFAULT_USER_AVATAR;
+    const currentUser = state.currentUser || state.user;
+    if (currentUser) {
+        if (nameEl) nameEl.innerText = currentUser.name;
+        if (emailEl) emailEl.innerText = currentUser.email || '';
+        const resolvedAv = (typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(currentUser.avatar) : (currentUser.avatar || DEFAULT_USER_AVATAR);
+        if (avatarEl) avatarEl.src = resolvedAv;
         
-        if (homeGreeting) homeGreeting.innerHTML = `Maba, ${state.currentUser.name.split(' ')[0]} ✨`;
-        if (homeAvatar) homeAvatar.src = state.currentUser.avatar || DEFAULT_USER_AVATAR;
+        if (homeGreeting) homeGreeting.innerHTML = `Maba, ${(currentUser.name || '').split(' ')[0]} ✨`;
+        if (homeAvatar) homeAvatar.src = resolvedAv;
         
         const signInItem = document.getElementById('sidebar-signin-item');
         if (signInItem) {
@@ -3195,28 +3199,53 @@ function openProfileModal() {
 
 function saveProfileSettings(e) {
     e.preventDefault();
-    const name = document.getElementById('profile-name').value;
-    const email = document.getElementById('profile-email').value;
-    const theme = document.getElementById('profile-theme').value;
-    const guests = document.getElementById('profile-guests').value;
-    const avatar = document.getElementById('profile-avatar-input').value;
+    const name = document.getElementById('profile-name')?.value;
+    const email = document.getElementById('profile-email')?.value;
+    const theme = document.getElementById('profile-theme')?.value;
+    const guests = document.getElementById('profile-guests')?.value;
+    const avatar = document.getElementById('profile-avatar-input')?.value;
     
-    if (!state.currentUser) {
-        state.currentUser = {};
-    }
-    state.currentUser.name = name;
-    state.currentUser.email = email;
-    state.currentUser.avatar = avatar;
-    localStorage.setItem('ohati_user_session', JSON.stringify(state.currentUser));
+    if (!state.user) state.user = {};
+    if (name) state.user.name = name;
+    if (email) state.user.email = email;
+    if (avatar) state.user.avatar = avatar;
+    state.currentUser = state.user;
+    
+    try {
+        localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+    } catch (eErr) {}
     
     if (state.event) {
         state.event.theme = theme;
         state.event.guest_count = guests;
     }
-    
-    closeBookingModal();
-    updateUserSessionUI();
-    showPushNotification("Profile Updated", "Local storage and theme configurations updated successfully.");
+
+    const payload = {};
+    if (name) payload.name = name;
+    if (email) payload.email = email;
+    if (avatar) payload.avatar = avatar;
+
+    if (window.API && typeof window.API.updateProfile === 'function' && Object.keys(payload).length > 0) {
+        window.API.updateProfile(payload).then(res => {
+            if (res && res.user) {
+                state.user = Object.assign(state.user || {}, res.user);
+                try {
+                    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                } catch (eErr) {}
+            }
+            closeBookingModal();
+            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            if (typeof showPushNotification === 'function') showPushNotification("Profile Updated", "Your profile settings have been updated successfully.");
+        }).catch(err => {
+            closeBookingModal();
+            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+            if (typeof showPushNotification === 'function') showPushNotification("Profile Saved", "Settings saved locally.");
+        });
+    } else {
+        closeBookingModal();
+        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
+        if (typeof showPushNotification === 'function') showPushNotification("Profile Updated", "Profile settings saved.");
+    }
 }
 
 function openSignUpModal() {

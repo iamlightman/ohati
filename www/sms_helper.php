@@ -51,6 +51,20 @@ function send_smsonlinegh($phone, $message) {
     $api_key = defined('SMS_API_KEY') ? SMS_API_KEY : '38e66cec652f99e5bf32fa1ff09df0ce62865cf854f68f0e5deed46a96e466be';
     $sender_id = defined('SMS_SENDER_ID') ? SMS_SENDER_ID : 'ohati';
 
+    $host = strtolower($_SERVER['HTTP_HOST'] ?? '');
+    $is_local = (
+        empty($host) ||
+        $host === 'localhost' ||
+        strpos($host, 'localhost:') !== false ||
+        strpos($host, '127.0.0.1') !== false ||
+        php_sapi_name() === 'cli'
+    );
+
+    if ($is_local) {
+        @file_put_contents(__DIR__ . '/sms_log.txt', "[" . date('Y-m-d H:i:s') . "] SMS to {$formatted_phone}: {$clean_msg}\n", FILE_APPEND);
+        return ['success' => true, 'local_dev' => true];
+    }
+
     // SMSOnlineGh API v5 Official JSON Payload Structure
     $v5_payload = [
         'text' => $clean_msg,

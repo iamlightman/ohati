@@ -142,6 +142,28 @@ function upload_media_file($file_input, $folder = 'general', $max_width = 1920) 
 
     $relative_url = 'uploads/' . trim($folder, '/') . '/' . $target_filename;
 
+    // Mirror upload to root, www, and ios directories if they exist
+    if (file_exists($target_file_path)) {
+        $sub_path = 'uploads/' . trim($folder, '/') . '/' . $target_filename;
+        $mirror_dirs = [
+            __DIR__ . '/' . $sub_path,
+            __DIR__ . '/www/' . $sub_path,
+            __DIR__ . '/ios/App/App/public/' . $sub_path,
+            dirname(__DIR__) . '/' . $sub_path,
+            dirname(__DIR__) . '/www/' . $sub_path,
+            dirname(__DIR__) . '/ios/App/App/public/' . $sub_path
+        ];
+        foreach ($mirror_dirs as $m_path) {
+            $m_dir = dirname($m_path);
+            if (!file_exists($m_dir)) {
+                @mkdir($m_dir, 0777, true);
+            }
+            if ($m_path !== $target_file_path) {
+                @copy($target_file_path, $m_path);
+            }
+        }
+    }
+
     // Check for Cloudinary Cloud Storage Integration
     $cloudinary_url = getenv('CLOUDINARY_URL') ?: (defined('CLOUDINARY_URL') ? CLOUDINARY_URL : '');
     if (!empty($cloudinary_url) && file_exists($target_file_path)) {
@@ -209,18 +231,32 @@ function format_full_image_url($url) {
         return $url;
     }
     
+    // Clean any accidental "scratch/" prefix from path
+    $clean_url = preg_replace('#^scratch/#i', '', $url);
+    $clean_relative = preg_replace('/[\?&]v=\d+/', '', $clean_url);
+    $local_path = __DIR__ . '/' . ltrim($clean_relative, '/');
+    if (!file_exists($local_path)) {
+        $local_path = dirname(__DIR__) . '/' . ltrim($clean_relative, '/');
+    }
+    if (file_exists($local_path)) {
+        $mtime = filemtime($local_path);
+        if (strpos($clean_url, 'v=') === false) {
+            $clean_url .= (strpos($clean_url, '?') !== false ? '&v=' : '?v=') . $mtime;
+        }
+    }
+
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     
-    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
-        if ($scheme === 'https' && strpos($url, 'http://') === 0) {
-            return 'https://' . substr($url, 7);
+    if (strpos($clean_url, 'http://') === 0 || strpos($clean_url, 'https://') === 0) {
+        if ($scheme === 'https' && strpos($clean_url, 'http://') === 0) {
+            return 'https://' . substr($clean_url, 7);
         }
-        return $url;
+        return $clean_url;
     }
     
     $host = $_SERVER['HTTP_HOST'] ?? '';
     if (empty($host)) {
-        return $url;
+        return $clean_url;
     }
 
     $script_name = $_SERVER['SCRIPT_NAME'] ?? '';
@@ -231,7 +267,7 @@ function format_full_image_url($url) {
         $dir = rtrim(str_replace('\\', '/', $dir), '/');
     }
     
-    $clean_path = ltrim($url, '/');
+    $clean_path = ltrim($clean_url, '/');
     return "$scheme://$host$dir/$clean_path";
 }
 ?>

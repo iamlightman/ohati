@@ -150,7 +150,10 @@ const API = {
         }
         return this.post('login', data);
     },
-    logout() { return this.get('logout'); },
+    logout(token) { 
+        const t = token || localStorage.getItem('ohati_auth_token') || '';
+        return this.get('logout', t ? { auth_token: t } : {});
+    },
     deleteAccount() { return this.get('delete_account'); },
     getVendorFollowers(vendorId = 0) { return this.get(`get_vendor_followers${vendorId ? '?vendor_id=' + vendorId : ''}`); },
     getVendorFollowing() { return this.get('get_vendor_following'); },

@@ -16,5 +16,6 @@ uploads/*
 node_modules/
 scratch/
 mail_log.txt
+sms_log.txt
 test_login.php
 

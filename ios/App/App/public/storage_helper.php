@@ -142,6 +142,28 @@ function upload_media_file($file_input, $folder = 'general', $max_width = 1920) 
 
     $relative_url = 'uploads/' . trim($folder, '/') . '/' . $target_filename;
 
+    // Mirror upload to root, www, and ios directories if they exist
+    if (file_exists($target_file_path)) {
+        $sub_path = 'uploads/' . trim($folder, '/') . '/' . $target_filename;
+        $mirror_dirs = [
+            __DIR__ . '/' . $sub_path,
+            __DIR__ . '/www/' . $sub_path,
+            __DIR__ . '/ios/App/App/public/' . $sub_path,
+            dirname(__DIR__) . '/' . $sub_path,
+            dirname(__DIR__) . '/www/' . $sub_path,
+            dirname(__DIR__) . '/ios/App/App/public/' . $sub_path
+        ];
+        foreach ($mirror_dirs as $m_path) {
+            $m_dir = dirname($m_path);
+            if (!file_exists($m_dir)) {
+                @mkdir($m_dir, 0777, true);
+            }
+            if ($m_path !== $target_file_path) {
+                @copy($target_file_path, $m_path);
+            }
+        }
+    }
+
     // Check for Cloudinary Cloud Storage Integration
     $cloudinary_url = getenv('CLOUDINARY_URL') ?: (defined('CLOUDINARY_URL') ? CLOUDINARY_URL : '');
     if (!empty($cloudinary_url) && file_exists($target_file_path)) {

@@ -903,13 +903,63 @@ function closeWelcomePopup(event) {
 }
 
 window.openAppDownloadUrl = function (platform) {
-    if (typeof showPushNotification === 'function') {
-        showPushNotification('App Coming Soon 🚀', 'The official Ohati Mobile App for Android & iOS is coming soon to the App Store & Google Play Store!');
+    const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isNative) {
+        return; // Hidden on native Android/iOS Capacitor webview
+    }
+
+    const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isAndroid = /android/i.test(ua);
+
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ohati.app';
+    const appStoreUrl = 'https://apps.apple.com/app/ohati/id6740000000';
+
+    if (platform === 'android') {
+        window.open(playStoreUrl, '_blank');
+        return;
+    }
+    if (platform === 'ios') {
+        window.open(appStoreUrl, '_blank');
+        return;
+    }
+
+    // Auto-detect browser device type
+    if (isAndroid) {
+        window.open(playStoreUrl, '_blank');
+    } else if (isIOS) {
+        window.open(appStoreUrl, '_blank');
     } else {
-        alert('The official Ohati Mobile App for Android & iOS is coming soon!');
+        showAppDownloadModal();
     }
 };
 window.showBadgeMessage = window.openAppDownloadUrl;
+
+function showAppDownloadModal() {
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ohati.app';
+    const appStoreUrl = 'https://apps.apple.com/app/ohati/id6740000000';
+    openModal(`
+        <div style="text-align:center; padding:24px 16px;">
+            <div style="width:68px; height:68px; background:linear-gradient(135deg, #1B2B4B, #0F172A); color:#F2A735; border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem; box-shadow:0 10px 25px rgba(27,43,75,0.25);">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            <h3 style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:800; color:var(--gray-900, #0F172A); margin:0 0 6px 0;">Get Ohati Mobile App</h3>
+            <p style="font-size:0.88rem; color:var(--gray-600, #475569); line-height:1.5; margin:0 0 20px 0;">
+                Experience faster booking, real-time chat notifications, and vendor updates on your phone.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+                <a href="${playStoreUrl}" target="_blank" class="btn btn-primary btn-full" style="height:48px; background:#34A853; border-color:#34A853; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; color:#fff;">
+                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Get it on Google Play
+                </a>
+                <a href="${appStoreUrl}" target="_blank" class="btn btn-primary btn-full" style="height:48px; background:#000000; border-color:#000000; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; color:#fff;">
+                    <i class="fa-brands fa-apple" style="font-size:1.25rem;"></i> Download on App Store
+                </a>
+            </div>
+            <button class="btn btn-outline btn-full" onclick="closeModal()" style="border-radius:12px; font-weight:700;">Close</button>
+        </div>
+    `);
+}
+window.showAppDownloadModal = showAppDownloadModal;
 
 function openAllCategoriesModal() {
     const categories = state.categories || [];
@@ -1021,14 +1071,11 @@ function checkAndShowGeneralSponsoredPopup() {
         // Record popup trigger count in backend
         API.get('record_ad_popup', { ad_id: ad.id });
 
-        let bannerImg = ad.banner_url || 'img/ads/default.jpg';
-        if (bannerImg && !bannerImg.startsWith('data:') && !bannerImg.startsWith('http')) {
-            bannerImg = bannerImg;
-        }
+        let bannerImg = window.resolveImageUrl(ad.banner_url || ad.vendor_cover || ad.cover_photo, 'cover');
 
         const html = `
             <div class="auth-modal-header" style="position:relative; text-align:center;">
-                <span style="background:var(--accent); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:4px; margin-bottom:8px; text-transform:uppercase;">
+                <span style="background:#0F172A; color:#FBBF24; border:1px solid #F59E0B; font-size:0.68rem; font-weight:800; padding:4px 12px; border-radius:12px; display:inline-flex; align-items:center; gap:4px; margin-bottom:8px; text-transform:uppercase;">
                     <i class="fa-solid fa-rectangle-ad"></i> Sponsored Promotion
                 </span>
                 <h2 class="auth-modal-title" style="font-family:'Fraunces', serif;">${escapeHTML(ad.title)}</h2>

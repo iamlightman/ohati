@@ -465,7 +465,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     ${activeAds.map(ad => `
                         <div class="sponsored-ad-banner" onclick="handleAdClick(${ad.id}, '${ad.destination}', ${ad.vendor_id})">
                             <div class="sponsored-ad-img-wrap">
-                                <img src="${ad.banner_url || 'img/ads/default.jpg'}" alt="${ad.title}">
+                                <img src="${window.resolveImageUrl(ad.banner_url || ad.vendor_cover || ad.cover_photo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(ad.title || 'Ad')}">
                                 <span class="sponsored-tag"><i class="fa-solid fa-rectangle-ad"></i> Sponsored</span>
                             </div>
                             <div class="sponsored-ad-content">
@@ -532,7 +532,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <i class="fa-solid ${labelIcon}"></i> ${recLabel}
                         </div>
                         <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
-                            <img src="${recVendor.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400';" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
+                            <img src="${recVendor.logo || 'img/default-avatar.png'}" onerror="this.onerror=null; this.src='img/default-avatar.png';" style="width:50px; height:50px; border-radius:10px; object-fit:cover; border:1px solid var(--gray-200);" alt="">
                             <div style="flex:1; min-width:0;">
                                 <h4 style="font-family:'Fraunces',serif; font-size:0.95rem; margin:0 0 2px 0; color:var(--primary); display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     <span>${recVendor.name}</span>
@@ -572,7 +572,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
             rating: v.rating || '5.0',
             reviews: v.reviews_count || 0,
             city: v.city || v.location || 'Accra, Ghana',
-            img: v.cover_photo || v.logo || 'img/app_icon.png',
+            img: window.resolveImageUrl(v.cover_photo || v.logo, 'cover'),
             initials: initials,
             badgeClass: '',
             verification_badge: v.verification_badge || 'grey',
@@ -595,7 +595,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
         return `
             <div class="handpicked-card" onclick="${clickAction}">
                 <div class="handpicked-img-wrapper">
-                    <img src="${v.img}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600';" alt="${v.name}" class="handpicked-cover">
+                    <img src="${v.img}" onerror="this.onerror=null; this.src='img/default-cover.jpg';" alt="${v.name}" class="handpicked-cover">
                     <div class="handpicked-logo-badge ${v.badgeClass || ''}">
                         ${badgeContent}
                     </div>
@@ -641,7 +641,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <span class="section-subtitle">HANDPICKED FOR YOU</span>
                     <h2 class="section-main-title">The best for your special day</h2>
                 </div>
-                <a href="#" class="view-all-link" onclick="navigateTo('search'); event.preventDefault();">View all <i class="fa-solid fa-chevron-right"></i></a>
+                <a href="javascript:void(0)" class="view-all-link" onclick="navigateTo('search'); event.preventDefault();">View all <i class="fa-solid fa-chevron-right"></i></a>
             </div>
             
             <div class="handpicked-scroller scrollable-x">
@@ -664,7 +664,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <span class="section-subtitle">CATEGORIES</span>
                     <h3 class="section-title">Browse Categories</h3>
                 </div>
-                <a href="#" class="section-link" onclick="openAllCategoriesModal(); event.preventDefault();">View All</a>
+                <a href="javascript:void(0)" class="section-link" onclick="openAllCategoriesModal(); event.preventDefault();">View All</a>
             </div>
             <div class="category-grid">
                 ${categories.slice(0, 9).map(c => `
@@ -683,7 +683,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <span class="section-subtitle">PREMIUM SELECTION</span>
                     <h3 class="section-title">Featured Vendors</h3>
                 </div>
-                <a href="#" class="section-link" onclick="navigateTo('search'); event.preventDefault();">View All</a>
+                <a href="javascript:void(0)" class="section-link" onclick="navigateTo('search'); event.preventDefault();">View All</a>
             </div>
             <div class="vendor-cards-scroll featured-vendors-container" id="featured-vendors-scroll">
                 ${premiumVendors.length > 0 ? premiumVendors.map(v => `
@@ -1339,7 +1339,7 @@ function renderRecommendationCard(v) {
     return `
         <div class="recommendation-card" onclick="viewVendorDetails(${v.id})" style="flex:0 0 180px; background:#fff; border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:var(--shadow-sm); transition:transform 0.2s ease;">
             <div style="position:relative; height:105px; background:var(--gray-100);">
-                <img src="${v.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=200'}" style="width:100%; height:100%; object-fit:cover; display:block;">
+                <img src="${v.cover_photo || 'img/default-cover.jpg'}" style="width:100%; height:100%; object-fit:cover; display:block;">
                 ${isPromoted ? `
                     <span style="position:absolute; top:6px; left:6px; background:var(--accent); color:#fff; font-size:0.55rem; font-weight:800; padding:2px 6px; border-radius:4px; display:flex; align-items:center; gap:2px;">
                         <i class="fa-solid fa-crown" style="font-size:0.5rem;"></i> Promoted
@@ -1435,7 +1435,7 @@ function toggleCompareDetail(vid, e) {
                             <th style="padding:8px 6px;text-align:left;font-size:0.65rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--gray-200);min-width:70px;"></th>
                             ${allVendors.map((cv, i) => `
                                 <th style="padding:8px 6px;text-align:center;border-bottom:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};min-width:90px;cursor:pointer;" onclick="${i > 0 ? 'closeModal(); viewVendorDetails(' + cv.id + ')' : ''}">
-                                    <img src="${cv.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
+                                    <img src="${cv.logo || 'img/default-avatar.png'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${i === 0 ? 'var(--accent)' : 'var(--gray-200)'};margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;">
                                     <div style="font-size:0.7rem;font-weight:700;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;">${cv.name}</div>
                                     ${i === 0 ? '<span style="font-size:0.5rem;background:var(--accent);color:var(--primary-dark);padding:1px 6px;border-radius:3px;font-weight:800;text-transform:uppercase;">Current</span>' : ''}
                                 </th>
@@ -1882,7 +1882,7 @@ function loadDesktopChatPartner(vid) {
         contentPanel.innerHTML = `
             <div class="chat-screen" data-vendor-id="${v.id}">
                 <div class="chat-header">
-                    <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                    <img class="chat-vendor-avatar" src="${v.logo || 'img/default-avatar.png'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                         <div class="chat-vendor-name">${nameWithBadge}</div>
                         <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
@@ -2138,7 +2138,7 @@ function renderChatShell(v) {
         <div class="chat-screen" data-vendor-id="${v.id}">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="closeActiveChat()"><i class="fa-solid fa-chevron-left"></i></button>
-                <img class="chat-vendor-avatar" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                <img class="chat-vendor-avatar" src="${v.logo || 'img/default-avatar.png'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                 <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-name">${nameWithBadge}</div>
                     <div class="chat-vendor-status" id="chat-partner-status">${statusText}</div>
@@ -3687,7 +3687,7 @@ function renderFavoritesScreen(favorites) {
         <div class="favorites-grid">
             ${favorites.map(f => `
                 <div class="fav-card" onclick="viewVendorDetails(${f.id})" style="position:relative;">
-                    <img class="fav-cover" src="${f.cover_photo || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=200'}" alt="">
+                    <img class="fav-cover" src="${f.cover_photo || 'img/default-cover.jpg'}" alt="">
                     <button onclick="shareVendorProfile(state.favorites.find(x => x.id === ${f.id}), event)" style="position:absolute; top:8px; right:8px; border:none; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); color:#1B2B4B; display:flex; align-items:center; justify-content:center; font-size:0.75rem; cursor:pointer; box-shadow:var(--shadow-sm); z-index:5;">
                         <i class="fa-solid fa-share-nodes"></i>
                     </button>
@@ -4324,7 +4324,7 @@ function initCompareScreen(params = {}, targetContainer = null) {
                     <div class="compare-vendor-col">
                         <div class="compare-vendor-header" style="position:relative; padding-top:16px;">
                             <button onclick="removeCompareVendor(${v.id}, event)" style="position:absolute; right:4px; top:4px; background:none; border:none; color:var(--error); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; padding:4px;" title="Remove"><i class="fa-solid fa-circle-xmark"></i></button>
-                            <img class="compare-vendor-logo" src="${v.logo || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400'}" alt="">
+                            <img class="compare-vendor-logo" src="${v.logo || 'img/default-avatar.png'}" alt="">
                             <div class="compare-vendor-name">${v.name}</div>
                         </div>
                         <div class="compare-row">
@@ -4589,10 +4589,10 @@ window.openAppExclusiveModal = function(featureTitle = "App Exclusive Feature", 
 
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
                 <button class="btn btn-primary btn-full" onclick="openAppDownloadUrl('android')" style="height:44px; font-size:0.88rem; font-weight:700; background:#34A853; border-color:#34A853; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Download for Android (Coming Soon)
+                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Download for Android
                 </button>
                 <button class="btn btn-primary btn-full" onclick="openAppDownloadUrl('ios')" style="height:44px; font-size:0.88rem; font-weight:700; background:#000; border-color:#000; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <i class="fa-brands fa-apple" style="font-size:1.2rem;"></i> Download for iOS (Coming Soon)
+                    <i class="fa-brands fa-apple" style="font-size:1.2rem;"></i> Download for iOS
                 </button>
             </div>
 
@@ -6336,13 +6336,12 @@ function renderPromoPackages() {
     const platinumReach = state.settings?.ad_plan_platinum_reach || "200,000+ planners";
 
     container.innerHTML = `
-        <div class="p-section" style="padding-top:0;">
             <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); padding:20px 24px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25); margin-bottom:20px; box-shadow:0 8px 24px rgba(11, 31, 58, 0.12);">
-                <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800; margin-bottom:4px;">
+                <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#FBBF24; font-weight:800; margin-bottom:6px;">
                     <i class="fa-solid fa-bullhorn"></i> High-Impact Exposure
                 </div>
-                <h4 style="font-family:'Fraunces',serif; font-size:1.25rem; font-weight:700; margin:0 0 6px 0;">Select an Advertising Plan</h4>
-                <p style="font-size:0.78rem; opacity:0.88; margin:0; line-height:1.4; max-width:600px;">Pick a promotional tier to spotlight your services to thousands of active Ghanaian event planners across Accra, Kumasi, Takoradi, and nationwide.</p>
+                <h4 style="font-family:'Fraunces',serif; font-size:1.3rem; font-weight:800; margin:0 0 6px 0; color:#FFFFFF !important;">Select an Advertising Plan</h4>
+                <p style="font-size:0.82rem; color:#F1F5F9 !important; opacity:1; margin:0; line-height:1.5; max-width:600px;">Pick a promotional tier to spotlight your services to thousands of active Ghanaian event planners across Accra, Kumasi, Takoradi, and nationwide.</p>
             </div>
 
             <div class="promo-packages-grid" style="display:flex; flex-direction:column; gap:16px;">
@@ -6387,8 +6386,8 @@ function renderPromoPackages() {
                 </div>
 
                 <!-- Premium -->
-                <div class="card" style="padding:20px; border-radius:16px; border:1px solid var(--accent); background:linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%); box-shadow:0 6px 20px rgba(242, 167, 53, 0.12); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
-                    <div style="position:absolute; top:-11px; right:16px; background:linear-gradient(135deg, var(--accent) 0%, #D97706 100%); color:#0B1F3A; font-size:0.58rem; font-weight:900; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">Most Popular</div>
+                <div class="card" style="padding:20px; border-radius:16px; border:1px solid #D97706; background:linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%); box-shadow:0 6px 20px rgba(217, 119, 6, 0.12); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+                    <div style="position:absolute; top:-11px; right:16px; background:linear-gradient(135deg, #D97706 0%, #B45309 100%); color:#FFFFFF; font-size:0.58rem; font-weight:900; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">Most Popular</div>
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                             <div>
@@ -6404,7 +6403,7 @@ function renderPromoPackages() {
                             <li>Estimated reach: <strong>${premiumReach}</strong></li>
                         </ul>
                     </div>
-                    <button class="btn btn-primary btn-sm btn-full" style="background:linear-gradient(135deg, var(--accent) 0%, #D97706 100%); color:#0B1F3A; border:none; border-radius:10px; font-weight:800; padding:10px; box-shadow:0 4px 12px rgba(242, 167, 53, 0.3);" onclick="purchasePromoPackage('Premium', 30, ${premiumPrice})">Buy Premium</button>
+                    <button class="btn btn-primary btn-sm btn-full" style="background:linear-gradient(135deg, #D97706 0%, #B45309 100%); color:#FFFFFF; border:none; border-radius:10px; font-weight:800; padding:10px; box-shadow:0 4px 12px rgba(217, 119, 6, 0.3);" onclick="purchasePromoPackage('Premium', 30, ${premiumPrice})">Buy Premium</button>
                 </div>
 
                 <!-- Platinum -->
@@ -6414,9 +6413,9 @@ function renderPromoPackages() {
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                             <div>
                                 <h3 style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin:0 0 2px 0;">Platinum</h3>
-                                <span style="font-size:0.65rem; color:var(--accent); font-weight:700; background:rgba(242, 167, 53, 0.15); padding:2px 8px; border-radius:6px;">90 Days (35% Off)</span>
+                                <span style="font-size:0.65rem; color:#FBBF24; font-weight:800; background:rgba(251, 191, 36, 0.2); padding:2px 8px; border-radius:6px;">90 Days (35% Off)</span>
                             </div>
-                            <div style="font-size:1.25rem; font-weight:800; color:var(--accent);">GH₵ ${platinumPrice}</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:#FBBF24;">GH₵ ${platinumPrice}</div>
                         </div>
                         <ul style="font-size:0.75rem; color:#E2E8F0; padding-left:18px; margin-bottom:16px; line-height:1.6; list-style-type:disc;">
                             <li>Maximum top-tier placement everywhere</li>
@@ -6448,11 +6447,11 @@ function renderPromoAnalytics() {
         container.innerHTML = `
             <div class="p-section" style="display:flex; flex-direction:column; gap:16px;">
                 <div style="background:linear-gradient(135deg, #0B1F3A 0%, #1B2B4B 100%); padding:20px; border-radius:16px; color:#fff; border:1px solid rgba(242, 167, 53, 0.25);">
-                    <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--accent); font-weight:800; margin-bottom:4px;">
+                    <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#FBBF24; font-weight:800; margin-bottom:6px;">
                         <i class="fa-solid fa-chart-pie"></i> Performance Intelligence
                     </div>
-                    <h4 style="font-family:'Fraunces',serif; font-size:1.2rem; margin:0 0 6px 0;">Promotion Analytics & ROI</h4>
-                    <p style="font-size:0.75rem; opacity:0.85; margin:0; line-height:1.4;">Live tracking of impression reach, conversion clicks, and engagement performance for all your active Ghana advertising campaigns.</p>
+                    <h4 style="font-family:'Fraunces',serif; font-size:1.3rem; font-weight:800; margin:0 0 6px 0; color:#FFFFFF !important;">Promotion Analytics & ROI</h4>
+                    <p style="font-size:0.82rem; color:#F1F5F9 !important; opacity:1; margin:0; line-height:1.5;">Live tracking of impression reach, conversion clicks, and engagement performance for all your active Ghana advertising campaigns.</p>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -6486,7 +6485,8 @@ function renderPromoAnalytics() {
 }
 
 function purchasePromoPackage(packageName, days, price) {
-    window.currentAdBannerBase64 = 'img/ads/default.jpg';
+    const userCover = state.vendor?.cover_photo || state.user?.cover_photo || state.user?.avatar || state.vendor?.logo;
+    window.currentAdBannerBase64 = userCover ? window.resolveImageUrl(userCover, 'cover') : window.DEFAULT_VENDOR_COVER;
     window.currentAdCost = price;
     window.currentAdDuration = days;
     window._adReceiptData = '';
@@ -6507,23 +6507,23 @@ function purchasePromoPackage(packageName, days, price) {
             </div>
             
             <!-- Live Ad Banner Preview -->
-            <div class="card p-12 mb-16" style="border:1px solid var(--accent); background:var(--gray-50); border-radius:12px;">
-                <div style="font-size:0.7rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:4px;">
+            <div class="card p-12 mb-16" style="border:1px solid #D97706; background:#FFFBEB; border-radius:12px;">
+                <div style="font-size:0.7rem; font-weight:800; color:#B45309; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:4px;">
                     <i class="fa-solid fa-eye"></i> Live Advertisement Preview
                 </div>
                 <div class="sponsored-card" style="border-radius:12px; overflow:hidden; border:1px solid var(--gray-200); background:var(--white); box-shadow:var(--shadow-sm);">
                     <div style="position:relative; height:120px; background:var(--gray-100);">
-                        <img id="preview-ad-banner" src="${window.currentAdBannerBase64}" style="width:100%; height:100%; object-fit:cover; display:block;">
-                        <span style="position:absolute; top:8px; left:8px; background:var(--accent); color:#fff; font-size:0.6rem; font-weight:800; padding:3px 6px; border-radius:4px; display:flex; align-items:center; gap:4px;">
+                        <img id="preview-ad-banner" src="${window.currentAdBannerBase64}" onerror="window.handleImageError(this, 'cover')" style="width:100%; height:100%; object-fit:cover; display:block;">
+                        <span style="position:absolute; top:8px; left:8px; background:#0F172A; color:#FBBF24; font-size:0.65rem; font-weight:800; padding:4px 8px; border-radius:6px; display:flex; align-items:center; gap:4px; border:1px solid #F59E0B;">
                             <i class="fa-solid fa-rectangle-ad"></i> Sponsored
                         </span>
                     </div>
                     <div style="padding:12px;">
                         <h4 id="preview-ad-title" style="margin:0 0 4px 0; font-size:0.85rem; font-weight:700; color:var(--gray-800); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Summer Bridal Special</h4>
-                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-500); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
+                        <p id="preview-ad-desc" style="margin:0 0 10px 0; font-size:0.75rem; color:var(--gray-600); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px;">Catchy description will appear here...</p>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.7rem; color:var(--gray-400);"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
-                            <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:4px 10px; font-size:0.7rem; font-weight:700; background:var(--accent); border-color:var(--accent);">Learn More</button>
+                            <span style="font-size:0.75rem; color:#475569; font-weight:600;"><i class="fa-solid fa-location-dot"></i> <span id="preview-ad-location">All Locations</span></span>
+                            <button id="preview-ad-cta" class="btn btn-primary btn-xs" style="padding:5px 12px; font-size:0.7rem; font-weight:800; background:#0F172A; color:#FFFFFF; border:none;">Learn More</button>
                         </div>
                     </div>
                 </div>
@@ -6940,7 +6940,10 @@ function updateAdPreview() {
     const ctaVal = document.getElementById('ad-cta-text').value;
 
     const previewBanner = document.getElementById('preview-ad-banner');
-    if (previewBanner) previewBanner.src = window.currentAdBannerBase64 || 'img/ads/default.jpg';
+    if (previewBanner) {
+        const currentImg = window.currentAdBannerBase64 || state.vendor?.cover_photo || state.user?.cover_photo || state.user?.avatar;
+        previewBanner.src = window.resolveImageUrl(currentImg, 'cover');
+    }
     document.getElementById('preview-ad-title').textContent = titleVal;
     document.getElementById('preview-ad-desc').textContent = descVal;
     document.getElementById('preview-ad-location').textContent = locVal === 'All' ? 'All Locations' : locVal + ' only';
@@ -6970,7 +6973,7 @@ function payForAdCampaign() {
         vendor_id: state.user.vendor_id,
         title: title,
         description: desc,
-        banner_url: window.currentAdBannerBase64 || 'img/ads/default.jpg',
+        banner_url: window.currentAdBannerBase64 || state.vendor?.cover_photo || state.user?.cover_photo || 'img/default-cover.jpg',
         placement: placement,
         duration_days: duration,
         cost: cost,

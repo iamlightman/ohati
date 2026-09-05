@@ -8,7 +8,7 @@ if (file_exists(__DIR__ . '/ohati_config.php')) {
 }
 
 if (!function_exists('create_pdo_conn')) {
-    function create_pdo_conn($dbname, $dbuser, $dbpass, $host = 'localhost') {
+    function create_pdo_conn($dbname, $dbuser, $dbpass, $host = '127.0.0.1') {
         try {
             $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -26,13 +26,34 @@ if (!function_exists('create_pdo_conn')) {
                 $conn->exec("USE `$dbname`");
                 return $conn;
             } catch (PDOException $e2) {
+                // Local Development Fallback: Try connecting as local MySQL root if live config credentials fail locally
+                $h = strtolower($_SERVER['HTTP_HOST'] ?? '');
+                $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+                $doc_root = $_SERVER['DOCUMENT_ROOT'] ?? '';
+                $is_local_dev = ($host === 'localhost' || $host === '127.0.0.1' || empty($h) || strpos($h, 'localhost') !== false || strpos($h, '127.0.0.1') !== false || $ip === '127.0.0.1' || $ip === '::1' || php_sapi_name() === 'cli' || stripos($doc_root, 'xampp') !== false);
+                
+                if ($is_local_dev && ($dbuser !== 'root' || !empty($dbpass))) {
+                    try {
+                        $conn = new PDO("mysql:host=127.0.0.1", "root", "", [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                        ]);
+                        $conn->exec("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                        $conn->exec("USE `$dbname`");
+                        return $conn;
+                    } catch (PDOException $e3) {}
+                }
+
+                if ($host === '127.0.0.1') {
+                    return create_pdo_conn($dbname, $dbuser, $dbpass, 'localhost');
+                }
                 return null;
             }
         }
     }
 }
 
-$host = defined('DB_HOST') ? DB_HOST : 'localhost';
+$host = defined('DB_HOST') ? DB_HOST : '127.0.0.1';
 $db_pass = defined('DB_PASS') ? DB_PASS : '';
 
 // 1. Primary Database Connection: ohaticom_1 ($pdo / $pdo_1)
@@ -96,6 +117,7 @@ if (!$didit_schema_done) {
     try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_session_id VARCHAR(255) DEFAULT NULL"); } catch (Exception $eCol) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_decision VARCHAR(50) DEFAULT NULL"); } catch (Exception $eCol) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN didit_verification_data TEXT DEFAULT NULL"); } catch (Exception $eCol) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN cover_photo VARCHAR(500) DEFAULT ''"); } catch (Exception $eCol) {}
 
     try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_session_id VARCHAR(255) DEFAULT NULL"); } catch (Exception $eCol) {}
     try { $pdo->exec("ALTER TABLE vendors ADD COLUMN didit_decision VARCHAR(50) DEFAULT NULL"); } catch (Exception $eCol) {}
@@ -461,9 +483,9 @@ try {
 
         // Seed sample comments for Post #1 and Post #4
         $ins_com = $pdo->prepare("INSERT INTO blog_comments (post_id, author_name, author_avatar, comment, status, created_at) VALUES (?,?,?,?,?,?)");
-        $ins_com->execute([1, 'Efia Dufie', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150', 'This timeline guide saved our wedding planning! The recommendation to book chilling services 6 months ahead was spot on.', 'approved', $now_str]);
-        $ins_com->execute([1, 'Kwadwo Poku', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150', 'Great article! Highly recommend locking in venues early in Accra.', 'approved', $now_str]);
-        $ins_com->execute([4, 'Akosua Baako', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150', 'Chill & Serve Ghana handled our drinks at Airport City and everything stayed freezing cold all night!', 'approved', $now_str]);
+        $ins_com->execute([1, 'Efia Dufie', 'img/default-avatar.png', 'This timeline guide saved our wedding planning! The recommendation to book chilling services 6 months ahead was spot on.', 'approved', $now_str]);
+        $ins_com->execute([1, 'Kwadwo Poku', 'img/default-avatar.png', 'Great article! Highly recommend locking in venues early in Accra.', 'approved', $now_str]);
+        $ins_com->execute([4, 'Akosua Baako', 'img/default-avatar.png', 'Chill & Serve Ghana handled our drinks at Airport City and everything stayed freezing cold all night!', 'approved', $now_str]);
     }
 } catch (Exception $e) {}
 
@@ -1204,7 +1226,7 @@ try {
     $admin_count = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn();
     if ($admin_count == 0) {
         $admin_email = 'admin@ohati.com';
-        $admin_name = 'Chill & Serve Ghana';
+        $admin_name = 'Ohati Admin';
         $admin_hash = password_hash('OhatiAdmin2026@Pass', PASSWORD_BCRYPT);
         $pdo->prepare("INSERT INTO users (name, email, password_hash, role, email_verified, is_active) VALUES (?, ?, ?, 'admin', 1, 1)")
             ->execute([$admin_name, $admin_email, $admin_hash]);
@@ -1568,28 +1590,10 @@ try {
     }
 } catch (Exception $e) {}
 
-// Auto-update live database vendor logos to authentic business category imagery
+// Auto-update live database vendor logos to clean non-Unsplash fallbacks
 try {
-    $category_logos_update = [
-        'Photography' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=400',
-        'Videography' => 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400',
-        'Makeup Artists' => 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=400',
-        'Event Planners' => 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400',
-        'Decorators' => 'https://images.unsplash.com/photo-1519225495810-7512c696505a?q=80&w=400',
-        'Caterers' => 'https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=400',
-        'Cake Designers' => 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?q=80&w=400',
-        'Event Venues' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
-        'DJs' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400',
-        'Bridal Shops' => 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?q=80&w=400',
-        'MCs' => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=400',
-        'Florists' => 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=400',
-        'Car Rentals' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400',
-        'Traditional Marriage Services' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=400'
-    ];
-    foreach ($category_logos_update as $cat => $logo_url) {
-        $stmt = $pdo->prepare("UPDATE vendors SET logo = ? WHERE category = ? AND name NOT LIKE '%Chill & Serve%'");
-        $stmt->execute([$logo_url, $cat]);
-    }
+    $pdo->exec("UPDATE vendors SET logo = NULL WHERE logo LIKE '%unsplash.com%' AND name NOT LIKE '%Chill & Serve%'");
+    $pdo->exec("UPDATE vendors SET cover_photo = NULL WHERE cover_photo LIKE '%unsplash.com%' AND name NOT LIKE '%Chill & Serve%'");
     
     // Deduplicate vendors by name
     $pdo->exec("DELETE FROM vendors WHERE id NOT IN (SELECT min_id FROM (SELECT MIN(id) as min_id FROM vendors GROUP BY name) as t)");

@@ -1,4 +1,12 @@
-// js/auth.js — Ohati Authentication, Registration, OTP, KYC, and Vendor Onboarding Flows
+window.getOhatiEndpoint = function(action) {
+    let base = 'api.php';
+    if (typeof window.getOhatiApiBaseUrl === 'function') {
+        base = window.getOhatiApiBaseUrl();
+    } else if (typeof API !== 'undefined' && API.base) {
+        base = API.base;
+    }
+    return base.includes('?') ? `${base}&action=${action}` : `${base}?action=${action}`;
+};
 
 function renderAuthModal() {
     if (typeof showMandatoryAuthLockScreen === 'function') {
@@ -827,7 +835,8 @@ window.submitForgotPassword = async function() {
 
     try {
         const payload = targetVal.includes('@') ? { email: targetVal } : { phone: targetVal };
-        const response = await fetch(typeof getApiUrl === 'function' ? getApiUrl('forgot_password') : 'api.php?action=forgot_password', {
+        const endpointUrl = typeof window.getOhatiEndpoint === 'function' ? window.getOhatiEndpoint('forgot_password') : (typeof window.getOhatiApiBaseUrl === 'function' ? window.getOhatiApiBaseUrl() + '?action=forgot_password' : 'https://ohati.com/api.php?action=forgot_password');
+        const response = await fetch(endpointUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -2045,7 +2054,8 @@ window.handleMandatoryForgotSubmit = async function (e) {
 
     try {
         const payload = targetVal.includes('@') ? { email: targetVal } : { phone: targetVal };
-        const response = await fetch(typeof getApiUrl === 'function' ? getApiUrl('forgot_password') : 'api.php?action=forgot_password', {
+        const endpointUrl = typeof window.getOhatiEndpoint === 'function' ? window.getOhatiEndpoint('forgot_password') : (typeof window.getOhatiApiBaseUrl === 'function' ? window.getOhatiApiBaseUrl() + '?action=forgot_password' : 'https://ohati.com/api.php?action=forgot_password');
+        const response = await fetch(endpointUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -2565,7 +2575,8 @@ window.handleMandatoryForgotPasswordSubmit = function (e) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending reset link...';
     }
 
-    fetch('api.php?action=forgot_password', {
+    const endpointUrl = typeof window.getOhatiEndpoint === 'function' ? window.getOhatiEndpoint('forgot_password') : (typeof window.getOhatiApiBaseUrl === 'function' ? window.getOhatiApiBaseUrl() + '?action=forgot_password' : 'https://ohati.com/api.php?action=forgot_password');
+    fetch(endpointUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target: target })
@@ -2612,7 +2623,8 @@ window.handleMandatoryResetPasswordSubmit = function (e) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Saving password...';
     }
 
-    fetch('api.php?action=reset_password', {
+    const endpointUrl = typeof window.getOhatiEndpoint === 'function' ? window.getOhatiEndpoint('reset_password') : (typeof window.getOhatiApiBaseUrl === 'function' ? window.getOhatiApiBaseUrl() + '?action=reset_password' : 'https://ohati.com/api.php?action=reset_password');
+    fetch(endpointUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target: target, code: code, password: password })

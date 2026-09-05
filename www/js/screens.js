@@ -8244,44 +8244,59 @@ function handleCoverPhotoSelect(event) {
         return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-        showPushNotification('File Too Large', 'Cover image must be under 8MB.');
+    if (file.size > 10 * 1024 * 1024) {
+        showPushNotification('File Too Large', 'Cover image must be under 10MB.');
         return;
     }
 
-    const vid = state.user?.vendor_id || (state.vendor ? state.vendor.id : 0);
     const preview = document.getElementById('profile-edit-cover-preview');
     const oldSrc = preview ? preview.src : '';
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        if (preview) preview.src = e.target.result;
-        
-        API.updateVendor({
-            id: vid,
-            cover_photo: e.target.result
-        }).then(res => {
-            const savedUrl = res?.cover_photo || res?.vendor?.cover_photo || e.target.result;
-            if (savedUrl) {
-                if (!state.vendor) state.vendor = {};
-                if (!state.user) state.user = {};
-                state.vendor.cover_photo = savedUrl;
-                state.user.vendor_cover_photo = savedUrl;
-                state.user.cover_photo = savedUrl;
-                if (res?.vendor_id) state.user.vendor_id = res.vendor_id;
-                if (preview) preview.src = savedUrl;
-                try {
-                    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
-                    localStorage.setItem('oh_user', JSON.stringify(state.user));
-                } catch(eIgn) {}
-            }
-            showPushNotification('Cover Photo Saved', 'Cover banner updated.');
-        }).catch(err => {
+    const objectUrl = URL.createObjectURL(file);
+    if (preview) preview.src = objectUrl;
+
+    const formData = new FormData();
+    formData.append('cover', file);
+    formData.append('cover_photo', file);
+
+    const token = localStorage.getItem('ohati_auth_token');
+    if (token) formData.append('auth_token', token);
+
+    const headers = (typeof API !== 'undefined' && API.getAuthHeaders) ? API.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
+    const apiUrl = typeof window.getOhatiEndpoint === 'function' ? window.getOhatiEndpoint('upload_cover_image') : ((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'https://ohati.com/api.php') + '?action=upload_cover_image');
+
+    const isNative = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:';
+
+    fetch(apiUrl, {
+        method: 'POST',
+        credentials: isNative ? 'same-origin' : 'include',
+        headers: headers,
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success && (res.cover_photo || res.url)) {
+            const savedUrl = res.cover_photo || res.url;
+            if (!state.vendor) state.vendor = {};
+            if (!state.user) state.user = {};
+            state.vendor.cover_photo = savedUrl;
+            state.user.vendor_cover_photo = savedUrl;
+            state.user.cover_photo = savedUrl;
+            if (preview) preview.src = savedUrl;
+            try {
+                localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                localStorage.setItem('oh_user', JSON.stringify(state.user));
+            } catch(eIgn) {}
+            showPushNotification('Cover Photo Saved', 'Cover banner updated successfully.');
+        } else {
             if (preview && oldSrc) preview.src = oldSrc;
-            showPushNotification('Upload Failed', err.message || 'Could not save cover image.');
-        });
-    };
-    reader.readAsDataURL(file);
+            showPushNotification('Upload Failed', res.error || 'Could not save cover image.');
+        }
+    })
+    .catch(err => {
+        if (preview && oldSrc) preview.src = oldSrc;
+        showPushNotification('Upload Failed', err.message || 'Could not save cover image.');
+    });
 }
 
 // ── REPORT AN ISSUE SCREEN ─────────────────────────────────────────────

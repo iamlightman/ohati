@@ -98,7 +98,7 @@ function navigateTo(screenId, params = {}, options = {}) {
             (state.user.vendor_id && parseInt(state.user.vendor_id) > 0) ||
             (state.vendor && state.vendor.id > 0)
         ));
-        screenId = isVendor ? 'vendor-dash' : 'home';
+        screenId = isVendor ? 'vendor-dash' : 'user-jobs';
     }
 
     // Dismiss any open sidebar immediately on navigation entry
@@ -345,6 +345,9 @@ function navigateTo(screenId, params = {}, options = {}) {
                 break;
             case 'vendor-dash':
                 initVendorDashScreen(params);
+                break;
+            case 'user-dash':
+                initUserDashScreen(params);
                 break;
             case 'vendor-ads':
                 initVendorAdsScreen(params);
@@ -4711,6 +4714,263 @@ function renderKycStatusBanner(kycStatus) {
     }
 }
 
+// ── 10.5. CUSTOMER DASHBOARD SCREEN ──────────────────────────────────────────
+function initUserDashScreen(params) {
+    const screen = document.getElementById('screen-user-dash');
+    if (!screen) return;
+
+    if (!state.user && !localStorage.getItem('ohati_user_session')) {
+        screen.innerHTML = `
+            <div class="text-center" style="padding:80px 20px;">
+                <i class="fa-solid fa-user-slash" style="font-size:3.5rem; color:var(--gray-200); margin-bottom:16px;"></i>
+                <h4>Please Sign In</h4>
+                <p class="text-sm text-muted mb-16">Sign in to access your customer dashboard.</p>
+                <button class="btn btn-primary" onclick="openLoginModal()">Sign In</button>
+            </div>
+        `;
+        return;
+    }
+
+    screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
+
+    const u = state.user || {};
+
+    // Fetch real live customer data simultaneously from backend APIs
+    Promise.allSettled([
+        API.getBookings().catch(() => []),
+        API.get('job_get_user_dashboard').catch(() => null),
+        API.getFavorites().catch(() => []),
+        API.get('get_tracker_tasks').catch(() => null)
+    ]).then(([bookingsRes, jobsRes, favsRes, plannerRes]) => {
+        const bookings = Array.isArray(bookingsRes.value) ? bookingsRes.value : [];
+        const jobsData = (jobsRes.value && jobsRes.value.success) ? jobsRes.value : { stats: {}, jobs: {} };
+        const favorites = Array.isArray(favsRes.value) ? favsRes.value : [];
+        const planner = plannerRes.value || {};
+
+        renderUserDashScreen(u, bookings, jobsData, favorites, planner);
+    });
+}
+
+function renderUserDashScreen(u, bookings = [], jobsData = {}, favorites = [], planner = {}) {
+    const screen = document.getElementById('screen-user-dash');
+    if (!screen) return;
+
+    const userName = escapeHtml(u.name || u.username || 'Valued Customer');
+    const avatarUrl = window.resolveImageUrl(u.avatar);
+
+    // Calculate real metrics (NO dummy stats)
+    const activeBookings = bookings.filter(b => (b.status || '').toLowerCase() !== 'cancelled');
+    const pendingBookingsCount = activeBookings.filter(b => (b.status || '').toLowerCase() === 'pending' || (b.status || '').toLowerCase() === 'requested').length;
+    const confirmedBookingsCount = activeBookings.filter(b => (b.status || '').toLowerCase() === 'confirmed' || (b.status || '').toLowerCase() === 'in_progress').length;
+
+    let totalSpent = 0;
+    activeBookings.forEach(b => {
+        const amt = parseFloat(b.total_paid || b.negotiated_price || b.price || 0);
+        if (!isNaN(amt)) totalSpent += amt;
+    });
+
+    const jobsStats = jobsData.stats || {};
+    const jobsList = jobsData.jobs?.all || [];
+    const openJobsCount = jobsStats.active_count || jobsList.filter(j => j.status === 'open' || j.status === 'in_review').length;
+    const totalQuotesCount = jobsStats.total_applications || 0;
+
+    const favoritesCount = favorites.length;
+    const trackerTotal = planner.total || 0;
+    const trackerCompleted = planner.completed || 0;
+    const trackerPct = planner.percentage || (trackerTotal > 0 ? Math.round((trackerCompleted / trackerTotal) * 100) : 0);
+
+    screen.innerHTML = `
+        <div class="p-section" style="padding-bottom:12px; border-bottom:1px solid var(--gray-100);">
+            <!-- Customer Welcome Header Banner -->
+            <div class="card p-16 mb-16" style="background:linear-gradient(135deg, #0F172A, #1E293B); color:#FFF; border-radius:16px; border:none; box-shadow:0 10px 25px rgba(15,23,42,0.15);">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <img src="${avatarUrl}" onerror="window.handleImageError(this, 'avatar')" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2.5px solid var(--accent, #D4AF37); box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <h3 style="margin:0; color:#FFF; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.25rem;">${userName}</h3>
+                                <span class="badge" style="background:rgba(212,175,55,0.2); color:#D4AF37; border:1px solid rgba(212,175,55,0.4); font-size:0.68rem; font-weight:700;"><i class="fa-solid fa-user-check"></i> Customer Account</span>
+                            </div>
+                            <p style="margin:4px 0 0 0; font-size:0.78rem; color:#94A3B8;">Track your event planning, active vendor bookings, service requests, and escrow payments.</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary btn-sm" onclick="navigateTo('user-jobs')" style="background:var(--accent, #D4AF37); color:#0F172A; font-weight:700; border:none;">
+                            <i class="fa-solid fa-plus-circle"></i> Request Quotes
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="navigateTo('search')" style="border-color:rgba(255,255,255,0.25); color:#FFF;">
+                            <i class="fa-solid fa-magnifying-glass"></i> Browse Vendors
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real Live Customer Metrics Grid (NO Dummy Stats) -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:20px;">
+                <!-- Metric 1: Bookings -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px; cursor:pointer;" onclick="navigateTo('bookings')">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Bookings</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${activeBookings.length}</div>
+                    <div style="font-size:0.68rem; color:var(--success); margin-top:2px; font-weight:600;">${confirmedBookingsCount} Confirmed • ${pendingBookingsCount} Pending</div>
+                </div>
+
+                <!-- Metric 2: Service Requests -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px; cursor:pointer;" onclick="navigateTo('user-jobs')">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Service Requests</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${jobsList.length}</div>
+                    <div style="font-size:0.68rem; color:var(--primary); margin-top:2px; font-weight:600;">${openJobsCount} Open • ${totalQuotesCount} Quotes Recv</div>
+                </div>
+
+                <!-- Metric 3: Favorites -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px; cursor:pointer;" onclick="navigateTo('favorites')">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Saved Vendors</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${favoritesCount}</div>
+                    <div style="font-size:0.68rem; color:var(--gray-500); margin-top:2px;">Favorites List</div>
+                </div>
+
+                <!-- Metric 4: Total Spent -->
+                <div class="card p-12 text-center" style="background:#FFF; border:1px solid var(--gray-200); border-radius:12px;">
+                    <div style="font-size:0.72rem; color:var(--gray-500); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Escrow & Payments</div>
+                    <div style="font-size:1.3rem; font-weight:800; color:#059669;">GH₵${totalSpent.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2})}</div>
+                    <div style="font-size:0.68rem; color:var(--gray-500); margin-top:2px;">Protected Escrow</div>
+                </div>
+            </div>
+
+            <!-- Quick Action Links Bar -->
+            <div style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:4px;">
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('user-jobs')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> My Service Requests (${jobsList.length})
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('bookings')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-calendar-check" style="color:var(--primary);"></i> My Bookings (${activeBookings.length})
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('event')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-sliders" style="color:var(--primary);"></i> Event Planner
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="navigateTo('profile-edit')" style="white-space:nowrap; flex:1; border-radius:20px;">
+                    <i class="fa-solid fa-user-pen" style="color:var(--primary);"></i> Edit Profile
+                </button>
+            </div>
+
+            <!-- Section 1: Recent Vendor Bookings (Real Data) -->
+            <div class="card p-16 mb-20" style="border-radius:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h4 style="margin:0; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-calendar-check" style="color:var(--primary);"></i> Recent Vendor Bookings
+                    </h4>
+                    <a href="javascript:void(0)" onclick="navigateTo('bookings')" style="font-size:0.78rem; font-weight:700; color:var(--primary);">View All (${bookings.length}) <i class="fa-solid fa-arrow-right"></i></a>
+                </div>
+
+                ${activeBookings.length > 0 ? `
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${activeBookings.slice(0, 4).map(b => {
+                            const vName = escapeHtml(b.vendor_name || 'Vendor');
+                            const vCat = escapeHtml(b.vendor_category || 'Event Service');
+                            const bLogo = window.resolveImageUrl(b.vendor_logo);
+                            const bStatus = (b.status || 'Pending').toLowerCase();
+                            
+                            let bBadgeClass = 'badge-warning';
+                            if (bStatus === 'confirmed' || bStatus === 'in_progress') bBadgeClass = 'badge-success';
+                            else if (bStatus === 'completed') bBadgeClass = 'badge-primary';
+                            else if (bStatus === 'cancelled') bBadgeClass = 'badge-danger';
+
+                            const bPrice = parseFloat(b.negotiated_price || b.price || 0);
+
+                            return `
+                                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--gray-50); border-radius:10px; border:1px solid var(--gray-200); gap:12px; flex-wrap:wrap;">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <img src="${bLogo}" onerror="window.handleImageError(this, 'avatar')" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid var(--gray-300);">
+                                        <div>
+                                            <div style="font-weight:700; font-size:0.9rem; color:var(--gray-900);">${vName}</div>
+                                            <div style="font-size:0.75rem; color:var(--gray-500);">${vCat} • ${escapeHtml(b.event_date || 'Date TBD')}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <div style="text-align:right;">
+                                            <div style="font-weight:800; font-size:0.9rem; color:var(--gray-900);">GH₵${bPrice.toLocaleString('en-US')}</div>
+                                            <span class="badge ${bBadgeClass}" style="font-size:0.65rem; text-transform:capitalize;">${escapeHtml(b.status || 'Pending')}</span>
+                                        </div>
+                                        <button class="btn btn-outline btn-xs" onclick="navigateTo('bookings', { id: ${b.id} })">View</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div style="text-align:center; padding:30px 15px; color:var(--gray-500);">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:10px; display:block;"></i>
+                        <h5 style="margin:0 0 4px 0; color:var(--gray-700);">No active vendor bookings</h5>
+                        <p style="font-size:0.78rem; margin:0 0 12px 0;">Find top rated photographers, caterers, DJs, and event planners for your upcoming event.</p>
+                        <button class="btn btn-primary btn-sm" onclick="navigateTo('search')"><i class="fa-solid fa-magnifying-glass"></i> Explore Vendors</button>
+                    </div>
+                `}
+            </div>
+
+            <!-- Section 2: Active Service Requests & Quotes (Real Data) -->
+            <div class="card p-16 mb-20" style="border-radius:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h4 style="margin:0; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-briefcase" style="color:var(--primary);"></i> My Posted Service Requests
+                    </h4>
+                    <button class="btn btn-primary btn-xs" onclick="navigateTo('user-jobs')">+ Post New Request</button>
+                </div>
+
+                ${jobsList.length > 0 ? `
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${jobsList.slice(0, 3).map(j => {
+                            const jTitle = escapeHtml(j.title || 'Event Service Request');
+                            const jCat = escapeHtml(j.category || 'General');
+                            const jApps = parseInt(j.applications_count || 0);
+
+                            return `
+                                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--gray-50); border-radius:10px; border:1px solid var(--gray-200); gap:12px; flex-wrap:wrap;">
+                                    <div>
+                                        <div style="font-weight:700; font-size:0.88rem; color:var(--gray-900);">${jTitle}</div>
+                                        <div style="font-size:0.75rem; color:var(--gray-500);">${jCat} • Budget: GH₵${parseFloat(j.budget_min || 0).toLocaleString()} - GH₵${parseFloat(j.budget_max || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <span class="badge badge-primary" style="font-size:0.7rem;"><i class="fa-solid fa-paper-plane"></i> ${jApps} Quotes</span>
+                                        <button class="btn btn-outline btn-xs" onclick="navigateTo('user-jobs', { id: ${j.id} })">Manage</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div style="text-align:center; padding:30px 15px; color:var(--gray-500);">
+                        <i class="fa-solid fa-folder-open" style="font-size:2.5rem; color:var(--gray-300); margin-bottom:10px; display:block;"></i>
+                        <h5 style="margin:0 0 4px 0; color:var(--gray-700);">No service requests posted</h5>
+                        <p style="font-size:0.78rem; margin:0 0 12px 0;">Post a job with your budget and details to receive competitive quotes from verified vendors.</p>
+                        <button class="btn btn-primary btn-sm" onclick="navigateTo('user-jobs')">+ Post a Job Now</button>
+                    </div>
+                `}
+            </div>
+
+            <!-- Section 3: Event Planner & Checklist Summary -->
+            ${trackerTotal > 0 ? `
+                <div class="card p-16" style="border-radius:14px; background:linear-gradient(135deg, #F8FAFC, #EFF6FF); border:1px solid #BFDBFE;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1E3A8A; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-list-check" style="color:#2563EB;"></i> Event Planning Progress
+                        </h4>
+                        <a href="javascript:void(0)" onclick="navigateTo('event')" style="font-size:0.75rem; font-weight:700; color:#2563EB;">Open Planner <i class="fa-solid fa-chevron-right"></i></a>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                        <div style="flex:1; background:#E2E8F0; height:8px; border-radius:4px; overflow:hidden;">
+                            <div style="width:${trackerPct}%; background:#2563EB; height:100%; transition:width 0.3s ease;"></div>
+                        </div>
+                        <span style="font-weight:800; font-size:0.85rem; color:#1E3A8A;">${trackerPct}%</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:#475569; display:flex; justify-content:space-between;">
+                        <span>Tasks Completed: <strong>${trackerCompleted} of ${trackerTotal}</strong></span>
+                        ${planner.budget ? `<span>Est. Budget: <strong>GH₵${parseFloat(planner.budget.estimated || 0).toLocaleString()}</strong></span>` : ''}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
 // ── 11. VENDOR DASHBOARD SCREEN ──────────────────────────────────────────
 function initVendorDashScreen(params) {
     const screen = document.getElementById('screen-vendor-dash');
@@ -7799,23 +8059,25 @@ window.saveEditedPhoto = function() {
                         localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
                     } catch (eIgn) {}
 
-                    // Instantly sync UI components across application
+                    // Instantly sync UI components across application with cache-busting
                     const resolvedUrl = (typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(storedUrl) : storedUrl;
+                    const bustedUrl = resolvedUrl + (resolvedUrl.includes('?') ? '&v=' : '?v=') + Date.now();
+
                     const formPreview = document.getElementById('profile-edit-avatar-preview');
-                    if (formPreview) formPreview.src = resolvedUrl;
+                    if (formPreview) formPreview.src = bustedUrl;
                     const profileAvatar = document.getElementById('profile-avatar');
-                    if (profileAvatar) profileAvatar.src = resolvedUrl;
+                    if (profileAvatar) profileAvatar.src = bustedUrl;
                     const headerAvatar = document.getElementById('header-avatar');
-                    if (headerAvatar) headerAvatar.src = resolvedUrl;
+                    if (headerAvatar) headerAvatar.src = bustedUrl;
                     const sidebarAvatar = document.getElementById('sidebar-avatar');
-                    if (sidebarAvatar) sidebarAvatar.src = resolvedUrl;
+                    if (sidebarAvatar) sidebarAvatar.src = bustedUrl;
 
                     if (typeof updateAppHeader === 'function') updateAppHeader();
                     if (typeof updateSidebarUI === 'function') updateSidebarUI();
                 }
 
                 closeModal();
-                showPushNotification('Profile Picture Saved 🎉', 'Your profile picture has been updated permanently.');
+                showPushNotification('Profile Picture Saved 🎉', 'Your profile picture has been updated.');
             })
             .catch(err => {
                 if (applyBtn) {
@@ -8005,13 +8267,15 @@ function handleCoverPhotoSelect(event) {
                 if (!state.user) state.user = {};
                 state.vendor.cover_photo = savedUrl;
                 state.user.vendor_cover_photo = savedUrl;
+                state.user.cover_photo = savedUrl;
                 if (res?.vendor_id) state.user.vendor_id = res.vendor_id;
                 if (preview) preview.src = savedUrl;
                 try {
                     localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                    localStorage.setItem('oh_user', JSON.stringify(state.user));
                 } catch(eIgn) {}
             }
-            showPushNotification('Cover Photo Saved', 'Cover banner updated permanently.');
+            showPushNotification('Cover Photo Saved', 'Cover banner updated.');
         }).catch(err => {
             if (preview && oldSrc) preview.src = oldSrc;
             showPushNotification('Upload Failed', err.message || 'Could not save cover image.');

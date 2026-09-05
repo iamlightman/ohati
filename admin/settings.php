@@ -108,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (in_array($field, $user_fields)) {
                     $pdo->prepare("UPDATE users SET $field = ? WHERE id = ?")->execute([$req['new_value'], $req['user_id']]);
-                } elseif (in_array($field, $vendor_fields)) {
+                }
+                if (in_array($field, $vendor_fields)) {
                     $pdo->prepare("UPDATE vendors SET $field = ? WHERE user_id = ?")->execute([$req['new_value'], $req['user_id']]);
                 }
                 // Log activity

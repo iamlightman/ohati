@@ -172,8 +172,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             echo json_encode(['success' => false, 'message' => 'Vendor not found']);
             exit;
+        } elseif ($action === 'edit_vendor_details') {
+            $name = trim($input['name'] ?? '');
+            $category = trim($input['category'] ?? '');
+            $email = trim($input['email'] ?? '');
+            $phone = trim($input['phone'] ?? '');
+            $whatsapp = trim($input['whatsapp'] ?? '');
+            $location = trim($input['location'] ?? '');
+            $description = trim($input['description'] ?? '');
+            $experience = trim($input['experience'] ?? '');
+            $bank_name = trim($input['bank_name'] ?? '');
+            $account_name = trim($input['account_name'] ?? '');
+            $account_number = trim($input['account_number'] ?? '');
+            $momo_number = trim($input['momo_number'] ?? '');
+            $momo_provider = trim($input['momo_provider'] ?? '');
+            $payout_method = trim($input['payout_method'] ?? 'bank');
+
+            if (!$name) {
+                echo json_encode(['success' => false, 'message' => 'Vendor Name is required.']);
+                exit;
+            }
+
+            $vStmt = $pdo->prepare("SELECT user_id FROM vendors WHERE id = ?");
+            $vStmt->execute([$vid]);
+            $user_id = $vStmt->fetchColumn();
+
+            $updVendor = $pdo->prepare("UPDATE vendors SET name = ?, category = ?, email = ?, phone = ?, whatsapp = ?, location = ?, description = ?, experience = ?, bank_name = ?, account_name = ?, account_number = ?, momo_number = ?, momo_provider = ?, payout_method = ? WHERE id = ?");
+            $updVendor->execute([$name, $category, $email, $phone, $whatsapp, $location, $description, $experience, $bank_name, $account_name, $account_number, $momo_number, $momo_provider, $payout_method, $vid]);
+
+            if ($user_id > 0) {
+                $updUser = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?");
+                $updUser->execute([$name, $email, $phone, $user_id]);
+            }
+
+            try {
+                $admin_id = $_SESSION['admin_user']['id'] ?? 1;
+                $admin_name = $_SESSION['admin_user']['username'] ?? 'Admin';
+                log_activity($pdo, 'Vendor Details Updated', 'Vendor', $vid, $admin_id, 'admin', $admin_name, 0, '', $name, 'Updated by Admin');
+            } catch (Exception $eAudit) {}
+
+            echo json_encode(['success' => true, 'message' => 'Vendor details updated successfully.']);
+            exit;
         }
     }
+
+    if ($action === 'review_change_request') {
+        $req_id = intval($input['request_id'] ?? 0);
+        $status = in_array($input['status'] ?? '', ['approved', 'rejected']) ? $input['status'] : 'rejected';
+        $notes = trim($input['admin_notes'] ?? '');
+
+        $stmt = $pdo->prepare("SELECT * FROM profile_change_requests WHERE id = ?");
+        $stmt->execute([$req_id]);
+        $req = $stmt->fetch();
+        if (!$req) {
+            echo json_encode(['success' => false, 'message' => 'Request not found.']);
+            exit;
+        }
+
+        $pdo->prepare("UPDATE profile_change_requests SET status = ?, admin_notes = ? WHERE id = ?")->execute([$status, $notes, $req_id]);
+        if ($status === 'approved') {
+            $field = $req['field_name'];
+            $user_fields = ['name', 'email', 'phone', 'dob'];
+            $vendor_fields = ['name', 'category', 'description', 'location', 'phone', 'email', 'experience', 'whatsapp', 'website', 'bank_name', 'account_name', 'account_number', 'momo_number', 'momo_provider', 'payout_method'];
+
+            if (in_array($field, $user_fields)) {
+                $pdo->prepare("UPDATE users SET $field = ? WHERE id = ?")->execute([$req['new_value'], $req['user_id']]);
+            }
+            if (in_array($field, $vendor_fields)) {
+                $pdo->prepare("UPDATE vendors SET $field = ? WHERE user_id = ?")->execute([$req['new_value'], $req['user_id']]);
+            }
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $dev = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+            $pdo->prepare("INSERT INTO profile_activity_log (user_id, field_name, old_value, new_value, device, ip_address) VALUES (?, ?, ?, ?, ?, ?)")
+                ->execute([$req['user_id'], $field, $req['old_value'], $req['new_value'], $dev, $ip]);
+
+            $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Profile Update Approved', ?, 'user-check')")
+                ->execute([$req['user_id'], "Your request to change '$field' has been approved."]);
+        } else {
+            $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Profile Update Rejected', ?, 'user-xmark')")
+                ->execute([$req['user_id'], "Your request to change '{$req['field_name']}' was rejected. Reason: $notes"]);
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Change request ' . $status . ' successfully.']);
+        exit;
+    }
+
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
     exit;
 }
@@ -231,6 +315,7 @@ $stmt->execute($params);
 $vendors = $stmt->fetchAll();
 
 $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn();
+$pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM profile_change_requests r JOIN users u ON r.user_id = u.id WHERE r.status = 'pending' ORDER BY r.id ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -400,6 +485,38 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pend
                 </form>
             </div>
 
+            <!-- Pending Profile Change Requests -->
+            <?php if (!empty($pending_change_requests)): ?>
+                <div style="background:#FFF8F6; border:1px solid #FCD34D; border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 12px 0; color:#92400E; font-family:'Fraunces',serif; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Pending Profile Change Requests (<?= count($pending_change_requests) ?>)
+                    </h4>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <?php foreach ($pending_change_requests as $pReq): ?>
+                            <div style="background:#FFF; border:1px solid #FDE68A; border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <strong><?= htmlspecialchars($pReq['user_name']) ?></strong> <span style="font-size:0.75rem; color:#6B7280;">(#<?= $pReq['user_id'] ?>)</span>
+                                    <div style="font-size:0.8rem; color:#374151; margin-top:2px;">
+                                        Requesting change for <code><?= htmlspecialchars($pReq['field_name']) ?></code>:
+                                        <span style="text-decoration:line-through; color:#EF4444;"><?= htmlspecialchars($pReq['old_value'] ?: 'empty') ?></span>
+                                        &rarr;
+                                        <span style="font-weight:700; color:#10B981;"><?= htmlspecialchars($pReq['new_value']) ?></span>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn btn-primary btn-sm" onclick="reviewChangeReq(<?= $pReq['id'] ?>, 'approved')" style="padding:6px 12px; font-size:0.75rem; font-weight:700;">
+                                        <i class="fa-solid fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn btn-outline btn-sm" onclick="reviewChangeReq(<?= $pReq['id'] ?>, 'rejected')" style="padding:6px 12px; font-size:0.75rem; font-weight:700; color:#EF4444; border-color:#FCA5A5;">
+                                        <i class="fa-solid fa-xmark"></i> Reject
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Vendors Table -->
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -453,6 +570,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pend
                                         <div style="display:flex; gap:6px;">
                                             <script id="vendor-data-<?= $v['id'] ?>" type="application/json"><?= json_encode($v, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
                                             <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700;" onclick="viewVendorDetails(<?= $v['id'] ?>)" title="View Full Details"><i class="fa-solid fa-eye"></i> Details</button>
+                                            <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700; color:var(--accent);" onclick="openEditVendorModal(<?= $v['id'] ?>)" title="Edit Vendor Details"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
                                             <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700; color:var(--primary);" onclick="sendPasswordReset(<?= $v['user_id'] ?: 0 ?>, '<?= htmlspecialchars($v['email'] ?: $v['phone'] ?: $v['user_email'] ?: $v['user_phone'] ?: '', ENT_QUOTES) ?>')" title="Send Password Reset Link"><i class="fa-solid fa-key"></i> Reset Link</button>
                                             <button class="btn btn-outline btn-sm" style="padding:6px; font-size:0.75rem;" onclick="openVendorActionModal(<?= $v['id'] ?>)" title="Manage Vendor Tier & Status"><i class="fa-solid fa-gears"></i> Action</button>
                                             <button class="btn btn-outline btn-sm" style="padding:6px; font-size:0.75rem; color:var(--rose); border-color:rgba(244,63,94,0.2);" onclick="deleteVendor(<?= $v['id'] ?>)" title="Delete Vendor"><i class="fa-solid fa-trash"></i></button>
@@ -797,7 +915,192 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pend
                 }
             });
         }
+
+        function reviewChangeReq(reqId, status) {
+            let notes = '';
+            if (status === 'rejected') {
+                notes = prompt('Reason for rejection (optional):') || '';
+            }
+            fetch('vendors.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'review_change_request', request_id: reqId, status: status, admin_notes: notes })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Request reviewed successfully.');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed'));
+                }
+            })
+            .catch(err => alert('Network error reviewing change request.'));
+        }
+
+        function openEditVendorModal(vendorId) {
+            let v = null;
+            const scriptTag = document.getElementById('vendor-data-' + vendorId);
+            if (scriptTag) {
+                try { v = JSON.parse(scriptTag.textContent); } catch(e) {}
+            }
+            if (!v) { alert('Vendor data not found.'); return; }
+            document.getElementById('ev_vendor_id').value = v.id;
+            document.getElementById('ev_name').value = v.name || '';
+            document.getElementById('ev_category').value = v.category || '';
+            document.getElementById('ev_email').value = v.email || '';
+            document.getElementById('ev_phone').value = v.phone || '';
+            document.getElementById('ev_whatsapp').value = v.whatsapp || '';
+            document.getElementById('ev_location').value = v.location || '';
+            document.getElementById('ev_description').value = v.description || '';
+            document.getElementById('ev_experience').value = v.experience || '';
+            document.getElementById('ev_bank_name').value = v.bank_name || '';
+            document.getElementById('ev_account_name').value = v.account_name || '';
+            document.getElementById('ev_account_number').value = v.account_number || '';
+            document.getElementById('ev_momo_number').value = v.momo_number || '';
+            document.getElementById('ev_momo_provider').value = v.momo_provider || '';
+            document.getElementById('ev_payout_method').value = v.payout_method || 'bank';
+            document.getElementById('editVendorModal').style.display = 'flex';
+        }
+
+        function closeEditVendorModal() {
+            document.getElementById('editVendorModal').style.display = 'none';
+        }
+
+        function submitEditVendor() {
+            const vendorId = document.getElementById('ev_vendor_id').value;
+            const name = document.getElementById('ev_name').value.trim();
+            const category = document.getElementById('ev_category').value.trim();
+            const email = document.getElementById('ev_email').value.trim();
+            const phone = document.getElementById('ev_phone').value.trim();
+            const whatsapp = document.getElementById('ev_whatsapp').value.trim();
+            const location_val = document.getElementById('ev_location').value.trim();
+            const description = document.getElementById('ev_description').value.trim();
+            const experience = document.getElementById('ev_experience').value.trim();
+            const bank_name = document.getElementById('ev_bank_name').value.trim();
+            const account_name = document.getElementById('ev_account_name').value.trim();
+            const account_number = document.getElementById('ev_account_number').value.trim();
+            const momo_number = document.getElementById('ev_momo_number').value.trim();
+            const momo_provider = document.getElementById('ev_momo_provider').value.trim();
+            const payout_method = document.getElementById('ev_payout_method').value;
+
+            if (!name) { alert('Business Name is required.'); return; }
+
+            fetch('vendors.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'edit_vendor_details',
+                    vendor_id: parseInt(vendorId),
+                    name, category, email, phone, whatsapp, location: location_val, description, experience,
+                    bank_name, account_name, account_number, momo_number, momo_provider, payout_method
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Vendor details updated successfully!');
+                    closeEditVendorModal();
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to update vendor details.');
+                }
+            })
+            .catch(err => alert('Network error updating vendor details.'));
+        }
     </script>
+
+    <!-- Edit Vendor Details Modal -->
+    <div id="editVendorModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; width:90%; max-width:600px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:85vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:12px;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--primary); font-family:'Fraunces', serif;">
+                    <i class="fa-solid fa-pen-to-square" style="color:var(--accent);"></i> Edit Vendor Business Details
+                </h3>
+                <button onclick="closeEditVendorModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--gray-500);">&times;</button>
+            </div>
+            <input type="hidden" id="ev_vendor_id">
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Business Name *</label>
+                        <input type="text" id="ev_name" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Category</label>
+                        <input type="text" id="ev_category" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Email Address</label>
+                        <input type="email" id="ev_email" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Phone Number</label>
+                        <input type="text" id="ev_phone" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">WhatsApp Line</label>
+                        <input type="text" id="ev_whatsapp" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Location / City</label>
+                        <input type="text" id="ev_location" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Business Description</label>
+                    <textarea id="ev_description" class="form-textarea" rows="3" style="width:100%; padding:10px; margin:0;"></textarea>
+                </div>
+                <div>
+                    <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Years of Experience</label>
+                    <input type="text" id="ev_experience" class="form-input" style="width:100%; padding:10px; margin:0;">
+                </div>
+                <hr style="border:0; border-top:1px solid #E5E7EB; margin:6px 0;">
+                <h5 style="margin:0; font-weight:700; color:var(--primary);">Payout / Financial Info</h5>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Payout Method</label>
+                        <select id="ev_payout_method" class="form-select" style="width:100%; padding:10px; margin:0;">
+                            <option value="bank">Bank Transfer</option>
+                            <option value="momo">Mobile Money (MoMo)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Bank Name</label>
+                        <input type="text" id="ev_bank_name" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Account Name</label>
+                        <input type="text" id="ev_account_name" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Account Number</label>
+                        <input type="text" id="ev_account_number" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">MoMo Provider</label>
+                        <input type="text" id="ev_momo_provider" class="form-input" placeholder="e.g. MTN, Telecel, AT" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">MoMo Number</label>
+                        <input type="text" id="ev_momo_number" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditVendorModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditVendor()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Vendor Details Modal -->
     <div id="vendorDetailsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">

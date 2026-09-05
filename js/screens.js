@@ -644,7 +644,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <span class="section-subtitle">HANDPICKED FOR YOU</span>
                     <h2 class="section-main-title">The best for your special day</h2>
                 </div>
-                <a href="#" class="view-all-link" onclick="navigateTo('search'); event.preventDefault();">View all <i class="fa-solid fa-chevron-right"></i></a>
+                <a href="javascript:void(0)" class="view-all-link" onclick="navigateTo('search'); event.preventDefault();">View all <i class="fa-solid fa-chevron-right"></i></a>
             </div>
             
             <div class="handpicked-scroller scrollable-x">
@@ -667,7 +667,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <span class="section-subtitle">CATEGORIES</span>
                     <h3 class="section-title">Browse Categories</h3>
                 </div>
-                <a href="#" class="section-link" onclick="openAllCategoriesModal(); event.preventDefault();">View All</a>
+                <a href="javascript:void(0)" class="section-link" onclick="openAllCategoriesModal(); event.preventDefault();">View All</a>
             </div>
             <div class="category-grid">
                 ${categories.slice(0, 9).map(c => `
@@ -686,7 +686,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                     <span class="section-subtitle">PREMIUM SELECTION</span>
                     <h3 class="section-title">Featured Vendors</h3>
                 </div>
-                <a href="#" class="section-link" onclick="navigateTo('search'); event.preventDefault();">View All</a>
+                <a href="javascript:void(0)" class="section-link" onclick="navigateTo('search'); event.preventDefault();">View All</a>
             </div>
             <div class="vendor-cards-scroll featured-vendors-container" id="featured-vendors-scroll">
                 ${premiumVendors.length > 0 ? premiumVendors.map(v => `
@@ -4592,10 +4592,10 @@ window.openAppExclusiveModal = function(featureTitle = "App Exclusive Feature", 
 
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
                 <button class="btn btn-primary btn-full" onclick="openAppDownloadUrl('android')" style="height:44px; font-size:0.88rem; font-weight:700; background:#34A853; border-color:#34A853; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Download for Android (Coming Soon)
+                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Download for Android
                 </button>
                 <button class="btn btn-primary btn-full" onclick="openAppDownloadUrl('ios')" style="height:44px; font-size:0.88rem; font-weight:700; background:#000; border-color:#000; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <i class="fa-brands fa-apple" style="font-size:1.2rem;"></i> Download for iOS (Coming Soon)
+                    <i class="fa-brands fa-apple" style="font-size:1.2rem;"></i> Download for iOS
                 </button>
             </div>
 
@@ -8059,16 +8059,18 @@ window.saveEditedPhoto = function() {
                         localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
                     } catch (eIgn) {}
 
-                    // Instantly sync UI components across application
+                    // Instantly sync UI components across application with cache-busting
                     const resolvedUrl = (typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(storedUrl) : storedUrl;
+                    const bustedUrl = resolvedUrl + (resolvedUrl.includes('?') ? '&v=' : '?v=') + Date.now();
+
                     const formPreview = document.getElementById('profile-edit-avatar-preview');
-                    if (formPreview) formPreview.src = resolvedUrl;
+                    if (formPreview) formPreview.src = bustedUrl;
                     const profileAvatar = document.getElementById('profile-avatar');
-                    if (profileAvatar) profileAvatar.src = resolvedUrl;
+                    if (profileAvatar) profileAvatar.src = bustedUrl;
                     const headerAvatar = document.getElementById('header-avatar');
-                    if (headerAvatar) headerAvatar.src = resolvedUrl;
+                    if (headerAvatar) headerAvatar.src = bustedUrl;
                     const sidebarAvatar = document.getElementById('sidebar-avatar');
-                    if (sidebarAvatar) sidebarAvatar.src = resolvedUrl;
+                    if (sidebarAvatar) sidebarAvatar.src = bustedUrl;
 
                     if (typeof updateAppHeader === 'function') updateAppHeader();
                     if (typeof updateSidebarUI === 'function') updateSidebarUI();
@@ -8265,10 +8267,12 @@ function handleCoverPhotoSelect(event) {
                 if (!state.user) state.user = {};
                 state.vendor.cover_photo = savedUrl;
                 state.user.vendor_cover_photo = savedUrl;
+                state.user.cover_photo = savedUrl;
                 if (res?.vendor_id) state.user.vendor_id = res.vendor_id;
                 if (preview) preview.src = savedUrl;
                 try {
                     localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                    localStorage.setItem('oh_user', JSON.stringify(state.user));
                 } catch(eIgn) {}
             }
             showPushNotification('Cover Photo Saved', 'Cover banner updated.');

@@ -155,8 +155,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             echo json_encode(['success' => true, 'count' => $count]);
             exit;
+        } elseif ($action === 'edit_user_details') {
+            $name = trim($input['name'] ?? '');
+            $email = trim($input['email'] ?? '');
+            $phone = trim($input['phone'] ?? '');
+            $role = trim($input['role'] ?? 'customer');
+            $dob = trim($input['dob'] ?? '');
+
+            if (!$name) {
+                echo json_encode(['success' => false, 'message' => 'Full Name is required']);
+                exit;
+            }
+
+            $updUser = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, role = ?, dob = ? WHERE id = ?");
+            $updUser->execute([$name, $email, $phone, $role, $dob, $uid]);
+
+            $updVendor = $pdo->prepare("UPDATE vendors SET name = ?, email = ?, phone = ? WHERE user_id = ?");
+            $updVendor->execute([$name, $email, $phone, $uid]);
+
+            try {
+                $admin_id = $_SESSION['admin_user']['id'] ?? 1;
+                $admin_name = $_SESSION['admin_user']['username'] ?? 'Admin';
+                log_activity($pdo, 'User Details Updated', 'User', $uid, $admin_id, 'admin', $admin_name, 0, '', $name, 'Updated by Admin');
+            } catch (Exception $eAudit) {}
+
+            echo json_encode(['success' => true, 'message' => 'User details updated successfully']);
+            exit;
         }
     }
+
+    if ($action === 'review_change_request') {
+        $req_id = intval($input['request_id'] ?? 0);
+        $status = in_array($input['status'] ?? '', ['approved', 'rejected']) ? $input['status'] : 'rejected';
+        $notes = trim($input['admin_notes'] ?? '');
+
+        $stmt = $pdo->prepare("SELECT * FROM profile_change_requests WHERE id = ?");
+        $stmt->execute([$req_id]);
+        $req = $stmt->fetch();
+        if (!$req) {
+            echo json_encode(['success' => false, 'message' => 'Request not found.']);
+            exit;
+        }
+
+        $pdo->prepare("UPDATE profile_change_requests SET status = ?, admin_notes = ? WHERE id = ?")->execute([$status, $notes, $req_id]);
+        if ($status === 'approved') {
+            $field = $req['field_name'];
+            $user_fields = ['name', 'email', 'phone', 'dob'];
+            $vendor_fields = ['name', 'category', 'description', 'location', 'phone', 'email', 'experience', 'whatsapp', 'website', 'bank_name', 'account_name', 'account_number', 'momo_number', 'momo_provider', 'payout_method'];
+
+            if (in_array($field, $user_fields)) {
+                $pdo->prepare("UPDATE users SET $field = ? WHERE id = ?")->execute([$req['new_value'], $req['user_id']]);
+            }
+            if (in_array($field, $vendor_fields)) {
+                $pdo->prepare("UPDATE vendors SET $field = ? WHERE user_id = ?")->execute([$req['new_value'], $req['user_id']]);
+            }
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $dev = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+            $pdo->prepare("INSERT INTO profile_activity_log (user_id, field_name, old_value, new_value, device, ip_address) VALUES (?, ?, ?, ?, ?, ?)")
+                ->execute([$req['user_id'], $field, $req['old_value'], $req['new_value'], $dev, $ip]);
+
+            $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Profile Update Approved', ?, 'user-check')")
+                ->execute([$req['user_id'], "Your request to change '$field' has been approved."]);
+        } else {
+            $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Profile Update Rejected', ?, 'user-xmark')")
+                ->execute([$req['user_id'], "Your request to change '{$req['field_name']}' was rejected. Reason: $notes"]);
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Change request ' . $status . ' successfully.']);
+        exit;
+    }
+
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
     exit;
 }
@@ -206,6 +275,7 @@ $stmt->execute($params);
 $users = $stmt->fetchAll();
 
 $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pending_verification' OR kyc_status = 'pending') AND (kyc_id_front != '' OR kyc_selfie != '' OR kyc_id_back != '')")->fetchColumn();
+$pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM profile_change_requests r JOIN users u ON r.user_id = u.id WHERE r.status = 'pending' ORDER BY r.id ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -374,6 +444,38 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pend
                 </form>
             </div>
 
+            <!-- Pending Profile Change Requests -->
+            <?php if (!empty($pending_change_requests)): ?>
+                <div style="background:#FFF8F6; border:1px solid #FCD34D; border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 12px 0; color:#92400E; font-family:'Fraunces',serif; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Pending Profile Change Requests (<?= count($pending_change_requests) ?>)
+                    </h4>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <?php foreach ($pending_change_requests as $pReq): ?>
+                            <div style="background:#FFF; border:1px solid #FDE68A; border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <strong><?= htmlspecialchars($pReq['user_name']) ?></strong> <span style="font-size:0.75rem; color:#6B7280;">(#<?= $pReq['user_id'] ?>)</span>
+                                    <div style="font-size:0.8rem; color:#374151; margin-top:2px;">
+                                        Requesting change for <code><?= htmlspecialchars($pReq['field_name']) ?></code>:
+                                        <span style="text-decoration:line-through; color:#EF4444;"><?= htmlspecialchars($pReq['old_value'] ?: 'empty') ?></span>
+                                        &rarr;
+                                        <span style="font-weight:700; color:#10B981;"><?= htmlspecialchars($pReq['new_value']) ?></span>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn btn-primary btn-sm" onclick="reviewChangeReq(<?= $pReq['id'] ?>, 'approved')" style="padding:6px 12px; font-size:0.75rem; font-weight:700;">
+                                        <i class="fa-solid fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn btn-outline btn-sm" onclick="reviewChangeReq(<?= $pReq['id'] ?>, 'rejected')" style="padding:6px 12px; font-size:0.75rem; font-weight:700; color:#EF4444; border-color:#FCA5A5;">
+                                        <i class="fa-solid fa-xmark"></i> Reject
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Users Table -->
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -426,6 +528,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pend
                                         <div style="display:flex; gap:6px;">
                                             <script id="user-data-<?= $u['id'] ?>" type="application/json"><?= json_encode($u, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
                                             <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700;" onclick="viewUserDetails(<?= $u['id'] ?>)" title="View Full Details"><i class="fa-solid fa-eye"></i> Details</button>
+                                            <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700; color:var(--accent);" onclick="openEditUserModal(<?= $u['id'] ?>)" title="Edit User Details"><i class="fa-solid fa-user-pen"></i> Edit</button>
                                             <button class="btn btn-outline btn-sm" style="padding:6px 10px; font-size:0.75rem; font-weight:700; color:var(--primary);" onclick="sendPasswordReset(<?= $u['id'] ?>, '<?= htmlspecialchars($u['email'] ?: $u['phone'], ENT_QUOTES) ?>')" title="Send Password Reset Link"><i class="fa-solid fa-key"></i> Reset Link</button>
                                             <button class="btn btn-outline btn-sm" style="padding:6px; font-size:0.75rem;" onclick="openStatusActionModal(<?= $u['id'] ?>)" title="Manage Status"><i class="fa-solid fa-user-gear"></i> Action</button>
                                             <button class="btn btn-outline btn-sm" style="padding:6px; font-size:0.75rem; color:var(--rose); border-color:rgba(244,63,94,0.2);" onclick="deleteUser(<?= $u['id'] ?>)" title="Delete Account"><i class="fa-solid fa-trash"></i></button>
@@ -753,7 +856,122 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE (kyc_status = 'pend
                 }
             }).catch(err => alert('Status Update Notice: ' + err.message));
         }
+
+        function reviewChangeReq(reqId, status) {
+            let notes = '';
+            if (status === 'rejected') {
+                notes = prompt('Reason for rejection (optional):') || '';
+            }
+            fetch('users.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'review_change_request', request_id: reqId, status: status, admin_notes: notes })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Request reviewed successfully.');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed'));
+                }
+            })
+            .catch(err => alert('Network error reviewing change request.'));
+        }
+
+        function openEditUserModal(userId) {
+            let u = null;
+            const scriptTag = document.getElementById('user-data-' + userId);
+            if (scriptTag) {
+                try { u = JSON.parse(scriptTag.textContent); } catch(e) {}
+            }
+            if (!u) { alert('User data not found.'); return; }
+            document.getElementById('eu_user_id').value = u.id;
+            document.getElementById('eu_name').value = u.name || '';
+            document.getElementById('eu_email').value = u.email || '';
+            document.getElementById('eu_phone').value = u.phone || '';
+            document.getElementById('eu_role').value = u.role || 'customer';
+            document.getElementById('eu_dob').value = u.dob || '';
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+        }
+
+        function submitEditUser() {
+            const userId = document.getElementById('eu_user_id').value;
+            const name = document.getElementById('eu_name').value.trim();
+            const email = document.getElementById('eu_email').value.trim();
+            const phone = document.getElementById('eu_phone').value.trim();
+            const role = document.getElementById('eu_role').value;
+            const dob = document.getElementById('eu_dob').value;
+
+            if (!name) { alert('Full Name is required.'); return; }
+
+            fetch('users.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'edit_user_details', user_id: parseInt(userId), name, email, phone, role, dob })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User details updated successfully!');
+                    closeEditUserModal();
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to update user details.');
+                }
+            })
+            .catch(err => alert('Network error updating user details.'));
+        }
     </script>
+
+    <!-- Edit User Details Modal -->
+    <div id="editUserModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; width:90%; max-width:500px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:12px;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--primary); font-family:'Fraunces', serif;">
+                    <i class="fa-solid fa-user-pen" style="color:var(--accent);"></i> Edit User Details
+                </h3>
+                <button onclick="closeEditUserModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--gray-500);">&times;</button>
+            </div>
+            <input type="hidden" id="eu_user_id">
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div>
+                    <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Full Name *</label>
+                    <input type="text" id="eu_name" class="form-input" style="width:100%; padding:10px; margin:0;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Email Address</label>
+                    <input type="email" id="eu_email" class="form-input" style="width:100%; padding:10px; margin:0;">
+                </div>
+                <div>
+                    <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Phone Number</label>
+                    <input type="text" id="eu_phone" class="form-input" style="width:100%; padding:10px; margin:0;">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Role</label>
+                        <select id="eu_role" class="form-select" style="width:100%; padding:10px; margin:0;">
+                            <option value="customer">Customer / Event Host</option>
+                            <option value="vendor">Vendor / Professional</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Date of Birth</label>
+                        <input type="date" id="eu_dob" class="form-input" style="width:100%; padding:10px; margin:0;">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditUserModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditUser()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Status Action Modal -->
     <div id="statusActionModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">

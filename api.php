@@ -68,7 +68,7 @@ if (!function_exists('resolve_vendor_logo')) {
 
 if (!function_exists('resolve_vendor_cover')) {
     function resolve_vendor_cover($category, $current_cover = '') {
-        if (!empty($current_cover) && strpos($current_cover, 'unsplash.com') === false && strpos($current_cover, 'photo-') === false && strpos($current_cover, 'data:image/svg+xml') === false) {
+        if (!empty($current_cover) && strpos($current_cover, 'data:image/svg+xml') === false) {
             return $current_cover;
         }
         if ($category === 'Chilling Services') {
@@ -3381,17 +3381,32 @@ case 'chat':
     $db_vendor_id = $target_v_id > 0 ? $target_v_id : $vid;
     $db_user_id = $uid;
     $sender_role = 'user';
+    $active_user_role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? 'customer';
 
-    if (($my_v_id > 0 && $my_v_id === $target_v_id) || ($role === 'vendor' && $my_v_id > 0)) {
+    if (($my_v_id > 0 && $my_v_id === $target_v_id) || ($active_user_role === 'vendor' && $my_v_id > 0)) {
         $db_vendor_id = $my_v_id > 0 ? $my_v_id : $target_v_id;
         $db_user_id = $target_u_id;
         $sender_role = 'vendor';
     }
 
-    $now_stamp = date('Y-m-d H:i:s');
-    $ins = $pdo->prepare("INSERT INTO messages (vendor_id, user_id, sender, message, type, file_name, file_size, duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $ins->execute([$db_vendor_id, $db_user_id, $sender_role, $message, $type, $file_name, $file_size, $duration, $now_stamp]);
-    $inserted_id = intval($pdo->lastInsertId());
+    try {
+        $now_stamp = date('Y-m-d H:i:s');
+        $ins = $pdo->prepare("INSERT INTO messages (vendor_id, user_id, sender, message, type, file_name, file_size, duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $ins->execute([$db_vendor_id, $db_user_id, $sender_role, $message, $type, $file_name, $file_size, $duration, $now_stamp]);
+        $inserted_id = intval($pdo->lastInsertId());
+    } catch (Throwable $eMsgIns) {
+        // Fallback for missing optional columns
+        try {
+            $now_stamp = date('Y-m-d H:i:s');
+            $ins = $pdo->prepare("INSERT INTO messages (vendor_id, user_id, sender, message, type, created_at) VALUES (?, ?, ?, ?, ?, ?)");
+            $ins->execute([$db_vendor_id, $db_user_id, $sender_role, $message, $type, $now_stamp]);
+            $inserted_id = intval($pdo->lastInsertId());
+        } catch (Throwable $eMsgFatal) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Unable to deliver message: ' . $eMsgFatal->getMessage()]);
+            exit;
+        }
+    }
 
     // Send notification to recipient
     $notif_text = $message;
@@ -4000,7 +4015,11 @@ case 'upload_cover_image':
         $pdo->prepare("UPDATE vendors SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $v_id]);
         if (isset($_SESSION['vendor'])) $_SESSION['vendor']['cover_photo'] = $cover_url;
     }
-    if (isset($_SESSION['user'])) $_SESSION['user']['vendor_cover_photo'] = $cover_url;
+    $pdo->prepare("UPDATE users SET cover_photo = ? WHERE id = ?")->execute([$cover_url, $uid]);
+    if (isset($_SESSION['user'])) {
+        $_SESSION['user']['cover_photo'] = $cover_url;
+        $_SESSION['user']['vendor_cover_photo'] = $cover_url;
+    }
     echo json_encode(['success' => true, 'cover_photo' => $busted_url, 'url' => $busted_url, 'vendor' => $_SESSION['vendor'] ?? null, 'user' => $_SESSION['user'] ?? null]);
     break;
 
@@ -4192,10 +4211,14 @@ case 'admin_review_profile_change_request':
     
     if ($status === 'approved') {
         $field = $req['field_name'];
-        if (in_array($field, ['name', 'email', 'phone', 'dob'])) {
+        $user_fields = ['name', 'email', 'phone', 'dob'];
+        $vendor_fields = ['name', 'category', 'description', 'location', 'phone', 'email', 'experience', 'whatsapp', 'website', 'bank_name', 'account_name', 'account_number', 'momo_number', 'momo_provider', 'payout_method'];
+
+        if (in_array($field, $user_fields)) {
             $upd = $pdo->prepare("UPDATE users SET $field = ? WHERE id = ?");
             $upd->execute([$req['new_value'], $req['user_id']]);
-        } else {
+        }
+        if (in_array($field, $vendor_fields)) {
             $upd = $pdo->prepare("UPDATE vendors SET $field = ? WHERE user_id = ?");
             $upd->execute([$req['new_value'], $req['user_id']]);
         }

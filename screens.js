@@ -8267,10 +8267,12 @@ function handleCoverPhotoSelect(event) {
                 if (!state.user) state.user = {};
                 state.vendor.cover_photo = savedUrl;
                 state.user.vendor_cover_photo = savedUrl;
+                state.user.cover_photo = savedUrl;
                 if (res?.vendor_id) state.user.vendor_id = res.vendor_id;
                 if (preview) preview.src = savedUrl;
                 try {
                     localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
+                    localStorage.setItem('oh_user', JSON.stringify(state.user));
                 } catch(eIgn) {}
             }
             showPushNotification('Cover Photo Saved', 'Cover banner updated.');

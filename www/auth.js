@@ -277,7 +277,7 @@ function renderAuthModal() {
                 <div class="form-group">
                     <div class="flex-between">
                         <label class="form-label">Password</label>
-                        <a href="forgot-password.php" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="window.location.href='forgot-password.php'; return false;">Forgot?</a>
+                        <a href="#" style="font-size:0.75rem; color:var(--accent); font-weight:700; text-decoration:none;" onclick="state.authMode='forgot-form'; renderAuthModal(); return false;">Forgot?</a>
                     </div>
                     <div class="input-group">
                         <input type="password" class="form-input" id="login-pass" placeholder="Your password">
@@ -294,10 +294,30 @@ function renderAuthModal() {
             break;
 
         case 'forgot':
-            window.location.href = 'forgot-password.php';
-            state.authMode = 'login';
-            renderAuthModal();
-            return;
+        case 'forgot-form':
+            html = `
+                <div class="auth-modal-header" style="text-align: center;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(242, 167, 53, 0.12); color: var(--accent, #F2A735); display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 12px; border: 1px solid rgba(242, 167, 53, 0.3);">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h2 class="auth-modal-title">Reset Your Password</h2>
+                    <p class="auth-modal-subtitle" style="font-size: 0.85rem; color: #6B7280; line-height: 1.4; margin-top: 4px;">
+                        Enter your registered email address or phone number and we'll send you a password reset link.
+                    </p>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">Email or Phone Number</label>
+                    <div class="input-group">
+                        <input type="text" class="form-input" id="forgot-target" placeholder="email@example.com or phone number" required>
+                    </div>
+                </div>
+                <div id="auth-error-msg" class="form-error mb-12" style="display:none;"></div>
+                <button class="btn btn-primary btn-full" id="forgot-submit-btn" onclick="submitForgotPassword()"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Send Reset Link</button>
+                <div class="text-center mt-16">
+                    <a href="#" style="font-size: 0.83rem; color: var(--accent); font-weight: 700; text-decoration: none;" onclick="state.authMode='login'; renderAuthModal(); event.preventDefault();"><i class="fa-solid fa-arrow-left" style="margin-right: 4px;"></i> Return to Sign In</a>
+                </div>
+            `;
+            break;
 
         case 'forgot-sent':
             const sentEmail = state.authData?.resetTarget || document.getElementById('forgot-target')?.value || '';
@@ -784,6 +804,62 @@ function submitForgot(event) {
         }
     });
 }
+
+window.submitForgotPassword = async function() {
+    const targetInput = document.getElementById('forgot-target');
+    const targetVal = targetInput ? targetInput.value.trim() : '';
+    const errBox = document.getElementById('auth-error-msg');
+    const submitBtn = document.getElementById('forgot-submit-btn');
+
+    if (!targetVal) {
+        if (errBox) {
+            errBox.textContent = 'Please enter your email or phone number.';
+            errBox.style.display = 'block';
+        }
+        return;
+    }
+
+    if (errBox) errBox.style.display = 'none';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Sending Reset Request...';
+    }
+
+    try {
+        const payload = targetVal.includes('@') ? { email: targetVal } : { phone: targetVal };
+        const response = await fetch(typeof getApiUrl === 'function' ? getApiUrl('forgot_password') : 'api.php?action=forgot_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (data.success || response.ok) {
+            state.authData = state.authData || {};
+            state.authData.resetTarget = targetVal;
+            state.authMode = 'forgot-sent';
+            renderAuthModal();
+        } else {
+            if (errBox) {
+                errBox.textContent = data.error || 'Failed to send password reset link. Please try again.';
+                errBox.style.display = 'block';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Send Reset Link';
+            }
+        }
+    } catch (err) {
+        if (errBox) {
+            errBox.textContent = 'Network error: ' + (err.message || 'Unable to connect to server.');
+            errBox.style.display = 'block';
+        }
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Send Reset Link';
+        }
+    }
+};
 
 // Reset Password
 function submitReset(event) {
@@ -1823,10 +1899,31 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                     </div>
                 </div>
             `;
-        } else if (mode === 'forgot') {
-            window.location.href = 'forgot-password.php';
-            renderMandatoryAuthContent('login');
-            return;
+        } else if (mode === 'forgot' || mode === 'forgot-form') {
+            overlay.innerHTML = `
+                <div style="background:#0F1923; border:1px solid rgba(255,255,255,0.12); border-radius:24px; width:100%; max-width:440px; padding:32px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.8); color:#FFF; text-align:center;">
+                    <div style="width:64px; height:64px; border-radius:50%; background:rgba(242,167,53,0.15); border:2px solid var(--accent, #F2A735); color:var(--accent, #F2A735); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h2 style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:800; margin:0 0 8px 0; color:#FFF;">Reset Password</h2>
+                    <p style="font-size:0.85rem; color:#94A3B8; margin:0 0 20px 0; line-height:1.4;">
+                        Enter your registered email address or phone number to receive a password reset link.
+                    </p>
+
+                    <form onsubmit="handleMandatoryForgotSubmit(event)" style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">Email or Phone Number</label>
+                            <input type="text" id="m-lock-forgot-target" required placeholder="email@example.com or phone number" style="width:100%; padding:13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
+                        </div>
+                        <div id="m-lock-forgot-error" style="display:none; padding:10px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#FCA5A5; font-size:0.8rem; text-align:center;"></div>
+                        <button type="submit" id="m-lock-forgot-btn" style="width:100%; padding:14px; background:linear-gradient(135deg, var(--accent, #F2A735), #D98E1C); color:#000; font-weight:800; border-radius:14px; border:none; cursor:pointer; font-size:1rem; margin-top:6px;">Send Reset Link</button>
+                    </form>
+
+                    <div style="margin-top:20px; font-size:0.85rem; color:#94A3B8;">
+                        <a href="#" onclick="renderMandatoryAuthContent('login'); return false;" style="color:var(--accent, #F2A735); font-weight:700; text-decoration:none;"><i class="fa-solid fa-arrow-left"></i> Return to Sign In</a>
+                    </div>
+                </div>
+            `;
         } else if (mode === 'forgot-sent') {
             const target = window._forgotTarget || '';
             overlay.innerHTML = `
@@ -1900,7 +1997,7 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <label style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin:0;">Password</label>
-                                <a href="forgot-password.php" onclick="window.location.href='forgot-password.php'; return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
+                                <a href="#" onclick="renderMandatoryAuthContent('forgot-form'); return false;" style="font-size:0.75rem; color:var(--accent, #F2A735); font-weight:700; text-decoration:none;">Forgot?</a>
                             </div>
                             <div style="position:relative;">
                                 <input type="password" id="m-lock-pass" required placeholder="Your password" style="width:100%; padding:13px 40px 13px 13px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.95rem; outline:none; box-sizing:border-box;">
@@ -1928,6 +2025,43 @@ window.unlockMandatoryAuthScreen = function () {
     if (overlay) {
         overlay.style.display = 'none';
         try { overlay.remove(); } catch (e) { }
+    }
+};
+
+window.handleMandatoryForgotSubmit = async function (e) {
+    if (e) e.preventDefault();
+    const targetInput = document.getElementById('m-lock-forgot-target');
+    const targetVal = targetInput ? targetInput.value.trim() : '';
+    const errBox = document.getElementById('m-lock-forgot-error');
+    const btn = document.getElementById('m-lock-forgot-btn');
+
+    if (!targetVal) {
+        if (errBox) { errBox.textContent = 'Please enter your email or phone number.'; errBox.style.display = 'block'; }
+        return;
+    }
+
+    if (errBox) errBox.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending Reset Link...'; }
+
+    try {
+        const payload = targetVal.includes('@') ? { email: targetVal } : { phone: targetVal };
+        const response = await fetch(typeof getApiUrl === 'function' ? getApiUrl('forgot_password') : 'api.php?action=forgot_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (data.success || response.ok) {
+            window._forgotTarget = targetVal;
+            renderMandatoryAuthContent('forgot-sent');
+        } else {
+            if (errBox) { errBox.textContent = data.error || 'Failed to send reset link.'; errBox.style.display = 'block'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+        }
+    } catch(err) {
+        if (errBox) { errBox.textContent = 'Network error: Unable to connect to server.'; errBox.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
     }
 };
 

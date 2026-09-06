@@ -55,7 +55,23 @@ window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
         }
     }
     
-    if (!domainPrefix || domainPrefix.includes('capacitor://') || domainPrefix.includes('file://')) {
+    const hostname = (() => {
+        try {
+            return new URL(domainPrefix).hostname;
+        } catch (e) {
+            return '';
+        }
+    })();
+
+    if (!domainPrefix || 
+        domainPrefix.startsWith('capacitor://') || 
+        domainPrefix.startsWith('file://') ||
+        domainPrefix.includes('capacitor://') || 
+        domainPrefix.includes('file://') ||
+        hostname === 'localhost' || 
+        hostname === '127.0.0.1' ||
+        domainPrefix.includes('localhost') || 
+        domainPrefix.includes('127.0.0.1')) {
         domainPrefix = 'https://ohati.com';
     }
 

@@ -1,6 +1,10 @@
 window.getOhatiApiBaseUrl = function() {
     const customUrl = localStorage.getItem('ohati_custom_server_url');
-    if (customUrl) return customUrl.endsWith('/') ? customUrl + 'api.php' : customUrl + '/api.php';
+    if (customUrl) {
+        const trimmed = customUrl.trim();
+        if (trimmed.endsWith('/api.php') || trimmed.endsWith('api.php')) return trimmed;
+        return trimmed.endsWith('/') ? trimmed + 'api.php' : trimmed + '/api.php';
+    }
     if (window.OHATI_API_BASE_URL) return window.OHATI_API_BASE_URL;
 
     const isNativeApp = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
@@ -9,7 +13,11 @@ window.getOhatiApiBaseUrl = function() {
                         (navigator.userAgent && navigator.userAgent.includes('OhatiApp'));
 
     if (isNativeApp) {
-        if (window.location.origin && window.location.origin.startsWith('http') && !window.location.origin.includes('capacitor://')) {
+        if (window.location.origin && 
+            window.location.origin.startsWith('http') && 
+            !window.location.origin.includes('capacitor://') &&
+            !window.location.origin.includes('localhost') &&
+            !window.location.origin.includes('127.0.0.1')) {
             const pathName = window.location.pathname || '';
             const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
             return window.location.origin + (appDir ? appDir + '/api.php' : '/api.php');

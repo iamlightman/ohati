@@ -864,7 +864,7 @@ window.scrollToVendorCardColumn = function(idx) {
 function handleAdClick(adId, destination, vendorId) {
     API.post('record_ad_click', { id: adId }).then(() => {
         if (destination === 'whatsapp') {
-            window.open('https://wa.me/233209001100', '_blank');
+            window.open('https://wa.me/233209459997', '_blank');
         } else if (destination === 'packages') {
             viewVendorDetails(vendorId);
             setTimeout(() => {
@@ -1836,7 +1836,7 @@ function renderChatInbox(inbox) {
         return `
             <div class="chat-inbox-item" onclick="openChatWithVendor(${targetId})">
                 <div class="chat-inbox-avatar">
-                    <img src="${targetLogo || (window.DEFAULT_USER_AVATAR || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23081729\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%23FFFFFF\'/><path d=\'M 20 82 C 20 62, 32 56, 50 56 C 68 56, 80 62, 80 82 Z\' fill=\'%23FFFFFF\'/></svg>')}" alt="" class="header-logo-img">
+                    <img src="${window.resolveImageUrl(targetLogo, 'avatar')}" alt="" class="header-logo-img">
                     ${isOnline ? `<div class="chat-inbox-online" title="Online now"></div>` : ''}
                 </div>
                 <div class="chat-inbox-info">
@@ -1885,7 +1885,7 @@ function loadDesktopChatPartner(vid) {
         contentPanel.innerHTML = `
             <div class="chat-screen" data-vendor-id="${v.id}">
                 <div class="chat-header">
-                    <img class="chat-vendor-avatar" src="${v.logo || 'img/default-avatar.png'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                    <img class="chat-vendor-avatar" src="${window.resolveImageUrl(v.logo || v.avatar, 'avatar')}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                         <div class="chat-vendor-name">${nameWithBadge}</div>
                         <div class="chat-vendor-status" id="chat-partner-status">${statusTextDesk}</div>
@@ -2141,7 +2141,7 @@ function renderChatShell(v) {
         <div class="chat-screen" data-vendor-id="${v.id}">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="closeActiveChat()"><i class="fa-solid fa-chevron-left"></i></button>
-                <img class="chat-vendor-avatar" src="${v.logo || 'img/default-avatar.png'}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
+                <img class="chat-vendor-avatar" src="${window.resolveImageUrl(v.logo || v.avatar, 'avatar')}" alt="" style="cursor:pointer;" onclick="${headerClickAction}">
                 <div class="chat-vendor-info" style="cursor:pointer;" onclick="${headerClickAction}">
                     <div class="chat-vendor-name">${nameWithBadge}</div>
                     <div class="chat-vendor-status" id="chat-partner-status">${statusText}</div>
@@ -2284,7 +2284,7 @@ function updateChatMessages(history) {
             return `
                 <div class="msg-row incoming" style="display:flex; align-items:flex-end; justify-content:flex-start; gap:8px; width:100%; margin-bottom:4px;">
                     <div style="position:relative; width:28px; height:28px; flex-shrink:0;">
-                        <img src="${partnerAvatar}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="${avatarClickAction}" title="${state.activeChatPartner?.name || 'Profile'}">
+                        <img src="${window.resolveImageUrl(partnerAvatar, 'avatar')}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="${avatarClickAction}" title="${state.activeChatPartner?.name || 'Profile'}">
                         ${badgeBadgeHtml}
                     </div>
                     <div class="msg-bubble ${bubbleClass}" style="margin:0;">
@@ -6170,7 +6170,7 @@ function renderFaqsList(faqs) {
 
 window.openChatSupport = function() {
     API.get('get_app_download_urls').then(data => {
-        let phone = data.chat_support_number || data.site_phone || '+233209001100';
+        let phone = data.chat_support_number || data.site_phone || '+233209459997';
         let cleanPhone = phone.replace(/[^0-9]/g, '');
         if (cleanPhone.startsWith('0')) {
             cleanPhone = '233' + cleanPhone.substring(1);
@@ -6182,7 +6182,7 @@ window.openChatSupport = function() {
             window.open(waUrl, '_blank');
         }
     }).catch(err => {
-        window.open('https://wa.me/233209001100', '_blank');
+        window.open('https://wa.me/233209459997', '_blank');
     });
 };
 

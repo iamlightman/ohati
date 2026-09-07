@@ -709,6 +709,13 @@ function renderFilterDrawer() {
     const drawer = document.getElementById('filter-drawer');
     if (!drawer) return;
 
+    const renderCategoryOptions = (cats) => `
+        <option value="">All Categories</option>
+        ${(cats || []).map(c => `<option value="${c.name}" ${state.filters.category === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+    `;
+
+    const categories = state.categories || [];
+
     drawer.innerHTML = `
         <div class="flex-between mb-16">
             <h3 style="font-size:1.1rem;">Filter Vendors</h3>
@@ -718,8 +725,7 @@ function renderFilterDrawer() {
         <div class="form-group">
             <label class="form-label">Category</label>
             <select class="form-select" id="filter-category">
-                <option value="">All Categories</option>
-                ${state.categories.map(c => `<option value="${c.name}" ${state.filters.category === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+                ${renderCategoryOptions(categories)}
             </select>
         </div>
 
@@ -759,6 +765,16 @@ function renderFilterDrawer() {
             <button class="btn btn-primary btn-full" onclick="applyFilters()">Apply Filters</button>
         </div>
     `;
+
+    if (!categories.length) {
+        API.getCategories().then(cats => {
+            if (cats && cats.length) {
+                state.categories = cats;
+                const select = document.getElementById('filter-category');
+                if (select) select.innerHTML = renderCategoryOptions(cats);
+            }
+        }).catch(() => {});
+    }
 }
 
 function applyFilters() {
@@ -962,6 +978,13 @@ function showAppDownloadModal() {
 window.showAppDownloadModal = showAppDownloadModal;
 
 function openAllCategoriesModal() {
+    const renderCategoryCards = (cats) => (cats || []).map(c => `
+        <div class="category-item-modal" onclick="selectCategoryFilter('${c.name}'); closeModal();" data-name="${c.name.toLowerCase()}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid var(--gray-200); background:var(--gray-50); cursor:pointer; transition:all var(--anim-fast) ease;">
+            <div style="font-size:1.1rem; color:var(--accent); display:flex; align-items:center; justify-content:center; width:28px; height:28px;"><i class="fa-solid fa-${c.icon}"></i></div>
+            <span style="font-size:0.8rem; font-weight:600; color:var(--gray-800);">${c.name}</span>
+        </div>
+    `).join('');
+
     const categories = state.categories || [];
 
     let modalHTML = `
@@ -978,16 +1001,21 @@ function openAllCategoriesModal() {
         </div>
         
         <div id="modal-category-grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; max-height:300px; overflow-y:auto; padding-bottom:8px;">
-            ${categories.map(c => `
-                <div class="category-item-modal" onclick="selectCategoryFilter('${c.name}'); closeModal();" data-name="${c.name.toLowerCase()}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid var(--gray-200); background:var(--gray-50); cursor:pointer; transition:all var(--anim-fast) ease;">
-                    <div style="font-size:1.1rem; color:var(--accent); display:flex; align-items:center; justify-content:center; width:28px; height:28px;"><i class="fa-solid fa-${c.icon}"></i></div>
-                    <span style="font-size:0.8rem; font-weight:600; color:var(--gray-800);">${c.name}</span>
-                </div>
-            `).join('')}
+            ${renderCategoryCards(categories)}
         </div>
     `;
 
     openModal(modalHTML);
+
+    if (!categories.length) {
+        API.getCategories().then(cats => {
+            if (cats && cats.length) {
+                state.categories = cats;
+                const grid = document.getElementById('modal-category-grid');
+                if (grid) grid.innerHTML = renderCategoryCards(cats);
+            }
+        }).catch(() => {});
+    }
 }
 
 function filterCategoriesInModal() {

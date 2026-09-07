@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('site_name', trim($_POST['site_name'] ?? 'Ohati'));
         setSetting('site_email', trim($_POST['site_email'] ?? ''));
         setSetting('site_phone', trim($_POST['site_phone'] ?? ''));
-        setSetting('chat_support_number', trim($_POST['chat_support_number'] ?? '+233209001100'));
+        setSetting('chat_support_number', trim($_POST['chat_support_number'] ?? '+233209459997'));
         setSetting('site_address', trim($_POST['site_address'] ?? ''));
         setSetting('android_download_url', trim($_POST['android_download_url'] ?? 'https://play.google.com/store/apps/details?id=com.ohati.app'));
         setSetting('ios_download_url', trim($_POST['ios_download_url'] ?? 'https://apps.apple.com/app/ohati/id123456789'));
@@ -157,8 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Read current settings values
 $site_name = getSetting('site_name', 'Ohati');
 $site_email = getSetting('site_email', 'hello@ohati.com');
-$site_phone = getSetting('site_phone', '+233 20 900 1100');
-$chat_support_number = getSetting('chat_support_number', '+233 20 900 1100');
+$site_phone = getSetting('site_phone', '+233 20 945 9997');
+$chat_support_number = getSetting('chat_support_number', '+233 20 945 9997');
 $site_address = getSetting('site_address', 'Accra, Ghana');
 $android_download_url = getSetting('android_download_url', 'https://play.google.com/store/apps/details?id=com.ohati.app');
 $ios_download_url = getSetting('ios_download_url', 'https://apps.apple.com/app/ohati/id123456789');
@@ -398,7 +398,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
 
                         <div class="form-group mb-16">
                             <label class="form-label" style="font-weight:700; color:var(--primary);"><i class="fa-brands fa-whatsapp" style="color:#25D366;"></i> 24/7 Chat Support Number (WhatsApp Desk)</label>
-                            <input type="text" name="chat_support_number" class="form-input" placeholder="e.g. +233209001100" value="<?= htmlspecialchars($chat_support_number) ?>">
+                            <input type="text" name="chat_support_number" class="form-input" placeholder="e.g. +233209459997" value="<?= htmlspecialchars($chat_support_number) ?>">
                             <div style="font-size:0.75rem; color:var(--gray-500); margin-top:4px;">This number powers the "Still need assistance? Our support desk is online 24/7." 1-click Chat Support button across the app.</div>
                         </div>
 

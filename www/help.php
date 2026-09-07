@@ -76,7 +76,7 @@ try {
             <div class="card" style="padding:16px; text-align:center; background:var(--gray-50); border:1px solid var(--gray-100);">
                 <h4 style="font-size:0.85rem; margin-bottom:6px; color:var(--primary);">Still need assistance?</h4>
                 <p style="font-size:0.75rem; color:var(--gray-500); margin-bottom:12px;">Our support desk is online 24/7.</p>
-                <a href="https://wa.me/233209001100" target="_blank" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:8px; text-decoration:none; justify-content:center;">
+                <a href="https://wa.me/233209459997" target="_blank" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:8px; text-decoration:none; justify-content:center;">
                     <i class="fa-brands fa-whatsapp"></i> Chat Support
                 </a>
             </div>

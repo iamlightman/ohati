@@ -504,7 +504,7 @@ if ($requested_vendor_id > 0) {
                     </label>
                 </div>
                 <div class="welcome-popup-footer" style="display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; padding:16px 20px; background:var(--gray-100, #F8FAFC); border-top:1px solid var(--gray-200, #E2E8F0); border-radius:0 0 20px 20px;">
-                    <div style="font-size:0.85rem; color:var(--gray-700, #334155);">Need help? Chat with <a href="https://wa.me/233209001100" target="_blank" style="color:var(--primary, #1B2B4B); text-decoration:none; font-weight:700;">Ohati Support</a></div>
+                    <div style="font-size:0.85rem; color:var(--gray-700, #334155);">Need help? Chat with <a href="https://wa.me/233209459997" target="_blank" style="color:var(--primary, #1B2B4B); text-decoration:none; font-weight:700;">Ohati Support</a></div>
                 </div>
             </div>
         </div>

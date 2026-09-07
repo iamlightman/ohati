@@ -282,6 +282,21 @@ if (!function_exists('clean')) {
     }
 }
 
+if (!function_exists('getSetting')) {
+    function getSetting($key, $default = '') {
+        global $pdo;
+        try {
+            if (!$pdo) return $default;
+            $stmt = $pdo->prepare("SELECT val_value FROM system_settings WHERE key_name = ?");
+            $stmt->execute([$key]);
+            $val = $stmt->fetchColumn();
+            return ($val !== false) ? $val : $default;
+        } catch (Exception $e) {
+            return $default;
+        }
+    }
+}
+
 if (!function_exists('add_notification')) {
     function add_notification($pdo, $user_id, $title, $message) {
         $uid = intval($user_id);
@@ -1948,35 +1963,53 @@ case 'request_account_deletion':
 
 // ── CATEGORIES ─────────────────────────────────────────────────────────
 case 'categories':
+    $default_categories = [
+        ['id'=>1, 'name'=>'Photography', 'slug'=>'photography', 'icon'=>'camera', 'description'=>'', 'display_order'=>1, 'is_active'=>1],
+        ['id'=>2, 'name'=>'Videography', 'slug'=>'videography', 'icon'=>'video', 'description'=>'', 'display_order'=>2, 'is_active'=>1],
+        ['id'=>3, 'name'=>'Makeup Artists', 'slug'=>'makeup-artists', 'icon'=>'brush', 'description'=>'', 'display_order'=>3, 'is_active'=>1],
+        ['id'=>4, 'name'=>'Bridal Shops', 'slug'=>'bridal-shops', 'icon'=>'shirt', 'description'=>'', 'display_order'=>4, 'is_active'=>1],
+        ['id'=>5, 'name'=>'Event Planners', 'slug'=>'event-planners', 'icon'=>'calendar-days', 'description'=>'', 'display_order'=>5, 'is_active'=>1],
+        ['id'=>6, 'name'=>'Decorators', 'slug'=>'decorators', 'icon'=>'wand-magic-sparkles', 'description'=>'', 'display_order'=>6, 'is_active'=>1],
+        ['id'=>7, 'name'=>'Caterers', 'slug'=>'caterers', 'icon'=>'utensils', 'description'=>'', 'display_order'=>7, 'is_active'=>1],
+        ['id'=>8, 'name'=>'Cake Designers', 'slug'=>'cake-designers', 'icon'=>'cake-candles', 'description'=>'', 'display_order'=>8, 'is_active'=>1],
+        ['id'=>9, 'name'=>'Event Venues', 'slug'=>'event-venues', 'icon'=>'hotel', 'description'=>'', 'display_order'=>9, 'is_active'=>1],
+        ['id'=>10, 'name'=>'DJs', 'slug'=>'djs', 'icon'=>'music', 'description'=>'', 'display_order'=>10, 'is_active'=>1],
+        ['id'=>11, 'name'=>'MCs', 'slug'=>'mcs', 'icon'=>'microphone', 'description'=>'', 'display_order'=>11, 'is_active'=>1],
+        ['id'=>12, 'name'=>'Live Bands', 'slug'=>'live-bands', 'icon'=>'guitar', 'description'=>'', 'display_order'=>12, 'is_active'=>1],
+        ['id'=>13, 'name'=>'Florists', 'slug'=>'florists', 'icon'=>'spa', 'description'=>'', 'display_order'=>13, 'is_active'=>1],
+        ['id'=>14, 'name'=>'Car Rentals', 'slug'=>'car-rentals', 'icon'=>'car', 'description'=>'', 'display_order'=>14, 'is_active'=>1],
+        ['id'=>15, 'name'=>'Security Services', 'slug'=>'security-services', 'icon'=>'shield-halved', 'description'=>'', 'display_order'=>15, 'is_active'=>1],
+        ['id'=>16, 'name'=>'Chilling Services', 'slug'=>'chilling-services', 'icon'=>'snowflake', 'description'=>'', 'display_order'=>16, 'is_active'=>1],
+        ['id'=>17, 'name'=>'Rental Equipment', 'slug'=>'rental-equipment', 'icon'=>'chair', 'description'=>'', 'display_order'=>17, 'is_active'=>1],
+        ['id'=>18, 'name'=>'Cocktail Bars', 'slug'=>'cocktail-bars', 'icon'=>'martini-glass-citrus', 'description'=>'', 'display_order'=>18, 'is_active'=>1],
+        ['id'=>19, 'name'=>'Honeymoon Packages', 'slug'=>'honeymoon-packages', 'icon'=>'plane-departure', 'description'=>'', 'display_order'=>19, 'is_active'=>1],
+        ['id'=>20, 'name'=>'Invitation Designers', 'slug'=>'invitation-designers', 'icon'=>'envelope-open-text', 'description'=>'', 'display_order'=>20, 'is_active'=>1],
+        ['id'=>21, 'name'=>'Jewelers', 'slug'=>'jewelers', 'icon'=>'gem', 'description'=>'', 'display_order'=>21, 'is_active'=>1],
+        ['id'=>22, 'name'=>'Lighting', 'slug'=>'lighting', 'icon'=>'lightbulb', 'description'=>'', 'display_order'=>22, 'is_active'=>1],
+        ['id'=>23, 'name'=>'Printing Services', 'slug'=>'printing-services', 'icon'=>'print', 'description'=>'', 'display_order'=>23, 'is_active'=>1],
+        ['id'=>24, 'name'=>'Ushers', 'slug'=>'ushers', 'icon'=>'user-check', 'description'=>'', 'display_order'=>24, 'is_active'=>1],
+        ['id'=>25, 'name'=>'Content Creators', 'slug'=>'content-creators', 'icon'=>'clapperboard', 'description'=>'', 'display_order'=>25, 'is_active'=>1],
+        ['id'=>26, 'name'=>'Juice Bar', 'slug'=>'juice-bar', 'icon'=>'glass-water', 'description'=>'', 'display_order'=>26, 'is_active'=>1],
+        ['id'=>27, 'name'=>'Traditional Marriage Services', 'slug'=>'traditional-marriage-services', 'icon'=>'hands-holding', 'description'=>'', 'display_order'=>27, 'is_active'=>1],
+        ['id'=>28, 'name'=>'Dowry Wrapping', 'slug'=>'dowry-wrapping', 'icon'=>'gift', 'description'=>'', 'display_order'=>28, 'is_active'=>1],
+        ['id'=>29, 'name'=>'Breakfast', 'slug'=>'breakfast', 'icon'=>'mug-hot', 'description'=>'', 'display_order'=>29, 'is_active'=>1],
+        ['id'=>30, 'name'=>'Coordinators', 'slug'=>'coordinators', 'icon'=>'clipboard-list', 'description'=>'', 'display_order'=>30, 'is_active'=>1],
+        ['id'=>31, 'name'=>'Waiters', 'slug'=>'waiters', 'icon'=>'concierge-bell', 'description'=>'', 'display_order'=>31, 'is_active'=>1],
+        ['id'=>32, 'name'=>'Portable Washroom', 'slug'=>'portable-washroom', 'icon'=>'restroom', 'description'=>'', 'display_order'=>32, 'is_active'=>1],
+        ['id'=>33, 'name'=>'Souvenirs', 'slug'=>'souvenirs', 'icon'=>'bag-shopping', 'description'=>'', 'display_order'=>33, 'is_active'=>1],
+        ['id'=>34, 'name'=>'Hairstylists', 'slug'=>'hairstylists', 'icon'=>'scissors', 'description'=>'', 'display_order'=>34, 'is_active'=>1],
+        ['id'=>35, 'name'=>'Dowry Bearers', 'slug'=>'dowry-bearers', 'icon'=>'people-group', 'description'=>'', 'display_order'=>35, 'is_active'=>1],
+        ['id'=>36, 'name'=>'Local Bar', 'slug'=>'local-bar', 'icon'=>'beer-mug-empty', 'description'=>'', 'display_order'=>36, 'is_active'=>1]
+    ];
     try {
         $stmt = $pdo->query("SELECT id, name, slug, icon, description, display_order, is_active FROM vendor_categories WHERE is_active = 1 ORDER BY display_order ASC, name ASC");
         $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (empty($categories)) {
-            $categories = [
-                ['name'=>'Photography','icon'=>'camera'],['name'=>'Videography','icon'=>'video'],
-                ['name'=>'Makeup Artists','icon'=>'brush'],['name'=>'Bridal Shops','icon'=>'shirt'],
-                ['name'=>'Event Planners','icon'=>'calendar-days'],['name'=>'Decorators','icon'=>'wand-magic-sparkles'],
-                ['name'=>'Caterers','icon'=>'utensils'],['name'=>'Cake Designers','icon'=>'cake-candles'],
-                ['name'=>'Event Venues','icon'=>'hotel'],['name'=>'DJs','icon'=>'music'],
-                ['name'=>'MCs','icon'=>'microphone'],['name'=>'Live Bands','icon'=>'guitar'],
-                ['name'=>'Florists','icon'=>'spa'],['name'=>'Car Rentals','icon'=>'car'],
-                ['name'=>'Security Services','icon'=>'shield-halved'],['name'=>'Chilling Services','icon'=>'snowflake'],
-                ['name'=>'Rental Equipment','icon'=>'chair'],['name'=>'Cocktail Bars','icon'=>'martini-glass-citrus'],
-                ['name'=>'Honeymoon Packages','icon'=>'plane-departure'],['name'=>'Invitation Designers','icon'=>'envelope-open-text'],
-                ['name'=>'Jewelers','icon'=>'gem'],['name'=>'Lighting','icon'=>'lightbulb'],
-                ['name'=>'Printing Services','icon'=>'print'],['name'=>'Ushers','icon'=>'user-check'],
-                ['name'=>'Content Creators','icon'=>'clapperboard'],['name'=>'Juice Bar','icon'=>'glass-water'],
-                ['name'=>'Traditional Marriage Services','icon'=>'hands-holding'],
-                ['name'=>'Dowry Wrapping','icon'=>'gift'],['name'=>'Breakfast','icon'=>'mug-hot'],
-                ['name'=>'Coordinators','icon'=>'clipboard-list'],['name'=>'Waiters','icon'=>'concierge-bell'],
-                ['name'=>'Portable Washroom','icon'=>'restroom'],['name'=>'Souvenirs','icon'=>'bag-shopping'],
-                ['name'=>'Hairstylists','icon'=>'scissors'],['name'=>'Dowry Bearers','icon'=>'people-group'],
-                ['name'=>'Local Bar','icon'=>'beer-mug-empty']
-            ];
+            $categories = $default_categories;
         }
         echo json_encode($categories);
     } catch (Exception $e) {
-        echo json_encode([]);
+        echo json_encode($default_categories);
     }
     break;
 
@@ -2292,7 +2325,23 @@ case 'vendor_details':
     } else {
         http_response_code(404); echo json_encode(['error'=>'Not found']); exit;
     }
-    $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
+    $v_owner_avatar = '';
+    if (!empty($v['user_id']) && intval($v['user_id']) > 0) {
+        try {
+            $u_stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ? LIMIT 1");
+            $u_stmt->execute([intval($v['user_id'])]);
+            $v_owner_avatar = strval($u_stmt->fetchColumn() ?: '');
+        } catch (Throwable $eUAv) {}
+    }
+    $v['avatar'] = $v_owner_avatar;
+    $raw_v_logo = trim((string)($v['logo'] ?? ''));
+    if (!empty($raw_v_logo)) {
+        $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $raw_v_logo);
+    } else if (!empty($v_owner_avatar)) {
+        $v['logo'] = '';
+    } else {
+        $v['logo'] = resolve_vendor_logo($v['category'] ?? '', '');
+    }
     $v['cover_photo'] = resolve_vendor_cover($v['category'] ?? '', $v['cover_photo'] ?? '');
     $info = get_online_status_info($v['last_active'] ?? '');
     $v['is_online'] = $info['is_online'];
@@ -5374,8 +5423,8 @@ case 'admin_update_referral_settings':
 case 'get_app_download_urls':
     $android_url = getSetting('android_download_url', 'https://play.google.com/store/apps/details?id=com.ohati.app');
     $ios_url = getSetting('ios_download_url', 'https://apps.apple.com/app/ohati/id123456789');
-    $chat_support = getSetting('chat_support_number', '+233209001100');
-    $site_phone = getSetting('site_phone', '+233 20 900 1100');
+    $chat_support = getSetting('chat_support_number', '+233209459997');
+    $site_phone = getSetting('site_phone', '+233 20 945 9997');
     $site_email = getSetting('site_email', 'hello@ohati.com');
 
     echo json_encode([

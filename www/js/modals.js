@@ -413,42 +413,17 @@ function openBecomeVendorModal() {
                 <div class="form-group mb-12">
                     <label class="form-label">Primary Vendor Category</label>
                     <select class="form-select" id="bv-category" required>
-                        <option value="Photography">Photography</option>
-                        <option value="Videography">Videography</option>
-                        <option value="Makeup Artists">Makeup Artists</option>
-                        <option value="Bridal Shops">Bridal Shops</option>
-                        <option value="Event Planners">Event Planners</option>
-                        <option value="Decorators">Decorators</option>
-                        <option value="Caterers">Caterers</option>
-                        <option value="Cake Designers">Cake Designers</option>
-                        <option value="Event Venues">Event Venues</option>
-                        <option value="DJs">DJs</option>
-                        <option value="MCs">MCs</option>
-                        <option value="Live Bands">Live Bands</option>
-                        <option value="Florists">Florists</option>
-                        <option value="Car Rentals">Car Rentals</option>
-                        <option value="Security Services">Security Services</option>
-                        <option value="Chilling Services">Chilling Services</option>
-                        <option value="Rental Equipment">Rental Equipment</option>
-                        <option value="Cocktail Bars">Cocktail Bars</option>
-                        <option value="Honeymoon Packages">Honeymoon Packages</option>
-                        <option value="Invitation Designers">Invitation Designers</option>
-                        <option value="Jewelers">Jewelers</option>
-                        <option value="Lighting">Lighting</option>
-                        <option value="Printing Services">Printing Services</option>
-                        <option value="Ushers">Ushers</option>
-                        <option value="Content Creators">Content Creators</option>
-                        <option value="Juice Bar">Juice Bar</option>
-                        <option value="Traditional Marriage Services">Traditional Marriage Services</option>
-                        <option value="Dowry Wrapping">Dowry Wrapping</option>
-                        <option value="Breakfast">Breakfast</option>
-                        <option value="Coordinators">Coordinators</option>
-                        <option value="Waiters">Waiters</option>
-                        <option value="Portable Washroom">Portable Washroom</option>
-                        <option value="Souvenirs">Souvenirs</option>
-                        <option value="Hairstylists">Hairstylists</option>
-                        <option value="Dowry Bearers">Dowry Bearers</option>
-                        <option value="Local Bar">Local Bar</option>
+                        ${(() => {
+                            const canonicalCats = (state.categories && Array.isArray(state.categories) && state.categories.length > 0) ? state.categories : [];
+                            const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+                            if (canonicalCats.length > 0) {
+                                return canonicalCats.map(c => {
+                                    const val = typeof c === 'string' ? c : (c.name || c.title || '');
+                                    return `<option value="${sanitize(val)}">${sanitize(val)}</option>`;
+                                }).join('');
+                            }
+                            return '<option value="" disabled selected>Loading categories...</option>';
+                        })()}
                     </select>
                 </div>
                 
@@ -481,26 +456,58 @@ function openBecomeVendorModal() {
     `;
     openModal(html);
     
-    API.getCategories().then(res => {
+    const canonicalCats = (state.categories && Array.isArray(state.categories) && state.categories.length > 0) ? state.categories : [];
+    const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+
+    const populateBvSelect = (cats) => {
         const select = document.getElementById('bv-category');
-        const cats = Array.isArray(res) ? res : (res && Array.isArray(res.categories) ? res.categories : (res && Array.isArray(res.data) ? res.data : []));
-        if (select && cats && cats.length > 0) {
+        const submitBtn = document.getElementById('bv-submit-btn');
+        if (select && Array.isArray(cats) && cats.length > 0) {
             select.innerHTML = cats.map(c => {
                 const val = typeof c === 'string' ? c : (c.name || c.title || '');
-                return `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+                return `<option value="${sanitize(val)}">${sanitize(val)}</option>`;
             }).join('');
+            if (submitBtn) submitBtn.disabled = false;
         }
-    }).catch(() => {});
+    };
+
+    if (canonicalCats.length === 0) {
+        const submitBtn = document.getElementById('bv-submit-btn');
+        if (submitBtn) submitBtn.disabled = true;
+        API.getCategories().then(res => {
+            const cats = Array.isArray(res) ? res : (res && Array.isArray(res.categories) ? res.categories : (res && Array.isArray(res.data) ? res.data : []));
+            if (cats && cats.length > 0) {
+                state.categories = cats;
+                populateBvSelect(cats);
+            } else {
+                throw new Error('No categories available');
+            }
+        }).catch(() => {
+            const select = document.getElementById('bv-category');
+            if (select) {
+                select.innerHTML = '<option value="" disabled selected>Unable to load categories. Please try again.</option>';
+            }
+            const submitBtn = document.getElementById('bv-submit-btn');
+            if (submitBtn) submitBtn.disabled = true;
+        });
+    }
 }
 
 function handleBecomeVendorSubmit(e) {
     e.preventDefault();
     const btn = document.getElementById('bv-submit-btn');
+    const categoryVal = document.getElementById('bv-category')?.value;
+
+    if (!categoryVal) {
+        showPushNotification('Category Required', 'Please select an active category from the list.');
+        return;
+    }
+
     if (btn) { btn.disabled = true; btn.textContent = 'Activating...'; }
     
     const payload = {
         business_name: document.getElementById('bv-bizname').value.trim(),
-        category: document.getElementById('bv-category').value,
+        category: categoryVal,
         experience: parseInt(document.getElementById('bv-experience').value) || 0,
         location: document.getElementById('bv-location').value.trim(),
         phone: document.getElementById('bv-phone').value.trim(),
@@ -785,14 +792,15 @@ function applyFilters() {
     state.filters.max_price = document.getElementById('filter-max-price')?.value || '';
     state.filters.verified_only = document.getElementById('filter-verified')?.checked ? 1 : 0;
     state.filters.premium_only = document.getElementById('filter-premium')?.checked ? 1 : 0;
+    state.filters.is_refined = true;
     closeFilterDrawer();
-    API.getVendors(state.filters).then(v => { state.vendors = v; renderSearchScreen(); });
+    initSearchScreen();
 }
 
 function resetAllFilters() {
-    state.filters = { category: '', location: '', search: '', rating: '', verified_only: 0, premium_only: 0, instant_booking: 0, min_price: '', max_price: '' };
+    state.filters = { category: '', location: '', search: '', rating: '', verified_only: 0, premium_only: 0, instant_booking: 0, min_price: '', max_price: '', is_refined: false };
     closeFilterDrawer();
-    API.getVendors().then(v => { state.vendors = v; renderSearchScreen(); });
+    initSearchScreen();
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────────
@@ -919,13 +927,63 @@ function closeWelcomePopup(event) {
 }
 
 window.openAppDownloadUrl = function (platform) {
-    if (typeof showPushNotification === 'function') {
-        showPushNotification('App Coming Soon 🚀', 'The official Ohati Mobile App for Android & iOS is coming soon to the App Store & Google Play Store!');
+    const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isNative) {
+        return; // Hidden on native Android/iOS Capacitor webview
+    }
+
+    const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isAndroid = /android/i.test(ua);
+
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ohati.app';
+    const appStoreUrl = 'https://apps.apple.com/app/ohati/id6740000000';
+
+    if (platform === 'android') {
+        window.open(playStoreUrl, '_blank');
+        return;
+    }
+    if (platform === 'ios') {
+        window.open(appStoreUrl, '_blank');
+        return;
+    }
+
+    // Auto-detect browser device type
+    if (isAndroid) {
+        window.open(playStoreUrl, '_blank');
+    } else if (isIOS) {
+        window.open(appStoreUrl, '_blank');
     } else {
-        alert('The official Ohati Mobile App for Android & iOS is coming soon!');
+        showAppDownloadModal();
     }
 };
 window.showBadgeMessage = window.openAppDownloadUrl;
+
+function showAppDownloadModal() {
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ohati.app';
+    const appStoreUrl = 'https://apps.apple.com/app/ohati/id6740000000';
+    openModal(`
+        <div style="text-align:center; padding:24px 16px;">
+            <div style="width:68px; height:68px; background:linear-gradient(135deg, #1B2B4B, #0F172A); color:#F2A735; border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem; box-shadow:0 10px 25px rgba(27,43,75,0.25);">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            <h3 style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:800; color:var(--gray-900, #0F172A); margin:0 0 6px 0;">Get Ohati Mobile App</h3>
+            <p style="font-size:0.88rem; color:var(--gray-600, #475569); line-height:1.5; margin:0 0 20px 0;">
+                Experience faster booking, real-time chat notifications, and vendor updates on your phone.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+                <a href="${playStoreUrl}" target="_blank" class="btn btn-primary btn-full" style="height:48px; background:#34A853; border-color:#34A853; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; color:#fff;">
+                    <i class="fa-brands fa-google-play" style="font-size:1.2rem;"></i> Get it on Google Play
+                </a>
+                <a href="${appStoreUrl}" target="_blank" class="btn btn-primary btn-full" style="height:48px; background:#000000; border-color:#000000; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; color:#fff;">
+                    <i class="fa-brands fa-apple" style="font-size:1.25rem;"></i> Download on App Store
+                </a>
+            </div>
+            <button class="btn btn-outline btn-full" onclick="closeModal()" style="border-radius:12px; font-weight:700;">Close</button>
+        </div>
+    `);
+}
+window.showAppDownloadModal = showAppDownloadModal;
 
 function openAllCategoriesModal() {
     const renderCategoryCards = (cats) => (cats || []).map(c => `

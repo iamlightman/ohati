@@ -27,6 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/db.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 set_exception_handler(function($e) {
     if (!headers_sent()) {
         header('Content-Type: application/json');
@@ -227,7 +231,7 @@ require_once __DIR__ . '/sms_helper.php';
 require_once __DIR__ . '/storage_helper.php';
 
 $raw_json = json_decode(file_get_contents('php://input'), true);
-$raw_input = is_array($raw_json) ? $raw_json : [];
+$raw_input = is_array($raw_json) ? $raw_json : (!empty($_POST) ? $_POST : []);
 $action = $_GET['action'] ?? $_POST['action'] ?? $raw_input['action'] ?? '';
 if (!isset($_SESSION['favorites'])) $_SESSION['favorites'] = [];
 if (!isset($_SESSION['compare'])) $_SESSION['compare'] = [];
@@ -2028,7 +2032,7 @@ case 'admin_create_category':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
     if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+    $input = json_decode(file_get_contents('php://input'), true) ?: $raw_input;
     $name = clean($input['name'] ?? '');
     $icon = clean($input['icon'] ?? 'camera');
     $desc = clean($input['description'] ?? '');
@@ -2051,7 +2055,7 @@ case 'admin_update_category':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
     if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+    $input = json_decode(file_get_contents('php://input'), true) ?: $raw_input;
     $cid = intval($input['id'] ?? 0);
     $name = clean($input['name'] ?? '');
     $icon = clean($input['icon'] ?? 'camera');
@@ -2084,7 +2088,7 @@ case 'admin_delete_category':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $is_admin = (isset($_SESSION['admin_user']) && ($_SESSION['admin_user']['role'] ?? '') === 'admin') || (isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin');
     if (!$is_admin) { http_response_code(403); echo json_encode(['error'=>'Admin access required']); exit; }
-    $input = json_decode(file_get_contents('php://input'), true);
+    $input = json_decode(file_get_contents('php://input'), true) ?: $raw_input;
     $cid = intval($input['id'] ?? 0);
     if ($cid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid category ID']); exit; }
     
@@ -2189,6 +2193,14 @@ case 'vendors':
         $v['social_links'] = json_decode($v['social_links'] ?? '{}', true) ?: [];
         $v['gallery'] = json_decode($v['gallery'] ?? '[]', true) ?: [];
         $v['is_favorite'] = in_array($v['id'], $_SESSION['favorites']);
+
+        // Authoritative review count and rating from actual review records
+        $rev_stmt = $pdo->prepare("SELECT COUNT(*) as rc, AVG(rating) as ar FROM reviews WHERE vendor_id = ?");
+        $rev_stmt->execute([$v['id']]);
+        $rev_row = $rev_stmt->fetch();
+        $v_rc = intval($rev_row['rc'] ?? 0);
+        $v['reviews_count'] = $v_rc;
+        $v['rating'] = $v_rc > 0 ? round(floatval($rev_row['ar']), 1) : 0.0;
 
         $info = get_online_status_info($v['last_active'] ?? '');
         $v['is_online'] = $info['is_online'];
@@ -2375,6 +2387,9 @@ case 'vendor_details':
 
     $r = $pdo->prepare("SELECT * FROM reviews WHERE vendor_id = ? ORDER BY id DESC"); $r->execute([$id]);
     $v['reviews'] = $r->fetchAll();
+    $act_count = count($v['reviews']);
+    $v['reviews_count'] = $act_count;
+    $v['rating'] = $act_count > 0 ? round(array_sum(array_column($v['reviews'], 'rating')) / $act_count, 1) : 0.0;
     foreach ($v['reviews'] as &$rev) { $rev['photos'] = json_decode($rev['photos'] ?? '[]', true) ?: []; }
     echo json_encode($v);
     break;
@@ -2995,8 +3010,8 @@ case 'vendor_stats':
         $rev_stmt = $pdo->prepare("SELECT AVG(rating) AS avg_rating, COUNT(*) AS rev_count FROM reviews WHERE vendor_id = ?");
         $rev_stmt->execute([$vendor_id]);
         $rev_res = $rev_stmt->fetch() ?: [];
-        $avg_rating = round(floatval($rev_res['avg_rating'] ?? 0.0), 1);
         $reviews_count = intval($rev_res['rev_count'] ?? 0);
+        $avg_rating = $reviews_count > 0 ? round(floatval($rev_res['avg_rating'] ?? 0.0), 1) : 0.0;
     } catch (Exception $e) {}
 
     $search_impressions = $period_views > 0 ? intval($period_views * 1.5) : 0;
@@ -3852,6 +3867,17 @@ case 'register_vendor':
     $name = clean($input['business_name'] ?? '');
     $category = clean($input['category'] ?? '');
     if (empty($name) || empty($category)) { http_response_code(400); echo json_encode(['error'=>'Business name and category required.']); exit; }
+    
+    // Validate that category is an active canonical category
+    $cat_chk = $pdo->prepare("SELECT name FROM vendor_categories WHERE is_active = 1 AND (LOWER(name) = LOWER(?) OR LOWER(slug) = LOWER(?)) LIMIT 1");
+    $cat_chk->execute([$category, $category]);
+    $canonical_cat = $cat_chk->fetchColumn();
+    if (!$canonical_cat) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid category selected. Please choose an active canonical category.']);
+        exit;
+    }
+    $category = $canonical_cat;
     $uid = isset($_SESSION['user']) ? intval($_SESSION['user']['id']) : 0;
     if ($uid <= 0 && (!empty($input['email']) || !empty($input['phone']))) {
         $vemail = clean($input['email'] ?? '');
@@ -4697,9 +4723,11 @@ case 'get_vendor_analytics':
     $followers_count = intval($fol_stmt->fetchColumn() ?: 0);
 
     // 6. Rating & Reviews
-    $rev_info = $pdo->prepare("SELECT COUNT(*) as rc, COALESCE(AVG(rating), 5.0) as ar FROM reviews WHERE vendor_id = ?");
+    $rev_info = $pdo->prepare("SELECT COUNT(*) as rc, AVG(rating) as ar FROM reviews WHERE vendor_id = ?");
     $rev_info->execute([$vid]);
     $r_row = $rev_info->fetch();
+    $act_rc = intval($r_row['rc'] ?? 0);
+    $act_ar = $act_rc > 0 ? round(floatval($r_row['ar'] ?? 0.0), 1) : 0.0;
 
     echo json_encode([
         'success' => true,
@@ -4712,8 +4740,8 @@ case 'get_vendor_analytics':
             'bookings' => $bookings_count,
             'revenue' => $revenue,
             'followers' => $followers_count,
-            'reviews_count' => intval($r_row['rc'] ?? 0),
-            'rating' => round(floatval($r_row['ar'] ?? 5.0), 1)
+            'reviews_count' => $act_rc,
+            'rating' => $act_ar
         ]
     ]);
     break;

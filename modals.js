@@ -413,42 +413,17 @@ function openBecomeVendorModal() {
                 <div class="form-group mb-12">
                     <label class="form-label">Primary Vendor Category</label>
                     <select class="form-select" id="bv-category" required>
-                        <option value="Photography">Photography</option>
-                        <option value="Videography">Videography</option>
-                        <option value="Makeup Artists">Makeup Artists</option>
-                        <option value="Bridal Shops">Bridal Shops</option>
-                        <option value="Event Planners">Event Planners</option>
-                        <option value="Decorators">Decorators</option>
-                        <option value="Caterers">Caterers</option>
-                        <option value="Cake Designers">Cake Designers</option>
-                        <option value="Event Venues">Event Venues</option>
-                        <option value="DJs">DJs</option>
-                        <option value="MCs">MCs</option>
-                        <option value="Live Bands">Live Bands</option>
-                        <option value="Florists">Florists</option>
-                        <option value="Car Rentals">Car Rentals</option>
-                        <option value="Security Services">Security Services</option>
-                        <option value="Chilling Services">Chilling Services</option>
-                        <option value="Rental Equipment">Rental Equipment</option>
-                        <option value="Cocktail Bars">Cocktail Bars</option>
-                        <option value="Honeymoon Packages">Honeymoon Packages</option>
-                        <option value="Invitation Designers">Invitation Designers</option>
-                        <option value="Jewelers">Jewelers</option>
-                        <option value="Lighting">Lighting</option>
-                        <option value="Printing Services">Printing Services</option>
-                        <option value="Ushers">Ushers</option>
-                        <option value="Content Creators">Content Creators</option>
-                        <option value="Juice Bar">Juice Bar</option>
-                        <option value="Traditional Marriage Services">Traditional Marriage Services</option>
-                        <option value="Dowry Wrapping">Dowry Wrapping</option>
-                        <option value="Breakfast">Breakfast</option>
-                        <option value="Coordinators">Coordinators</option>
-                        <option value="Waiters">Waiters</option>
-                        <option value="Portable Washroom">Portable Washroom</option>
-                        <option value="Souvenirs">Souvenirs</option>
-                        <option value="Hairstylists">Hairstylists</option>
-                        <option value="Dowry Bearers">Dowry Bearers</option>
-                        <option value="Local Bar">Local Bar</option>
+                        ${(() => {
+                            const canonicalCats = (state.categories && Array.isArray(state.categories) && state.categories.length > 0) ? state.categories : [];
+                            const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+                            if (canonicalCats.length > 0) {
+                                return canonicalCats.map(c => {
+                                    const val = typeof c === 'string' ? c : (c.name || c.title || '');
+                                    return `<option value="${sanitize(val)}">${sanitize(val)}</option>`;
+                                }).join('');
+                            }
+                            return '<option value="" disabled selected>Loading categories...</option>';
+                        })()}
                     </select>
                 </div>
                 
@@ -481,26 +456,58 @@ function openBecomeVendorModal() {
     `;
     openModal(html);
     
-    API.getCategories().then(res => {
+    const canonicalCats = (state.categories && Array.isArray(state.categories) && state.categories.length > 0) ? state.categories : [];
+    const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+
+    const populateBvSelect = (cats) => {
         const select = document.getElementById('bv-category');
-        const cats = Array.isArray(res) ? res : (res && Array.isArray(res.categories) ? res.categories : (res && Array.isArray(res.data) ? res.data : []));
-        if (select && cats && cats.length > 0) {
+        const submitBtn = document.getElementById('bv-submit-btn');
+        if (select && Array.isArray(cats) && cats.length > 0) {
             select.innerHTML = cats.map(c => {
                 const val = typeof c === 'string' ? c : (c.name || c.title || '');
-                return `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+                return `<option value="${sanitize(val)}">${sanitize(val)}</option>`;
             }).join('');
+            if (submitBtn) submitBtn.disabled = false;
         }
-    }).catch(() => {});
+    };
+
+    if (canonicalCats.length === 0) {
+        const submitBtn = document.getElementById('bv-submit-btn');
+        if (submitBtn) submitBtn.disabled = true;
+        API.getCategories().then(res => {
+            const cats = Array.isArray(res) ? res : (res && Array.isArray(res.categories) ? res.categories : (res && Array.isArray(res.data) ? res.data : []));
+            if (cats && cats.length > 0) {
+                state.categories = cats;
+                populateBvSelect(cats);
+            } else {
+                throw new Error('No categories available');
+            }
+        }).catch(() => {
+            const select = document.getElementById('bv-category');
+            if (select) {
+                select.innerHTML = '<option value="" disabled selected>Unable to load categories. Please try again.</option>';
+            }
+            const submitBtn = document.getElementById('bv-submit-btn');
+            if (submitBtn) submitBtn.disabled = true;
+        });
+    }
 }
 
 function handleBecomeVendorSubmit(e) {
     e.preventDefault();
     const btn = document.getElementById('bv-submit-btn');
+    const categoryVal = document.getElementById('bv-category')?.value;
+
+    if (!categoryVal) {
+        showPushNotification('Category Required', 'Please select an active category from the list.');
+        return;
+    }
+
     if (btn) { btn.disabled = true; btn.textContent = 'Activating...'; }
     
     const payload = {
         business_name: document.getElementById('bv-bizname').value.trim(),
-        category: document.getElementById('bv-category').value,
+        category: categoryVal,
         experience: parseInt(document.getElementById('bv-experience').value) || 0,
         location: document.getElementById('bv-location').value.trim(),
         phone: document.getElementById('bv-phone').value.trim(),
@@ -785,14 +792,15 @@ function applyFilters() {
     state.filters.max_price = document.getElementById('filter-max-price')?.value || '';
     state.filters.verified_only = document.getElementById('filter-verified')?.checked ? 1 : 0;
     state.filters.premium_only = document.getElementById('filter-premium')?.checked ? 1 : 0;
+    state.filters.is_refined = true;
     closeFilterDrawer();
-    API.getVendors(state.filters).then(v => { state.vendors = v; renderSearchScreen(); });
+    initSearchScreen();
 }
 
 function resetAllFilters() {
-    state.filters = { category: '', location: '', search: '', rating: '', verified_only: 0, premium_only: 0, instant_booking: 0, min_price: '', max_price: '' };
+    state.filters = { category: '', location: '', search: '', rating: '', verified_only: 0, premium_only: 0, instant_booking: 0, min_price: '', max_price: '', is_refined: false };
     closeFilterDrawer();
-    API.getVendors().then(v => { state.vendors = v; renderSearchScreen(); });
+    initSearchScreen();
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────────

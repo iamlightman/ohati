@@ -1771,7 +1771,17 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:4px;">Primary Service Category *</label>
                             <select id="m-lock-category" required style="width:100%; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#FFF; font-size:0.9rem; outline:none;">
-                                ${['Photography & Videography', 'Catering & Drinks', 'DJ & Sound System', 'Event Planning & Decor', 'Makeup & Hair Styling', 'Venues & Halls', 'Ushering & Security', 'MC & Entertainment', 'Other Event Services'].map(c => `<option value="${c}" ${(draft.category === c) ? 'selected' : ''} style="background:#0F1923; color:#FFF;">${c}</option>`).join('')}
+                                ${(() => {
+                                    const cats = (window.state && Array.isArray(window.state.categories) && window.state.categories.length > 0) ? window.state.categories : [];
+                                    const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+                                    if (cats.length > 0) {
+                                        return cats.map(c => {
+                                            const name = typeof c === 'string' ? c : (c.name || c.title || '');
+                                            return `<option value="${sanitize(name)}" ${(draft.category === name) ? 'selected' : ''} style="background:#0F1923; color:#FFF;">${sanitize(name)}</option>`;
+                                        }).join('');
+                                    }
+                                    return '<option value="" disabled selected style="background:#0F1923; color:#94A3B8;">Loading categories...</option>';
+                                })()}
                             </select>
                         </div>
                         <div>
@@ -1791,6 +1801,25 @@ window.showMandatoryAuthLockScreen = function (initialMode) {
                     </div>
                 </div>
             `;
+
+            if (!window.state || !Array.isArray(window.state.categories) || window.state.categories.length === 0) {
+                if (typeof API !== 'undefined' && API.getCategories) {
+                    API.getCategories().then(res => {
+                        const fetchedCats = Array.isArray(res) ? res : (res && Array.isArray(res.categories) ? res.categories : (res && Array.isArray(res.data) ? res.data : []));
+                        if (fetchedCats && fetchedCats.length > 0) {
+                            if (window.state) window.state.categories = fetchedCats;
+                            const sel = document.getElementById('m-lock-category');
+                            const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+                            if (sel) {
+                                sel.innerHTML = fetchedCats.map(c => {
+                                    const name = typeof c === 'string' ? c : (c.name || c.title || '');
+                                    return `<option value="${sanitize(name)}" ${(draft.category === name) ? 'selected' : ''} style="background:#0F1923; color:#FFF;">${sanitize(name)}</option>`;
+                                }).join('');
+                            }
+                        }
+                    }).catch(() => {});
+                }
+            }
         } else if (mode === 'signup') {
             const draft = window._mandatorySignupDraft || {};
             const isVendorSelected = (draft.role === 'vendor');
@@ -2331,8 +2360,8 @@ window.handleMandatoryVendorDetailsSubmit = function (e) {
     const location = locInput ? locInput.value.trim() : '';
     const description = descInput ? descInput.value.trim() : '';
 
-    if (!business_name || !location) {
-        if (errBox) { errBox.textContent = 'Please enter your business name and location.'; errBox.style.display = 'block'; }
+    if (!business_name || !location || !category) {
+        if (errBox) { errBox.textContent = 'Please select a valid category and enter your business name and location.'; errBox.style.display = 'block'; }
         return;
     }
 

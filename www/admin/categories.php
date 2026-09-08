@@ -34,31 +34,60 @@ $page_title = "Vendor Category Management";
         .btn-primary { background: #E05A47; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
         .btn-secondary { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
         .btn-danger { background: #EF4444; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .admin-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: var(--primary, #1B2B4B);
+            cursor: pointer;
+            padding: 8px;
+        }
+        @media(max-width: 900px) {
+            .admin-menu-toggle {
+                display: block;
+            }
+        }
     </style>
 </head>
-<body>
+<body class="admin-layout">
 
-<div class="admin-layout">
+    <!-- Admin Sidebar -->
     <?php include __DIR__ . '/sidebar.php'; ?>
 
-    <main class="admin-main" style="padding: 30px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
-            <div>
-                <h1 style="font-size: 1.6rem; font-weight: 800; color: #111827; margin: 0;">Vendor Category Management</h1>
-                <p style="color: #6B7280; font-size: 0.88rem; margin: 4px 0 0 0;">Manage marketplace categories, icons, ordering, and status with full database safety.</p>
+    <!-- Admin Main Content -->
+    <main class="admin-main">
+        <!-- Top Bar -->
+        <header class="admin-topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="admin-menu-toggle" onclick="toggleSidebar(true)"><i class="fa-solid fa-bars"></i></button>
+                <h1 class="admin-page-title">Vendor Categories</h1>
             </div>
-            <button class="btn-primary" onclick="openCategoryModal()"><i class="fa-solid fa-plus"></i> Add New Category</button>
-        </div>
+            <div style="font-size:0.8rem; font-weight:600; color:var(--gray-600); display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-circle-user" style="font-size:1.2rem; color:var(--accent, #F2A735);"></i>
+                <span>System Administrator</span>
+            </div>
+        </header>
 
-        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-            <input type="text" id="cat-search" class="form-input" placeholder="Search categories..." oninput="filterCategories()" style="max-width: 360px;">
-        </div>
+        <!-- Main Content Area -->
+        <div class="admin-content">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+                <div>
+                    <h2 style="font-size: 1.5rem; font-weight: 800; color: #111827; margin: 0;">Vendor Category Management</h2>
+                    <p style="color: #6B7280; font-size: 0.88rem; margin: 4px 0 0 0;">Manage marketplace categories, icons, ordering, and status with full database safety.</p>
+                </div>
+                <button class="btn-primary" onclick="openCategoryModal()" style="white-space: nowrap;"><i class="fa-solid fa-plus"></i> Add New Category</button>
+            </div>
 
-        <div class="cat-card-grid" id="category-list-container">
-            <!-- Loaded dynamically -->
+            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <input type="text" id="cat-search" class="form-input" placeholder="Search categories..." oninput="filterCategories()" style="max-width: 360px;">
+            </div>
+
+            <div class="cat-card-grid" id="category-list-container">
+                <!-- Loaded dynamically -->
+            </div>
         </div>
     </main>
-</div>
 
 <!-- Add / Edit Category Modal -->
 <div class="modal-backdrop" id="cat-modal">

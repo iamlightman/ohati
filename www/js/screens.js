@@ -7651,34 +7651,14 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                         <input type="text" class="form-input" id="edit-vendor-name" value="${v.name || ''}">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Category</label>
+                        <label class="form-label">Category (Select Created)</label>
                         <select class="form-select" id="edit-vendor-category">
-                            <option value="Photography" ${v.category === 'Photography' ? 'selected' : ''}>Photography</option>
-                            <option value="Videography" ${v.category === 'Videography' ? 'selected' : ''}>Videography</option>
-                            <option value="Makeup Artists" ${v.category === 'Makeup Artists' ? 'selected' : ''}>Makeup Artists</option>
-                            <option value="Bridal Shops" ${v.category === 'Bridal Shops' ? 'selected' : ''}>Bridal Shops</option>
-                            <option value="Event Planners" ${v.category === 'Event Planners' ? 'selected' : ''}>Event Planners</option>
-                            <option value="Decorators" ${v.category === 'Decorators' ? 'selected' : ''}>Decorators</option>
-                            <option value="Caterers" ${v.category === 'Caterers' ? 'selected' : ''}>Caterers</option>
-                            <option value="Cake Designers" ${v.category === 'Cake Designers' ? 'selected' : ''}>Cake Designers</option>
-                            <option value="Event Venues" ${v.category === 'Event Venues' ? 'selected' : ''}>Event Venues</option>
-                            <option value="DJs" ${v.category === 'DJs' ? 'selected' : ''}>DJs</option>
-                            <option value="MCs" ${v.category === 'MCs' ? 'selected' : ''}>MCs</option>
-                            <option value="Live Bands" ${v.category === 'Live Bands' ? 'selected' : ''}>Live Bands</option>
-                            <option value="Florists" ${v.category === 'Florists' ? 'selected' : ''}>Florists</option>
-                            <option value="Car Rentals" ${v.category === 'Car Rentals' ? 'selected' : ''}>Car Rentals</option>
-                            <option value="Security Services" ${v.category === 'Security Services' ? 'selected' : ''}>Security Services</option>
-                            <option value="Chilling Services" ${v.category === 'Chilling Services' ? 'selected' : ''}>Chilling Services</option>
-                            <option value="Rental Equipment" ${v.category === 'Rental Equipment' ? 'selected' : ''}>Rental Equipment</option>
-                            <option value="Cocktail Bars" ${v.category === 'Cocktail Bars' ? 'selected' : ''}>Cocktail Bars</option>
-                            <option value="Honeymoon Packages" ${v.category === 'Honeymoon Packages' ? 'selected' : ''}>Honeymoon Packages</option>
-                            <option value="Invitation Designers" ${v.category === 'Invitation Designers' ? 'selected' : ''}>Invitation Designers</option>
-                            <option value="Jewelers" ${v.category === 'Jewelers' ? 'selected' : ''}>Jewelers</option>
-                            <option value="Lighting" ${v.category === 'Lighting' ? 'selected' : ''}>Lighting</option>
-                            <option value="Printing Services" ${v.category === 'Printing Services' ? 'selected' : ''}>Printing Services</option>
-                            <option value="Ushers" ${v.category === 'Ushers' ? 'selected' : ''}>Ushers</option>
-                            <option value="Content Creators" ${v.category === 'Content Creators' ? 'selected' : ''}>Content Creators</option>
-                            <option value="Juice Bar" ${v.category === 'Juice Bar' ? 'selected' : ''}>Juice Bar</option>
+                            <option value="">-- Select Category --</option>
+                            ${(state.categories && state.categories.length > 0 ? state.categories : []).map(c => {
+                                const cName = typeof c === 'string' ? c : (c.name || '');
+                                return `<option value="${escapeHtml(cName)}" ${v.category === cName ? 'selected' : ''}>${escapeHtml(cName)}</option>`;
+                            }).join('')}
+                            ${v.category && !(state.categories || []).some(c => (typeof c === 'string' ? c : c.name) === v.category) ? `<option value="${escapeHtml(v.category)}" selected>${escapeHtml(v.category)}</option>` : ''}
                         </select>
                     </div>
                     <div class="form-group">
@@ -7770,6 +7750,9 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
 
     // Render dynamic vendor sections after DOM is set
     if (activeRole === 'vendor' && v) {
+        if (typeof populateDynamicCategories === 'function') {
+            populateDynamicCategories(v.category || '');
+        }
         const galContainer = document.getElementById('gallery-section-container');
         if (galContainer) galContainer.innerHTML = renderGalleryEditHTML();
         const pkgContainer = document.getElementById('packages-section-container');
@@ -8159,6 +8142,22 @@ window.saveEditedPhoto = function() {
 function openRequestChangeModal(fieldName) {
     const fnLower = (fieldName || '').toLowerCase();
     const isDocExempt = fnLower === 'email' || fnLower === 'phone' || fnLower === 'phone number';
+    const isCat = fnLower === 'category' || fnLower === 'vendor category' || fnLower === 'business category';
+    let inputFieldHtml = '';
+    if (isCat) {
+        const cats = (state.categories || []);
+        inputFieldHtml = `
+            <select class="form-select" id="req-new-value">
+                <option value="">-- Select Created Category --</option>
+                ${cats.map(c => {
+                    const cName = typeof c === 'string' ? c : (c.name || '');
+                    return `<option value="${escapeHtml(cName)}">${escapeHtml(cName)}</option>`;
+                }).join('')}
+            </select>
+        `;
+    } else {
+        inputFieldHtml = `<input type="text" class="form-input" id="req-new-value" placeholder="Enter new ${fieldName}">`;
+    }
     const html = `
         <div class="auth-modal-header">
             <h2 class="auth-modal-title">Request Profile Update</h2>
@@ -8166,7 +8165,7 @@ function openRequestChangeModal(fieldName) {
         </div>
         <div class="form-group">
             <label class="form-label">New ${fieldName}</label>
-            <input type="text" class="form-input" id="req-new-value" placeholder="Enter new ${fieldName}">
+            ${inputFieldHtml}
         </div>
         ${isDocExempt ? '' : `
         <div class="form-group">

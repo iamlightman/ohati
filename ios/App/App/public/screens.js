@@ -104,8 +104,20 @@ function navigateTo(screenId, params = {}, options = {}) {
     // Dismiss any open sidebar immediately on navigation entry
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
 
-    // Auth Guard: Lock screen to login/signup unless authenticated
-    if (!state.user && screenId !== 'blog' && screenId !== 'blog-detail' && screenId !== 'about' && screenId !== 'help' && screenId !== 'report-issue' && screenId !== 'privacy' && screenId !== 'terms') {
+    // Auth Guard: Allow guest access to public screens
+    const publicScreens = [
+        'home',
+        'search',
+        'detail',
+        'blog',
+        'blog-detail',
+        'about',
+        'help',
+        'report-issue',
+        'privacy',
+        'terms'
+    ];
+    if (!state.user && !publicScreens.includes(screenId)) {
         if (typeof showMandatoryAuthLockScreen === 'function') {
             showMandatoryAuthLockScreen('login');
         }
@@ -572,8 +584,8 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
             id: v.id,
             name: v.name,
             category: v.category_name || v.category || 'Vendor',
-            rating: v.rating || '5.0',
-            reviews: v.reviews_count || 0,
+            rating: (parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0',
+            reviews: parseInt(v.reviews_count || 0, 10),
             city: v.city || v.location || 'Accra, Ghana',
             img: window.resolveImageUrl(v.cover_photo || v.logo, 'cover'),
             initials: initials,
@@ -705,7 +717,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <div class="vendor-card-meta">
                                 <div class="vendor-card-rating">
                                     <i class="fa-solid fa-star"></i>
-                                    <span>${v.rating || '5.0'}</span>
+                                    <span>${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0'}</span>
                                 </div>
                                 <span style="font-size:0.65rem;font-weight:700;color:var(--primary);">${v.location.split(',')[0]}</span>
                             </div>
@@ -749,7 +761,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             <div class="vendor-card-meta" style="margin-top:4px;">
                                 <div class="vendor-card-rating" style="font-size:0.65rem;">
                                     <i class="fa-solid fa-star"></i>
-                                    <span>${v.rating || '5.0'}</span>
+                                    <span>${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0'}</span>
                                 </div>
                                 <span style="font-size:0.6rem; color:var(--gray-400);"><i class="fa-solid fa-eye"></i> ${v.views_count || 0}</span>
                             </div>
@@ -926,12 +938,34 @@ function renderHomeEventCard() {
 
 function triggerHomeSearch() {
     const val = document.getElementById('home-search-input')?.value.trim() || '';
-    state.filters.search = val;
+    state.filters = {
+        category: '',
+        location: '',
+        search: val,
+        rating: '',
+        min_price: '',
+        max_price: '',
+        verified_only: 0,
+        premium_only: 0,
+        instant_booking: 0,
+        is_refined: false
+    };
     navigateTo('search');
 }
 
 function selectCategoryFilter(cat) {
-    state.filters.category = cat;
+    state.filters = {
+        category: cat,
+        location: '',
+        search: '',
+        rating: '',
+        min_price: '',
+        max_price: '',
+        verified_only: 0,
+        premium_only: 0,
+        instant_booking: 0,
+        is_refined: false
+    };
     localStorage.setItem('ohati_user_interest_category', cat);
     navigateTo('search');
 }
@@ -971,33 +1005,54 @@ function initSearchScreen() {
     const screen = document.getElementById('screen-search');
     if (!screen) return;
 
-    screen.innerHTML = `
-        <div class="p-section search-controls-wrap" style="padding-bottom:10px; display:flex; gap:10px; align-items:center;">
-            <div class="search-bar" style="flex:1;">
-                <input type="text" placeholder="Search vendors..." id="search-input" value="${state.filters.search || ''}" onkeyup="if(event.key==='Enter') triggerSearch()">
-                <button class="search-bar-btn" onclick="triggerSearch()"><i class="fa-solid fa-magnifying-glass"></i></button>
-            </div>
-            <button class="btn btn-outline" style="padding:10px; height:44px; width:44px; border-radius:var(--radius-md);" onclick="openFilterDrawer()">
-                <i class="fa-solid fa-sliders" style="font-size:1.1rem; color:var(--primary);"></i>
-            </button>
-        </div>
-        <div id="search-vendors-list" class="p-section" style="padding-top:0;">
-            ${(state.vendors && state.vendors.length > 0) ? '' : renderSkeletonCardsHTML(6)}
-        </div>
-    `;
+    const existingInput = document.getElementById('search-input');
+    const existingList = document.getElementById('search-vendors-list');
 
-    if (state.vendors && state.vendors.length > 0) {
-        renderSearchScreen();
+    if (!existingInput || !existingList) {
+        screen.innerHTML = `
+            <div class="p-section search-controls-wrap" style="padding-bottom:10px; display:flex; gap:10px; align-items:center;">
+                <div class="search-bar" style="flex:1;">
+                    <input type="text" placeholder="Search vendors..." id="search-input" value="${state.filters.search || ''}" onkeyup="if(event.key==='Enter') triggerSearch()">
+                    <button class="search-bar-btn" onclick="triggerSearch()"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <button class="btn btn-outline" style="padding:10px; height:44px; width:44px; border-radius:var(--radius-md);" onclick="openFilterDrawer()">
+                    <i class="fa-solid fa-sliders" style="font-size:1.1rem; color:var(--primary);"></i>
+                </button>
+            </div>
+            <div id="search-vendors-list" class="p-section" style="padding-top:0;">
+                ${renderSkeletonCardsHTML(6)}
+            </div>
+        `;
+    } else {
+        existingInput.value = state.filters.search || '';
+        existingList.innerHTML = renderSkeletonCardsHTML(6);
     }
 
     API.getVendors(state.filters).then(vendors => {
-        state.vendors = vendors;
+        state.vendors = Array.isArray(vendors) ? vendors : (vendors && Array.isArray(vendors.vendors) ? vendors.vendors : (vendors && Array.isArray(vendors.data) ? vendors.data : []));
         renderSearchScreen();
+    }).catch(err => {
+        console.error("Error loading vendors:", err);
+        const listContainer = document.getElementById('search-vendors-list');
+        if (listContainer) {
+            listContainer.innerHTML = `
+                <div class="text-center" style="padding:40px 0;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem; color:#EF4444; margin-bottom:12px;"></i>
+                    <p class="text-sm text-muted">Unable to load vendors. Please check your connection and try again.</p>
+                    <button class="btn btn-primary btn-sm mt-16" onclick="initSearchScreen()">Retry</button>
+                </div>
+            `;
+        }
     });
 }
 
-function triggerSearch() {
-    state.filters.search = document.getElementById('search-input')?.value.trim() || '';
+function triggerSearch(options = {}) {
+    const inputVal = document.getElementById('search-input')?.value.trim() || '';
+    state.filters.search = inputVal;
+    if (!options.refinement && !state.filters.is_refined) {
+        state.filters.category = '';
+        state.filters.location = '';
+    }
     initSearchScreen();
 }
 
@@ -1019,6 +1074,8 @@ function renderSearchScreen() {
     container.innerHTML = state.vendors.map(v => {
         const isFeatured = parseInt(v.featured) === 1;
         const isPremium = v.verification_badge === 'gold' || parseInt(v.premium) === 1;
+        const revCount = Number.parseInt(v.reviews_count, 10) || 0;
+        const ratingVal = revCount > 0 ? parseFloat(v.rating || 0).toFixed(1) : '0.0';
         
         return `
             <div class="vendor-list-item" onclick="viewVendorDetails(${v.id})">
@@ -1044,9 +1101,9 @@ function renderSearchScreen() {
                     </div>
                     
                     <div class="vendor-rating-row" style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                        <span class="rating-badge" style="background:rgba(27,43,75,0.06); color:var(--primary); font-weight:800; padding:2px 6px; border-radius:6px; font-size:0.75rem;"><i class="fa-solid fa-star" style="color:#F59E0B; margin-right:3px;"></i>${parseFloat(v.rating || '5.0').toFixed(1)}</span>
+                        <span class="rating-badge" style="background:rgba(27,43,75,0.06); color:var(--primary); font-weight:800; padding:2px 6px; border-radius:6px; font-size:0.75rem;"><i class="fa-solid fa-star" style="color:#F59E0B; margin-right:3px;"></i>${ratingVal}</span>
                         <span class="rating-text" style="font-size:0.72rem; font-weight:700; color:var(--gray-800);">Rating</span>
-                        <span class="rating-count" style="font-size:0.7rem; color:var(--gray-500);">(${v.reviews_count || 12} reviews)</span>
+                        <span class="rating-count" style="font-size:0.7rem; color:var(--gray-500);">(${revCount} reviews)</span>
                     </div>
 
                     <div class="vendor-list-bottom" style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; border-top:1px solid var(--gray-100); padding-top:8px;">
@@ -1204,11 +1261,11 @@ function initDetailScreen() {
 
                 <div class="vendor-stats-row">
                     <div class="vendor-stat">
-                        <div class="vendor-stat-val">${v.rating || '5.0'}</div>
+                        <div class="vendor-stat-val">${(Number.parseInt(v.reviews_count !== undefined && v.reviews_count !== null ? v.reviews_count : (v.reviews ? v.reviews.length : 0), 10) || 0) > 0 ? parseFloat(v.rating || 0).toFixed(1) : '0.0'}</div>
                         <div class="vendor-stat-label">Rating</div>
                     </div>
                     <div class="vendor-stat">
-                        <div class="vendor-stat-val">${v.reviews_count || (v.reviews ? v.reviews.length : 0)}</div>
+                        <div class="vendor-stat-val">${Number.parseInt(v.reviews_count !== undefined && v.reviews_count !== null ? v.reviews_count : (v.reviews ? v.reviews.length : 0), 10) || 0}</div>
                         <div class="vendor-stat-label">Reviews</div>
                     </div>
                     <div class="vendor-stat">
@@ -1225,7 +1282,7 @@ function initDetailScreen() {
                     <div class="detail-tab ${state.activeDetailTab === 'overview' ? 'active' : ''}" onclick="selectDetailTab('overview')">Overview</div>
                     <div class="detail-tab ${state.activeDetailTab === 'packages' ? 'active' : ''}" onclick="selectDetailTab('packages')">Packages</div>
                     <div class="detail-tab ${state.activeDetailTab === 'gallery' ? 'active' : ''}" onclick="selectDetailTab('gallery')">Gallery</div>
-                    <div class="detail-tab ${state.activeDetailTab === 'reviews' ? 'active' : ''}" onclick="selectDetailTab('reviews')">Reviews (${v.reviews ? v.reviews.length : 0})</div>
+                    <div class="detail-tab ${state.activeDetailTab === 'reviews' ? 'active' : ''}" onclick="selectDetailTab('reviews')">Reviews (${Number.parseInt(v.reviews_count !== undefined && v.reviews_count !== null ? v.reviews_count : (v.reviews ? v.reviews.length : 0), 10) || 0})</div>
                 </div>
 
                 <div id="detail-tab-content" style="margin-bottom:20px;"></div>
@@ -1357,7 +1414,7 @@ function renderRecommendationCard(v) {
                 </div>
                 <div style="font-size:0.65rem; color:var(--gray-500); margin:2px 0 6px 0;">${v.category}</div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem;">
-                    <span style="color:var(--warning); font-weight:700;"><i class="fa-solid fa-star"></i> ${v.rating || '5.0'}</span>
+                    <span style="color:var(--warning); font-weight:700;"><i class="fa-solid fa-star"></i> ${(Number.parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0'}</span>
                     <span style="color:var(--gray-400);"><i class="fa-solid fa-location-dot"></i> ${v.location ? v.location.split(',')[0] : 'Ghana'}</span>
                 </div>
             </div>
@@ -4344,7 +4401,7 @@ function initCompareScreen(params = {}, targetContainer = null) {
                         </div>
                         <div class="compare-row">
                             <div class="compare-row-label">Rating</div>
-                            <div><i class="fa-solid fa-star" style="color:var(--accent);"></i> ${v.rating || '5.0'} (${v.reviews_count})</div>
+                            <div><i class="fa-solid fa-star" style="color:var(--accent);"></i> ${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0'} (${parseInt(v.reviews_count || 0, 10)})</div>
                         </div>
                         <div class="compare-row">
                             <div class="compare-row-label">Pricing</div>
@@ -7396,14 +7453,23 @@ function initProfileEditScreen() {
 
 function populateDynamicCategories(selectedCategory = '') {
     API.getCategories().then(cats => {
-        const select = document.getElementById('edit-vendor-category') || document.getElementById('v-category');
-        if (select && Array.isArray(cats) && cats.length > 0) {
-            select.innerHTML = cats.map(c => {
-                const cName = typeof c === 'string' ? c : c.name;
-                const isSel = (cName === selectedCategory) ? 'selected' : '';
-                return `<option value="${cName}" ${isSel}>${cName}</option>`;
-            }).join('');
-        }
+        const catList = Array.isArray(cats) ? cats : (cats && Array.isArray(cats.categories) ? cats.categories : (cats && Array.isArray(cats.data) ? cats.data : []));
+        if (!catList || catList.length === 0) return;
+        if (window.state) window.state.categories = catList;
+        
+        const sanitize = (s) => (typeof escapeHtml === 'function' ? escapeHtml(s) : String(s).replace(/[&<>"']/g, ''));
+        const targetIds = ['edit-vendor-category', 'v-category', 'bv-category', 'm-lock-category'];
+        targetIds.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const curVal = select.value || selectedCategory;
+                select.innerHTML = catList.map(c => {
+                    const cName = typeof c === 'string' ? c : (c.name || c.title || '');
+                    const isSel = (cName === curVal) ? 'selected' : '';
+                    return `<option value="${sanitize(cName)}" ${isSel}>${sanitize(cName)}</option>`;
+                }).join('');
+            }
+        });
     }).catch(() => {});
 }
 
@@ -7585,34 +7651,14 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
                         <input type="text" class="form-input" id="edit-vendor-name" value="${v.name || ''}">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Category</label>
+                        <label class="form-label">Category (Select Created)</label>
                         <select class="form-select" id="edit-vendor-category">
-                            <option value="Photography" ${v.category === 'Photography' ? 'selected' : ''}>Photography</option>
-                            <option value="Videography" ${v.category === 'Videography' ? 'selected' : ''}>Videography</option>
-                            <option value="Makeup Artists" ${v.category === 'Makeup Artists' ? 'selected' : ''}>Makeup Artists</option>
-                            <option value="Bridal Shops" ${v.category === 'Bridal Shops' ? 'selected' : ''}>Bridal Shops</option>
-                            <option value="Event Planners" ${v.category === 'Event Planners' ? 'selected' : ''}>Event Planners</option>
-                            <option value="Decorators" ${v.category === 'Decorators' ? 'selected' : ''}>Decorators</option>
-                            <option value="Caterers" ${v.category === 'Caterers' ? 'selected' : ''}>Caterers</option>
-                            <option value="Cake Designers" ${v.category === 'Cake Designers' ? 'selected' : ''}>Cake Designers</option>
-                            <option value="Event Venues" ${v.category === 'Event Venues' ? 'selected' : ''}>Event Venues</option>
-                            <option value="DJs" ${v.category === 'DJs' ? 'selected' : ''}>DJs</option>
-                            <option value="MCs" ${v.category === 'MCs' ? 'selected' : ''}>MCs</option>
-                            <option value="Live Bands" ${v.category === 'Live Bands' ? 'selected' : ''}>Live Bands</option>
-                            <option value="Florists" ${v.category === 'Florists' ? 'selected' : ''}>Florists</option>
-                            <option value="Car Rentals" ${v.category === 'Car Rentals' ? 'selected' : ''}>Car Rentals</option>
-                            <option value="Security Services" ${v.category === 'Security Services' ? 'selected' : ''}>Security Services</option>
-                            <option value="Chilling Services" ${v.category === 'Chilling Services' ? 'selected' : ''}>Chilling Services</option>
-                            <option value="Rental Equipment" ${v.category === 'Rental Equipment' ? 'selected' : ''}>Rental Equipment</option>
-                            <option value="Cocktail Bars" ${v.category === 'Cocktail Bars' ? 'selected' : ''}>Cocktail Bars</option>
-                            <option value="Honeymoon Packages" ${v.category === 'Honeymoon Packages' ? 'selected' : ''}>Honeymoon Packages</option>
-                            <option value="Invitation Designers" ${v.category === 'Invitation Designers' ? 'selected' : ''}>Invitation Designers</option>
-                            <option value="Jewelers" ${v.category === 'Jewelers' ? 'selected' : ''}>Jewelers</option>
-                            <option value="Lighting" ${v.category === 'Lighting' ? 'selected' : ''}>Lighting</option>
-                            <option value="Printing Services" ${v.category === 'Printing Services' ? 'selected' : ''}>Printing Services</option>
-                            <option value="Ushers" ${v.category === 'Ushers' ? 'selected' : ''}>Ushers</option>
-                            <option value="Content Creators" ${v.category === 'Content Creators' ? 'selected' : ''}>Content Creators</option>
-                            <option value="Juice Bar" ${v.category === 'Juice Bar' ? 'selected' : ''}>Juice Bar</option>
+                            <option value="">-- Select Category --</option>
+                            ${(state.categories && state.categories.length > 0 ? state.categories : []).map(c => {
+                                const cName = typeof c === 'string' ? c : (c.name || '');
+                                return `<option value="${escapeHtml(cName)}" ${v.category === cName ? 'selected' : ''}>${escapeHtml(cName)}</option>`;
+                            }).join('')}
+                            ${v.category && !(state.categories || []).some(c => (typeof c === 'string' ? c : c.name) === v.category) ? `<option value="${escapeHtml(v.category)}" selected>${escapeHtml(v.category)}</option>` : ''}
                         </select>
                     </div>
                     <div class="form-group">
@@ -7704,6 +7750,9 @@ function renderProfileEditForm(container, u, v, isFieldLocked) {
 
     // Render dynamic vendor sections after DOM is set
     if (activeRole === 'vendor' && v) {
+        if (typeof populateDynamicCategories === 'function') {
+            populateDynamicCategories(v.category || '');
+        }
         const galContainer = document.getElementById('gallery-section-container');
         if (galContainer) galContainer.innerHTML = renderGalleryEditHTML();
         const pkgContainer = document.getElementById('packages-section-container');
@@ -8093,6 +8142,22 @@ window.saveEditedPhoto = function() {
 function openRequestChangeModal(fieldName) {
     const fnLower = (fieldName || '').toLowerCase();
     const isDocExempt = fnLower === 'email' || fnLower === 'phone' || fnLower === 'phone number';
+    const isCat = fnLower === 'category' || fnLower === 'vendor category' || fnLower === 'business category';
+    let inputFieldHtml = '';
+    if (isCat) {
+        const cats = (state.categories || []);
+        inputFieldHtml = `
+            <select class="form-select" id="req-new-value">
+                <option value="">-- Select Created Category --</option>
+                ${cats.map(c => {
+                    const cName = typeof c === 'string' ? c : (c.name || '');
+                    return `<option value="${escapeHtml(cName)}">${escapeHtml(cName)}</option>`;
+                }).join('')}
+            </select>
+        `;
+    } else {
+        inputFieldHtml = `<input type="text" class="form-input" id="req-new-value" placeholder="Enter new ${fieldName}">`;
+    }
     const html = `
         <div class="auth-modal-header">
             <h2 class="auth-modal-title">Request Profile Update</h2>
@@ -8100,7 +8165,7 @@ function openRequestChangeModal(fieldName) {
         </div>
         <div class="form-group">
             <label class="form-label">New ${fieldName}</label>
-            <input type="text" class="form-input" id="req-new-value" placeholder="Enter new ${fieldName}">
+            ${inputFieldHtml}
         </div>
         ${isDocExempt ? '' : `
         <div class="form-group">

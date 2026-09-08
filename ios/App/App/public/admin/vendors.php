@@ -4,6 +4,17 @@ require_once __DIR__ . '/../db.php';
 session_start();
 require_once __DIR__ . '/auth_guard.php';
 
+if (!function_exists('log_activity')) {
+    function log_activity($pdo, $action, $entity_type, $entity_id, $actor_id, $actor_role, $actor_name, $amount = 0, $old_status = '', $new_status = '', $details = '') {
+        try {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $device = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+            $stmt = $pdo->prepare("INSERT INTO financial_audit_log (action, entity_type, entity_id, actor_id, actor_role, actor_name, amount, old_status, new_status, details, ip_address, device) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([$action, $entity_type, $entity_id, $actor_id, $actor_role, $actor_name, $amount, $old_status, $new_status, $details, $ip, substr($device, 0, 190)]);
+        } catch (\Throwable $e) {}
+    }
+}
+
 // Handle AJAX actions (toggle active status, toggle verification, delete)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
@@ -208,8 +219,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $admin_id = $_SESSION['admin_user']['id'] ?? 1;
                 $admin_name = $_SESSION['admin_user']['username'] ?? 'Admin';
-                log_activity($pdo, 'Vendor Details Updated', 'Vendor', $vid, $admin_id, 'admin', $admin_name, 0, '', $name, 'Updated by Admin');
-            } catch (Exception $eAudit) {}
+                if (function_exists('log_activity')) {
+                    log_activity($pdo, 'Vendor Details Updated', 'Vendor', $vid, $admin_id, 'admin', $admin_name, 0, '', $name, 'Updated by Admin');
+                }
+            } catch (\Throwable $eAudit) {}
 
             echo json_encode(['success' => true, 'message' => 'Vendor details updated successfully.']);
             exit;
@@ -262,8 +275,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Fetch categories for filter dropdown
-$categories = $pdo->query("SELECT DISTINCT category FROM vendors ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
+// Fetch canonical categories created in Category Management
+$categories = [];
+try {
+    $categories = $pdo->query("SELECT name FROM vendor_categories WHERE is_active = 1 ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+} catch (\Throwable $eCat) {}
+
+if (empty($categories)) {
+    try {
+        $categories = $pdo->query("SELECT DISTINCT category FROM vendors WHERE category IS NOT NULL AND category != '' ORDER BY category ASC")->fetchAll(PDO::FETCH_COLUMN);
+    } catch (\Throwable $eCat2) {}
+}
+natcasesort($categories);
+$categories = array_values($categories);
+
+// Fetch all vendors for quick selection & edit autocomplete
+$all_vendors_lookup = [];
+try {
+    $all_vendors_lookup = $pdo->query("SELECT id, name, category, email, phone, whatsapp, location, description, experience, bank_name, account_name, account_number, momo_number, momo_provider, payout_method, verified, premium, is_active, verification_badge FROM vendors ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (\Throwable $eAllVendors) {}
 
 // Fetch vendors with search and filters
 $search = trim($_GET['search'] ?? '');
@@ -459,6 +489,17 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
 
             <!-- Filter Controls -->
             <div class="card mb-20" style="background:#fff; border:1px solid #E4E7ED; border-radius:16px; padding:16px;">
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #F1F5F9;">
+                    <div style="font-weight:700; font-size:0.95rem; color:var(--primary); display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-store" style="color:var(--accent);"></i> Total Vendors: <span><?= count($all_vendors_lookup) ?></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; flex:1; max-width:480px; justify-content:flex-end;">
+                        <input type="text" id="quickVendorSelectInput" list="all_vendors_datalist" class="form-input" placeholder="🔍 Quick Edit: Type vendor name or select..." style="margin:0; font-size:0.85rem; padding:8px 12px; flex:1;" onchange="handleQuickVendorChosen(this)">
+                        <button type="button" class="btn btn-primary" onclick="triggerQuickVendorEdit()" style="font-size:0.85rem; padding:8px 14px; white-space:nowrap;">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit Vendor
+                        </button>
+                    </div>
+                </div>
                 <form method="GET" action="vendors.php" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
                     <div style="flex:2; min-width:200px;">
                         <input type="text" name="search" class="form-input" placeholder="Search by name, location, phone..." value="<?= htmlspecialchars($search) ?>" style="margin:0; padding:10px 14px;">
@@ -938,16 +979,84 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
             .catch(err => alert('Network error reviewing change request.'));
         }
 
+        window.allVendorsMap = <?= json_encode(array_column($all_vendors_lookup, null, 'id'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+
+        function findVendorIdFromInput(inputValue) {
+            if (!inputValue) return null;
+            const match = inputValue.match(/\(ID:\s*(\d+)\)/i);
+            if (match && match[1]) {
+                const vid = parseInt(match[1]);
+                if (window.allVendorsMap && window.allVendorsMap[vid]) return vid;
+            }
+            const trimmed = inputValue.trim().toLowerCase();
+            if (!trimmed) return null;
+            if (window.allVendorsMap) {
+                for (const id in window.allVendorsMap) {
+                    const v = window.allVendorsMap[id];
+                    if (v.name && v.name.toLowerCase() === trimmed) {
+                        return parseInt(id);
+                    }
+                }
+                for (const id in window.allVendorsMap) {
+                    const v = window.allVendorsMap[id];
+                    if (v.name && v.name.toLowerCase().startsWith(trimmed)) {
+                        return parseInt(id);
+                    }
+                }
+            }
+            return null;
+        }
+
+        function handleQuickVendorChosen(input) {
+            const vid = findVendorIdFromInput(input.value);
+            if (vid) {
+                openEditVendorModal(vid);
+                input.value = '';
+            }
+        }
+
+        function triggerQuickVendorEdit() {
+            const input = document.getElementById('quickVendorSelectInput');
+            const vid = findVendorIdFromInput(input ? input.value : '');
+            if (vid) {
+                openEditVendorModal(vid);
+                if (input) input.value = '';
+            } else {
+                alert('Please type or select a valid vendor name from the list.');
+            }
+        }
+
+        function handleModalVendorSwitch(input) {
+            const vid = findVendorIdFromInput(input.value);
+            if (vid) {
+                openEditVendorModal(vid);
+                input.value = '';
+            }
+        }
+
         function openEditVendorModal(vendorId) {
             let v = null;
             const scriptTag = document.getElementById('vendor-data-' + vendorId);
             if (scriptTag) {
                 try { v = JSON.parse(scriptTag.textContent); } catch(e) {}
             }
+            if (!v && window.allVendorsMap && window.allVendorsMap[vendorId]) {
+                v = window.allVendorsMap[vendorId];
+            }
             if (!v) { alert('Vendor data not found.'); return; }
             document.getElementById('ev_vendor_id').value = v.id;
             document.getElementById('ev_name').value = v.name || '';
-            document.getElementById('ev_category').value = v.category || '';
+            const catSelect = document.getElementById('ev_category');
+            if (catSelect) {
+                catSelect.value = v.category || '';
+                if (v.category && catSelect.value !== v.category) {
+                    const opt = document.createElement('option');
+                    opt.value = v.category;
+                    opt.textContent = v.category;
+                    catSelect.appendChild(opt);
+                    catSelect.value = v.category;
+                }
+            }
             document.getElementById('ev_email').value = v.email || '';
             document.getElementById('ev_phone').value = v.phone || '';
             document.getElementById('ev_whatsapp').value = v.whatsapp || '';
@@ -960,6 +1069,10 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
             document.getElementById('ev_momo_number').value = v.momo_number || '';
             document.getElementById('ev_momo_provider').value = v.momo_provider || '';
             document.getElementById('ev_payout_method').value = v.payout_method || 'bank';
+
+            const switchInput = document.getElementById('ev_switch_vendor');
+            if (switchInput) switchInput.value = '';
+
             document.getElementById('editVendorModal').style.display = 'flex';
         }
 
@@ -985,6 +1098,7 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
             const payout_method = document.getElementById('ev_payout_method').value;
 
             if (!name) { alert('Business Name is required.'); return; }
+            if (!category) { alert('Please select a category from the created categories list.'); return; }
 
             fetch('vendors.php', {
                 method: 'POST',
@@ -996,7 +1110,14 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
                     bank_name, account_name, account_number, momo_number, momo_provider, payout_method
                 })
             })
-            .then(r => r.json())
+            .then(async r => {
+                const text = await r.text();
+                try {
+                    return JSON.parse(text);
+                } catch(e) {
+                    throw new Error('Server error (' + r.status + '): ' + text.substring(0, 150));
+                }
+            })
             .then(data => {
                 if (data.success) {
                     alert('Vendor details updated successfully!');
@@ -1006,8 +1127,9 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
                     alert(data.message || 'Failed to update vendor details.');
                 }
             })
-            .catch(err => alert('Network error updating vendor details.'));
+            .catch(err => alert(err.message || 'Network error updating vendor details.'));
         }
+
     </script>
 
     <!-- Edit Vendor Details Modal -->
@@ -1020,6 +1142,12 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
                 <button onclick="closeEditVendorModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--gray-500);">&times;</button>
             </div>
             <input type="hidden" id="ev_vendor_id">
+            
+            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
+                <label style="font-size:0.75rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Select Vendor to Edit (Type like text or select from dropdown):</label>
+                <input type="text" id="ev_switch_vendor" list="all_vendors_datalist" class="form-input" placeholder="Type vendor name like text or pick from list..." style="width:100%; margin:0; padding:8px 12px; font-size:0.85rem; background:#fff;" onchange="handleModalVendorSwitch(this)">
+            </div>
+
             <div style="display:flex; flex-direction:column; gap:12px;">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                     <div>
@@ -1027,8 +1155,13 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
                         <input type="text" id="ev_name" class="form-input" style="width:100%; padding:10px; margin:0;">
                     </div>
                     <div>
-                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Category</label>
-                        <input type="text" id="ev_category" class="form-input" style="width:100%; padding:10px; margin:0;">
+                        <label style="font-size:0.8rem; font-weight:700; color:var(--gray-600); margin-bottom:4px; display:block;">Category (Select Created) *</label>
+                        <select id="ev_category" class="form-select" style="width:100%; padding:10px; margin:0;">
+                            <option value="">-- Select Category --</option>
+                            <?php foreach ($categories as $catItem): ?>
+                                <option value="<?= htmlspecialchars($catItem) ?>"><?= htmlspecialchars($catItem) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -1156,5 +1289,11 @@ $pending_change_requests = $pdo->query("SELECT r.*, u.name as user_name FROM pro
             </div>
         </div>
     </div>
+    <!-- Datalist for Vendor Autocomplete -->
+    <datalist id="all_vendors_datalist">
+        <?php foreach ($all_vendors_lookup as $av): ?>
+            <option value="<?= htmlspecialchars($av['name']) ?> (ID: <?= $av['id'] ?>)"><?= htmlspecialchars($av['category']) ?> • <?= htmlspecialchars($av['location']) ?></option>
+        <?php endforeach; ?>
+    </datalist>
 </body>
 </html>

@@ -30,6 +30,7 @@ Options -Indexes
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
     RewriteRule ^\.well-known/ - [L]
+    RewriteRule ^download/?$ download.php [L,QSA]
 </IfModule>
 
 <Files "assetlinks.json">

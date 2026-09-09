@@ -959,6 +959,61 @@ window.openAppDownloadUrl = function (platform) {
 };
 window.showBadgeMessage = window.openAppDownloadUrl;
 
+window.initWebDownloadBanner = function() {
+    try {
+        const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.location.protocol === 'capacitor:';
+        if (isNative) return;
+
+        if (document.getElementById('web-app-download-banner')) return;
+
+        const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+        const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isAndroid = /android/i.test(ua);
+
+        let storeUrl = 'https://ohati.com/download';
+        let btnText = 'Get App';
+        let iconClass = 'fa-solid fa-mobile-screen-button';
+
+        if (isIOS) {
+            storeUrl = 'https://apps.apple.com/ng/app/ohati/id6801835847';
+            btnText = 'App Store';
+            iconClass = 'fa-brands fa-apple';
+        } else if (isAndroid) {
+            storeUrl = 'https://play.google.com/store/apps/details?id=com.ohati.app';
+            btnText = 'Google Play';
+            iconClass = 'fa-brands fa-google-play';
+        }
+
+        const banner = document.createElement('div');
+        banner.id = 'web-app-download-banner';
+        banner.className = 'web-download-banner-strip';
+        banner.innerHTML = `
+            <div class="banner-content">
+                <span class="banner-badge"><i class="fa-solid fa-sparkles"></i> App Available</span>
+                <span class="banner-text">Get the official Ohati app — Fast booking, real-time chat & instant alerts!</span>
+            </div>
+            <div class="banner-actions">
+                <a href="${storeUrl}" target="_blank" rel="noopener" class="banner-btn">
+                    <i class="${iconClass}"></i> ${btnText}
+                </a>
+                <button onclick="dismissWebDownloadBanner()" class="banner-close-btn" title="Dismiss">&times;</button>
+            </div>
+        `;
+
+        const appHeader = document.getElementById('app-header');
+        if (appHeader && appHeader.parentNode) {
+            appHeader.parentNode.insertBefore(banner, appHeader);
+        } else {
+            document.body.prepend(banner);
+        }
+    } catch(e) {}
+};
+
+window.dismissWebDownloadBanner = function() {
+    const banner = document.getElementById('web-app-download-banner');
+    if (banner) banner.remove();
+};
+
 function showAppDownloadModal() {
     const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ohati.app';
     const appStoreUrl = 'https://apps.apple.com/app/ohati/id6740000000';

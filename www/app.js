@@ -2,6 +2,13 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.normalizeUserSession === 'function') window.normalizeUserSession();
+    if (typeof window.initWebDownloadBanner === 'function') {
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => window.initWebDownloadBanner(), { timeout: 1000 });
+        } else {
+            setTimeout(() => window.initWebDownloadBanner(), 100);
+        }
+    }
 
     // 0. Initialize theme from localStorage
     const savedTheme = localStorage.getItem('theme');

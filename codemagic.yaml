@@ -74,6 +74,11 @@ workflows:
           # Set CFBundleVersion directly in Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_BUILD_NUMBER" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $NEW_BUILD_NUMBER" ios/App/App/Info.plist
           
+          # Set CFBundleShortVersionString from package.json in Info.plist
+          PACKAGE_VER=$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.37")
+          echo "Setting iOS CFBundleShortVersionString to: $PACKAGE_VER"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $PACKAGE_VER" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $PACKAGE_VER" ios/App/App/Info.plist
+
           # Update agvtool in Xcode project
           cd ios/App && agvtool new-version -all $NEW_BUILD_NUMBER || true
       - name: Build and Export Signed IPA for App Store

@@ -2,6 +2,21 @@
 // blog_api.php — Ohati Blog API Module
 date_default_timezone_set('Africa/Accra');
 
+if (file_exists(__DIR__ . '/storage_helper.php')) {
+    require_once __DIR__ . '/storage_helper.php';
+}
+
+if (!function_exists('format_blog_content_images')) {
+    function format_blog_content_images($html) {
+        if (empty($html)) return '';
+        return preg_replace_callback('/<img([^>]+)src=["\']([^"\']+)["\']/i', function($matches) {
+            $src = $matches[2];
+            $full_url = function_exists('format_full_image_url') ? format_full_image_url($src) : $src;
+            return '<img' . $matches[1] . 'src="' . htmlspecialchars($full_url) . '"';
+        }, $html);
+    }
+}
+
 if (!function_exists('generate_blog_slug')) {
     function generate_blog_slug($title, $pdo, $current_id = 0) {
         $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title), '-'));
@@ -77,8 +92,19 @@ function handle_blog_action($action, $pdo) {
             $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
 
             // Fetch Top Featured Hero Post
-            $hero_stmt = $pdo->query("SELECT id, title, slug, subheadline, category, tags, cover_image, video_url, author_name, author_avatar, published_at, views_count, likes_count, comments_count, reading_time FROM blog_posts WHERE status = 'published' AND featured = 1 ORDER BY id DESC LIMIT 1");
-            $hero_post = $hero_stmt->fetch(PDO::FETCH_ASSOC) ?: ($posts[0] ?? null);
+            // Normalize Image URLs for API consumption
+            if (function_exists('format_full_image_url')) {
+                foreach ($posts as &$p) {
+                    if (!empty($p['cover_image'])) $p['cover_image'] = format_full_image_url($p['cover_image']);
+                    if (!empty($p['author_avatar'])) $p['author_avatar'] = format_full_image_url($p['author_avatar']);
+                }
+                unset($p);
+
+                if ($hero_post) {
+                    if (!empty($hero_post['cover_image'])) $hero_post['cover_image'] = format_full_image_url($hero_post['cover_image']);
+                    if (!empty($hero_post['author_avatar'])) $hero_post['author_avatar'] = format_full_image_url($hero_post['author_avatar']);
+                }
+            }
 
             echo json_encode([
                 'success' => true,
@@ -197,6 +223,18 @@ function handle_blog_action($action, $pdo) {
             $rel_stmt = $pdo->prepare("SELECT id, title, slug, category, cover_image, reading_time, published_at FROM blog_posts WHERE category = ? AND id != ? AND status = 'published' ORDER BY id DESC LIMIT 3");
             $rel_stmt->execute([$post['category'], $post['id']]);
             $related = $rel_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Normalize Single Article Image URLs
+            if (function_exists('format_full_image_url')) {
+                if (!empty($post['cover_image'])) $post['cover_image'] = format_full_image_url($post['cover_image']);
+                if (!empty($post['author_avatar'])) $post['author_avatar'] = format_full_image_url($post['author_avatar']);
+                if (!empty($post['content'])) $post['content'] = format_blog_content_images($post['content']);
+
+                foreach ($related as &$r) {
+                    if (!empty($r['cover_image'])) $r['cover_image'] = format_full_image_url($r['cover_image']);
+                }
+                unset($r);
+            }
 
             echo json_encode([
                 'success' => true,
@@ -596,9 +634,11 @@ function handle_blog_action($action, $pdo) {
             $up_res = upload_media_file($_FILES['image'], 'blog', 1600);
 
             if (!empty($up_res['url'])) {
+                $full_url = function_exists('format_full_image_url') ? format_full_image_url($up_res['url']) : $up_res['url'];
                 echo json_encode([
                     'success' => true,
-                    'url' => $up_res['url']
+                    'url' => $full_url,
+                    'relative_url' => $up_res['url']
                 ]);
             } else {
                 echo json_encode(['error' => $up_res['error'] ?? 'Image upload failed.']);

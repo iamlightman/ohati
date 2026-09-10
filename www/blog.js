@@ -123,7 +123,7 @@ function renderBlogFeedSections() {
         html += `
             <div class="blog-hero-card" onclick="openBlogArticle(${heroPost.id})">
                 <div class="blog-hero-media">
-                    <img src="${heroPost.cover_image || window.DEFAULT_BUSINESS_COVER}" alt="${escapeHtml(heroPost.title)} - Ohati Event Guide" title="${escapeHtml(heroPost.title)}" class="blog-hero-img" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
+                    <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(heroPost.cover_image, 'cover') : (heroPost.cover_image || window.DEFAULT_BUSINESS_COVER)}" alt="${escapeHtml(heroPost.title)} - Ohati Event Guide" title="${escapeHtml(heroPost.title)}" class="blog-hero-img" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
                     <span class="blog-hero-badge"><i class="fa-solid fa-star"></i> FEATURED GUIDE</span>
                 </div>
                 <div class="blog-hero-content">
@@ -136,7 +136,7 @@ function renderBlogFeedSections() {
                     <p class="blog-hero-excerpt">${escapeHtml(heroPost.subheadline || '')}</p>
                     <div class="blog-hero-footer">
                         <div class="blog-author-info">
-                            <img src="${window.resolveImageUrl(heroPost.author_avatar)}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                            <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(heroPost.author_avatar, 'avatar') : (heroPost.author_avatar || window.DEFAULT_USER_AVATAR)}" alt="${escapeHtml(heroPost.author_name || 'Author')}" title="${escapeHtml(heroPost.author_name || 'Author')}" class="blog-author-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
                             <span>${escapeHtml(heroPost.author_name || 'Ohati Editorial')}</span>
                         </div>
                         <div class="blog-stats-group">
@@ -170,7 +170,7 @@ function renderBlogFeedSections() {
         html += `
             <div class="blog-card" onclick="openBlogArticle(${post.id})">
                 <div class="blog-card-thumb-box">
-                    <img src="${post.cover_image || window.DEFAULT_BUSINESS_COVER}" alt="${escapeHtml(post.title)}" title="${escapeHtml(post.title)}" class="blog-card-thumb" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
+                    <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(post.cover_image, 'cover') : (post.cover_image || window.DEFAULT_BUSINESS_COVER)}" alt="${escapeHtml(post.title)}" title="${escapeHtml(post.title)}" class="blog-card-thumb" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
                     <span class="blog-card-cat">${escapeHtml(post.category)}</span>
                     ${post.video_url ? '<span class="blog-card-video-icon"><i class="fa-solid fa-play"></i></span>' : ''}
                 </div>
@@ -185,7 +185,7 @@ function renderBlogFeedSections() {
                     
                     <div class="blog-card-footer">
                         <div class="blog-card-author">
-                            <img src="${post.author_avatar || window.DEFAULT_USER_AVATAR}" class="blog-card-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                            <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(post.author_avatar, 'avatar') : (post.author_avatar || window.DEFAULT_USER_AVATAR)}" class="blog-card-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
                             <span>${escapeHtml(post.author_name || 'Ohati Editorial')}</span>
                         </div>
                         <div class="blog-card-stats">
@@ -312,6 +312,14 @@ function renderBlogArticleDetails(post, comments, related) {
     const container = document.getElementById('screen-blog-detail');
     if (!container) return;
 
+    // Format inline article content image paths
+    let formattedContent = post.content || '';
+    if (formattedContent && typeof window.resolveImageUrl === 'function') {
+        formattedContent = formattedContent.replace(/<img([^>]+)src=["\']([^"\']+)["\']/gi, (match, p1, src) => {
+            return `<img${p1}src="${window.resolveImageUrl(src, 'cover')}"`;
+        });
+    }
+
     // Video Embed Renderer Logic
     let videoMediaHTML = '';
     if (post.video_url) {
@@ -319,7 +327,7 @@ function renderBlogArticleDetails(post, comments, related) {
         if (url.endsWith('.mp4') || url.includes('video/')) {
             videoMediaHTML = `
                 <div class="blog-video-box">
-                    <video controls poster="${post.cover_image || ''}" class="blog-mp4-player" playsinline preload="metadata">
+                    <video controls poster="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(post.cover_image, 'cover') : (post.cover_image || '')}" class="blog-mp4-player" playsinline preload="metadata">
                         <source src="${url}" type="video/mp4">
                         Your browser does not support HTML5 video playback.
                     </video>
@@ -384,7 +392,7 @@ function renderBlogArticleDetails(post, comments, related) {
                 ${post.subheadline ? `<p class="blog-article-subheadline">${escapeHtml(post.subheadline)}</p>` : ''}
                 
                 <div class="blog-article-author-row">
-                    <img src="${post.author_avatar || window.DEFAULT_USER_AVATAR}" class="blog-article-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                    <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(post.author_avatar, 'avatar') : (post.author_avatar || window.DEFAULT_USER_AVATAR)}" class="blog-article-avatar" onerror="this.src=window.DEFAULT_USER_AVATAR">
                     <div>
                         <div class="blog-article-author-name">${escapeHtml(post.author_name || 'Ohati Editorial')}</div>
                         <div class="blog-article-meta-info">
@@ -402,18 +410,18 @@ function renderBlogArticleDetails(post, comments, related) {
             ${videoMediaHTML}
             ${!videoMediaHTML && post.cover_image ? `
                 <div class="blog-article-cover-box">
-                    <img src="${post.cover_image}" alt="${escapeHtml(post.title)}" class="blog-article-cover-img">
+                    <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(post.cover_image, 'cover') : post.cover_image}" alt="${escapeHtml(post.title)}" class="blog-article-cover-img">
                 </div>
             ` : ''}
 
             <!-- SECTION 4: FORMATTED ARTICLE BODY PROSE -->
             <div class="blog-article-content">
-                ${post.content}
+                ${formattedContent}
             </div>
 
             <!-- SECTION 5: AUTHOR & BRAND HIGHLIGHT -->
             <div class="blog-author-box">
-                <img src="${post.author_avatar || window.DEFAULT_USER_AVATAR}" class="blog-author-box-img" onerror="this.src=window.DEFAULT_USER_AVATAR">
+                <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(post.author_avatar, 'avatar') : (post.author_avatar || window.DEFAULT_USER_AVATAR)}" class="blog-author-box-img" onerror="this.src=window.DEFAULT_USER_AVATAR">
                 <div class="blog-author-box-info">
                     <h4>Written by ${escapeHtml(post.author_name || 'Chill & Serve Editorial')}</h4>
                     <p>Bringing you trusted insights, planning timelines, and top vendor tips to celebrate your special events in Ghana with confidence.</p>
@@ -564,7 +572,7 @@ function renderBlogArticleDetails(post, comments, related) {
                     <div class="blog-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
                         ${related.map(r => `
                             <div class="blog-card" onclick="openBlogArticle(${r.id})">
-                                <img src="${r.cover_image || window.DEFAULT_BUSINESS_COVER}" class="blog-card-thumb" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
+                                <img src="${(typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(r.cover_image, 'cover') : (r.cover_image || window.DEFAULT_BUSINESS_COVER)}" class="blog-card-thumb" onerror="this.src=window.DEFAULT_BUSINESS_COVER">
                                 <div class="blog-card-body">
                                     <span class="blog-card-cat">${escapeHtml(r.category)}</span>
                                     <h4 class="blog-card-title" style="font-size:0.95rem;">${escapeHtml(r.title)}</h4>

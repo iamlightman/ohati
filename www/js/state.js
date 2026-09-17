@@ -1,8 +1,8 @@
 // Authoritative bundled mobile application version
-window.OHATI_APP_VERSION = '1.0.41';
+window.OHATI_APP_VERSION = '1.0.42';
 
 const state = {
-    appVersion: '1.0.41',
+    appVersion: '1.0.42',
     currentScreen: 'loading',
     previousScreens: [],
     user: null,

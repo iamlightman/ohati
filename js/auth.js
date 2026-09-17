@@ -954,6 +954,20 @@ function handleLogout() {
     state.activeChatVendorId = null;
     state.stats = null;
 
+    // Clear chat intervals and notification sets
+    if (state.chatInterval) {
+        clearInterval(state.chatInterval);
+        state.chatInterval = null;
+    }
+    if (state.unreadPollTimeout) {
+        clearTimeout(state.unreadPollTimeout);
+        state.unreadPollTimeout = null;
+    }
+    if (state.notifiedMessages && typeof state.notifiedMessages.clear === 'function') {
+        state.notifiedMessages.clear();
+    }
+    window._chatGenToken = (window._chatGenToken || 0) + 1;
+
     // Clear all auth keys & stored user tokens
     localStorage.removeItem('ohati_auth_token');
     localStorage.removeItem('ohati_user_session');

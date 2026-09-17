@@ -530,6 +530,12 @@ function pollUnreadChats() {
 
         unreadList.forEach(msg => {
             const msgId = msg.id;
+            // Defensive UI verification: ensure message is intended for the logged in user
+            const curUid = state.user ? parseInt(state.user.id) : 0;
+            if (msg.recipient_type === 'user' && parseInt(msg.recipient_id) !== curUid) {
+                return; // Defense in depth: ignore foreign recipient messages
+            }
+
             if (!state.notifiedMessages.has(msgId)) {
                 state.notifiedMessages.add(msgId);
                 

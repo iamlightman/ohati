@@ -2170,6 +2170,10 @@ function renderPaymentSection(b) {
                     <button class="btn btn-outline" onclick="submitSimulatedPayment(${b.id}, ${b.price}, 'Fully Paid')" style="padding: 8px 12px; font-size: 0.7rem; height: auto; flex: 1;">Pay Full (${formatGHS(b.price)})</button>
                 </div>
             </div>
+        `;
+    }
+    
+    if (b.payment_status === 'Deposit Paid') {
         return `
             <div style="border: 1.5px solid var(--forest-green); padding: 12px; border-radius: 10px; background: rgba(45,90,60,0.02); text-align: center;">
                 <span style="font-size: 1.3rem; color: var(--forest-green);"><i class="fa-solid fa-circle-check"></i></span>
@@ -2657,18 +2661,25 @@ async function renderChatScreen() {
 }
 
 async function loadChatHistory(vendorId) {
+    window._chatGenToken = (window._chatGenToken || 0) + 1;
+    const currentGen = window._chatGenToken;
     try {
         const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_history&vendor_id=' + vendorId);
         const history = await res.json();
         
+        // Prevent race condition: discard if chat was switched while request was in flight
+        if (currentGen !== window._chatGenToken || state.activeChatVendorId !== vendorId) {
+            return;
+        }
+
         const area = document.getElementById('chat-msg-area');
         if (!area) return;
         
-        area.innerHTML = history.map(msg => `
+        area.innerHTML = Array.isArray(history) ? history.map(msg => `
             <div class="msg-bubble msg-${msg.sender === 'user' ? 'user' : 'vendor'}">
-                ${msg.message.replace(/\n/g, '<br>')}
+                ${(msg.message || '').replace(/\n/g, '<br>')}
             </div>
-        `).join('');
+        `).join('') : '';
         
         scrollToBottom('chat-msg-area');
     } catch (e) {

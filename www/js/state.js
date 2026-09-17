@@ -1,6 +1,8 @@
-// js/state.js — Ohati Global Application State
+// Authoritative bundled mobile application version
+window.OHATI_APP_VERSION = '1.0.41';
 
 const state = {
+    appVersion: '1.0.41',
     currentScreen: 'loading',
     previousScreens: [],
     user: null,

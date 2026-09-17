@@ -288,10 +288,15 @@ try {
         .badge-del { background: rgba(239,68,68,0.2); color: #EF4444; border: 1px solid rgba(239,68,68,0.4); padding: 3px 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
         .badge-archived { background: rgba(245,158,11,0.2); color: #F59E0B; border: 1px solid rgba(245,158,11,0.4); padding: 3px 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
         .avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #334155; background: #0F172A; }
-        .search-box { background: #1E293B; border: 1px solid #334155; color: #F8FAFC; padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; width: 300px; outline: none; }
+        .search-box { background: #1E293B; border: 1px solid #334155; color: #F8FAFC; padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; width: 300px; max-width: 100%; outline: none; }
         .search-box:focus { border-color: #F2A735; }
         .btn-undo { background: #F2A735; color: #0F172A; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; }
         .btn-undo:hover { background: #E09520; }
+        @media(max-width: 768px) {
+            .search-box { width: 100%; }
+            .admin-main { padding: 16px !important; }
+            table { min-width: 750px; }
+        }
     </style>
 </head>
 <body>
@@ -301,18 +306,21 @@ try {
 
     <main class="admin-main" style="padding: 28px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap:wrap; gap:16px;">
-            <div>
-                <h1 style="font-family:'Fraunces',serif; font-size:1.8rem; font-weight:800; color:#fff; margin:0; display:flex; align-items:center; gap:10px;">
-                    <i class="fa-solid fa-user-slash" style="color:#EF4444;"></i> Deleted Accounts Console
-                </h1>
-                <p style="color:#94A3B8; font-size:0.85rem; margin-top:4px;">Manage soft-deleted & archived user accounts with 1-click restore or undo.</p>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="admin-menu-toggle" style="color:#fff;" onclick="toggleSidebar(true)"><i class="fa-solid fa-bars"></i></button>
+                <div>
+                    <h1 style="font-family:'Fraunces',serif; font-size:1.8rem; font-weight:800; color:#fff; margin:0; display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-user-slash" style="color:#EF4444;"></i> Deleted Accounts Console
+                    </h1>
+                    <p style="color:#94A3B8; font-size:0.85rem; margin-top:4px;">Manage soft-deleted & archived user accounts with 1-click restore or undo.</p>
+                </div>
             </div>
             
-            <div style="display:flex; align-items:center; gap:12px;">
-                <form method="GET" style="margin:0;">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <form method="GET" style="margin:0; flex:1; min-width:200px;">
                     <input type="text" name="search" class="search-box" placeholder="Search by ID, name, email or phone..." value="<?= htmlspecialchars($search) ?>">
                 </form>
-                <span class="badge-del" style="font-size:0.85rem; padding:8px 16px;">
+                <span class="badge-del" style="font-size:0.85rem; padding:8px 16px; white-space:nowrap;">
                     <i class="fa-solid fa-box-archive"></i> <?= count($deleted_users) ?> Account(s) Archived
                 </span>
             </div>

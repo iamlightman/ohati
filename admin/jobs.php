@@ -270,18 +270,37 @@ $audit_logs = $db_logs->query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 5
     <title>Ohati Admin - Multi-DB Event Jobs Console</title>
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .admin-table-wrap {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            max-width: 100% !important;
+        }
+        .admin-table {
+            min-width: 750px;
+        }
+        @media (max-width: 768px) {
+            .admin-topbar {
+                flex-wrap: wrap !important;
+                gap: 12px !important;
+            }
+            .admin-content {
+                padding: 14px !important;
+            }
+        }
+    </style>
 </head>
 <body class="admin-layout">
 
     <?php require_once __DIR__ . '/sidebar.php'; ?>
 
     <main class="admin-main">
-        <header class="admin-topbar">
+        <header class="admin-topbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:12px;">
                 <button class="admin-menu-toggle" onclick="toggleSidebar(true)"><i class="fa-solid fa-bars"></i></button>
-                <h1 class="admin-page-title">Event Jobs Multi-Database Administration</h1>
+                <h1 class="admin-page-title" style="font-size:1.3rem;">Event Jobs Administration</h1>
             </div>
-            <div style="display:flex; gap:8px;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <a href="?export=csv&type=jobs" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-csv"></i> Export Jobs CSV</a>
                 <a href="?export=csv&type=applications" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-csv"></i> Export Proposals CSV</a>
             </div>
@@ -449,7 +468,7 @@ $audit_logs = $db_logs->query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 5
                     </form>
                 </div>
 
-                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow:hidden;">
+                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow-x:auto; -webkit-overflow-scrolling:touch;">
                     <table class="admin-table" style="width:100%; border-collapse:collapse;">
                         <thead>
                             <tr style="background:#F9FAFB; text-align:left; font-size:0.8rem; color:#6B7280;">
@@ -486,7 +505,7 @@ $audit_logs = $db_logs->query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 5
 
             <!-- TAB 3: PROPOSALS INBOX -->
             <?php if ($tab === 'applications'): ?>
-                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow:hidden;">
+                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow-x:auto; -webkit-overflow-scrolling:touch;">
                     <table class="admin-table" style="width:100%; border-collapse:collapse;">
                         <thead>
                             <tr style="background:#F9FAFB; text-align:left; font-size:0.8rem; color:#6B7280;">
@@ -524,7 +543,7 @@ $audit_logs = $db_logs->query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 5
 
             <!-- TAB 4: HIRED CONTRACTS -->
             <?php if ($tab === 'hires'): ?>
-                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow:hidden;">
+                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow-x:auto; -webkit-overflow-scrolling:touch;">
                     <table class="admin-table" style="width:100%; border-collapse:collapse;">
                         <thead>
                             <tr style="background:#F9FAFB; text-align:left; font-size:0.8rem; color:#6B7280;">
@@ -588,7 +607,7 @@ $audit_logs = $db_logs->query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 5
 
             <!-- TAB 6: AUDIT LOGS -->
             <?php if ($tab === 'audit'): ?>
-                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow:hidden;">
+                <div class="admin-table-wrap" style="background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow-x:auto; -webkit-overflow-scrolling:touch;">
                     <table class="admin-table" style="width:100%; border-collapse:collapse;">
                         <thead>
                             <tr style="background:#F9FAFB; text-align:left; font-size:0.8rem; color:#6B7280;">

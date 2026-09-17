@@ -1,6 +1,179 @@
 // js/app.js — Ohati Main Application Bootstrapper
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ISOLATED SAFE MANDATORY APP UPDATE CHECKER (FAIL-OPEN)
+// ══════════════════════════════════════════════════════════════════════════════
+window.initSafeAppUpdateCheck = function() {
+    try {
+        // 1. Platform Detection: ONLY run for native mobile applications
+        const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                         window.location.protocol === 'capacitor:' ||
+                         window.location.protocol === 'file:' ||
+                         (navigator.userAgent && navigator.userAgent.includes('OhatiApp'));
+
+        if (!isNative) {
+            // Normal web/desktop browser — immediately exit (fail-open)
+            return;
+        }
+
+        const rawPlatform = (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') 
+            ? window.Capacitor.getPlatform() 
+            : '';
+        let platform = 'android';
+        if (rawPlatform === 'ios' || /iphone|ipad|ipod/i.test(navigator.userAgent || '')) {
+            platform = 'ios';
+        } else if (rawPlatform === 'android' || /android/i.test(navigator.userAgent || '')) {
+            platform = 'android';
+        } else {
+            // Unidentifiable platform — fail open
+            return;
+        }
+
+        const CACHE_KEY = 'ohati_app_version_policy_v1';
+        const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+        async function evaluatePolicy(policy, source) {
+            if (!policy || typeof policy !== 'object' || !policy.platforms || !policy.platforms[platform]) {
+                return false;
+            }
+
+            const platformData = policy.platforms[platform];
+            const enforcementEnabled = (policy.enforcement_enabled === true || policy.enforcement_enabled === '1' || policy.enforcement_enabled === 1);
+
+            if (!enforcementEnabled) {
+                // Kill switch OFF — dismiss any existing lock and allow entry
+                if (typeof window.dismissMandatoryUpdateLock === 'function') {
+                    window.dismissMandatoryUpdateLock();
+                }
+                return false;
+            }
+
+            const minVersion = platformData.minimum_version;
+            const latestVersion = platformData.latest_version;
+            const currentVersion = window.OHATI_APP_VERSION || (window.state && window.state.appVersion) || '1.0.40';
+
+            // Strict SemVer validation on both versions
+            if (typeof window.isStrictSemVer !== 'function' || !window.isStrictSemVer(minVersion) || !window.isStrictSemVer(currentVersion)) {
+                // Malformed SemVer — fail open
+                return false;
+            }
+
+            // Segmented integer comparison
+            const cmp = window.compareSemVer(currentVersion, minVersion);
+
+            if (cmp < 0) {
+                // STATE 3: Installed version is below minimum supported version AND enforcement is ON
+                if (typeof window.showMandatoryUpdateLock === 'function') {
+                    window.showMandatoryUpdateLock({
+                        platform: platform,
+                        installed_version: currentVersion,
+                        minimum_version: minVersion,
+                        latest_version: latestVersion,
+                        store_url: platformData.store_url,
+                        release_notes: platformData.release_notes
+                    });
+                }
+                return true;
+            } else {
+                // STATE 1 & STATE 2: Current version is compliant
+                if (typeof window.dismissMandatoryUpdateLock === 'function') {
+                    window.dismissMandatoryUpdateLock();
+                }
+                return false;
+            }
+        }
+
+        async function executeCheck() {
+            if (window._ohatiVersionCheckInFlight) return;
+            window._ohatiVersionCheckInFlight = true;
+
+            const currentVersion = window.OHATI_APP_VERSION || (window.state && window.state.appVersion) || '1.0.40';
+            let onlinePolicyFetched = false;
+
+            try {
+                const apiBase = (typeof window.getOhatiApiBaseUrl === 'function') ? window.getOhatiApiBaseUrl() : 'api.php';
+                const endpoint = (apiBase.indexOf('?') === -1) 
+                    ? `${apiBase}?action=app_version_policy` 
+                    : `${apiBase}&action=app_version_policy`;
+
+                // Strict 2500ms timeout using AbortController
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+                const res = await fetch(endpoint, {
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: { 'Accept': 'application/json' }
+                });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.status === 'success' && data.platforms && data.platforms[platform]) {
+                        const minV = data.platforms[platform].minimum_version;
+                        if (window.isStrictSemVer && window.isStrictSemVer(minV)) {
+                            // Cache valid policy with timestamp & version
+                            try {
+                                const cachePayload = {
+                                    policy: data,
+                                    fetched_at: Date.now(),
+                                    platform: platform,
+                                    client_version: currentVersion
+                                };
+                                localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
+                            } catch (cacheErr) {}
+
+                            onlinePolicyFetched = true;
+                            await evaluatePolicy(data, 'network');
+                        }
+                    }
+                }
+            } catch (netErr) {
+                // Timeout, network error, HTTP 500, or fetch abort — fail open to cache/normal app
+            } finally {
+                window._ohatiVersionCheckInFlight = false;
+            }
+
+            // If online fetch did not succeed (offline / timeout / error), check cache
+            if (!onlinePolicyFetched) {
+                try {
+                    const cachedRaw = localStorage.getItem(CACHE_KEY);
+                    if (cachedRaw) {
+                        const cached = JSON.parse(cachedRaw);
+                        const now = Date.now();
+                        const age = now - (cached.fetched_at || 0);
+                        if (age >= 0 && age < CACHE_TTL_MS && cached.policy) {
+                            await evaluatePolicy(cached.policy, 'cache');
+                        }
+                    }
+                } catch (cacheEvalErr) {
+                    // Corrupted cache — fail open
+                }
+            }
+        }
+
+        // Fire non-blocking check immediately
+        executeCheck().catch(() => {});
+
+        // Re-evaluate when app resumes from app store
+        if (!window._ohatiResumeListenerAttached) {
+            window._ohatiResumeListenerAttached = true;
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    executeCheck().catch(() => {});
+                }
+            });
+            window.addEventListener('focus', () => {
+                executeCheck().catch(() => {});
+            });
+        }
+    } catch (globalErr) {
+        console.warn("[AppUpdate] Unexpected error in update checker (failing open):", globalErr);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.initSafeAppUpdateCheck === 'function') window.initSafeAppUpdateCheck();
     if (typeof window.normalizeUserSession === 'function') window.normalizeUserSession();
     if (typeof window.initWebDownloadBanner === 'function') {
         if ('requestIdleCallback' in window) {
@@ -530,6 +703,12 @@ function pollUnreadChats() {
 
         unreadList.forEach(msg => {
             const msgId = msg.id;
+            // Defensive UI verification: ensure message is intended for the logged in user
+            const curUid = state.user ? parseInt(state.user.id) : 0;
+            if (msg.recipient_type === 'user' && parseInt(msg.recipient_id) !== curUid) {
+                return; // Defense in depth: ignore foreign recipient messages
+            }
+
             if (!state.notifiedMessages.has(msgId)) {
                 state.notifiedMessages.add(msgId);
                 

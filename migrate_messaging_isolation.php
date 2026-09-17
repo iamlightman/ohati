@@ -57,7 +57,10 @@ try {
         'sender_type'     => "VARCHAR(10) NULL AFTER `sender`",
         'sender_id'       => "INT(11) NULL AFTER `sender_type`",
         'recipient_type'  => "VARCHAR(10) NULL AFTER `sender_id`",
-        'recipient_id'    => "INT(11) NULL AFTER `recipient_type`"
+        'recipient_id'    => "INT(11) NULL AFTER `recipient_type`",
+        'file_name'       => "VARCHAR(255) NULL DEFAULT ''",
+        'file_size'       => "INT(11) NULL DEFAULT 0",
+        'duration'        => "INT(11) NULL DEFAULT 0"
     ];
 
     $cols_to_add = [];

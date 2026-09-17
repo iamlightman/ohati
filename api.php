@@ -159,6 +159,136 @@ if (!function_exists('is_authorized_conversation_participant')) {
     }
 }
 
+if (!function_exists('resolve_conversation_entities')) {
+    function resolve_conversation_entities($uid, $convo_id, $target_id, $pdo, $explicit_vendor_id = 0) {
+        $uid = intval($uid);
+        if ($uid <= 0) return false;
+
+        $convo_id = trim($convo_id ?? '');
+        $target_id = intval($target_id ?? 0);
+        $explicit_vendor_id = intval($explicit_vendor_id ?? 0);
+
+        // 1. Explicit conversation_id supplied
+        if (!empty($convo_id)) {
+            if (!preg_match('/^v(\d+)_u(\d+)$/', $convo_id, $m)) {
+                return false;
+            }
+            $vid = intval($m[1]);
+            $cuid = intval($m[2]);
+            $auth = is_authorized_conversation_participant($uid, $convo_id, $pdo);
+            if (!$auth) return false;
+
+            return [
+                'vendor_id' => $vid,
+                'customer_user_id' => $cuid,
+                'conversation_id' => "v{$vid}_u{$cuid}",
+                'role' => $auth['role'],
+                'is_owner' => $auth['is_owner']
+            ];
+        }
+
+        // 2. Derive from target_id and entity relationships
+        if ($target_id <= 0) return false;
+
+        // Rule A: Is target_id a vendor, and authenticated user is NOT the owner of this vendor?
+        // Authenticated user is customer, target is vendor.
+        $v_stmt = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? LIMIT 1");
+        $v_stmt->execute([$target_id]);
+        $target_vendor = $v_stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($target_vendor && intval($target_vendor['user_id']) !== $uid) {
+            $vid = intval($target_vendor['id']);
+            $cuid = $uid;
+            $can_id = "v{$vid}_u{$cuid}";
+            $auth = is_authorized_conversation_participant($uid, $can_id, $pdo);
+            if ($auth) {
+                return [
+                    'vendor_id' => $vid,
+                    'customer_user_id' => $cuid,
+                    'conversation_id' => $can_id,
+                    'role' => $auth['role'],
+                    'is_owner' => $auth['is_owner']
+                ];
+            }
+        }
+
+        // Rule B: Does authenticated user own vendor profile(s), and target_id is the customer?
+        $my_v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+        $my_v_stmt->execute([$uid]);
+        $owned_vids = $my_v_stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $owned_vids = array_map('intval', $owned_vids);
+
+        if (!empty($owned_vids)) {
+            $selected_vid = 0;
+
+            // If an explicit vendor_id was passed and it's owned by this user, use it
+            if ($explicit_vendor_id > 0 && in_array($explicit_vendor_id, $owned_vids, true)) {
+                $selected_vid = $explicit_vendor_id;
+            } elseif (count($owned_vids) === 1) {
+                $selected_vid = $owned_vids[0];
+            } else {
+                // Multiple owned vendors: check existing messages with this target user to uniquely identify
+                $in_ph = implode(',', array_fill(0, count($owned_vids), '?'));
+                $chk_m = $pdo->prepare("
+                    SELECT vendor_id FROM messages 
+                    WHERE user_id = ? AND vendor_id IN ($in_ph) 
+                    ORDER BY id DESC LIMIT 1
+                ");
+                $chk_m->execute(array_merge([$target_id], $owned_vids));
+                $found_vid = intval($chk_m->fetchColumn() ?: 0);
+                if ($found_vid > 0 && in_array($found_vid, $owned_vids, true)) {
+                    $selected_vid = $found_vid;
+                }
+            }
+
+            if ($selected_vid > 0) {
+                $vid = $selected_vid;
+                $cuid = $target_id;
+                $can_id = "v{$vid}_u{$cuid}";
+                $auth = is_authorized_conversation_participant($uid, $can_id, $pdo);
+                if ($auth) {
+                    return [
+                        'vendor_id' => $vid,
+                        'customer_user_id' => $cuid,
+                        'conversation_id' => $can_id,
+                        'role' => $auth['role'],
+                        'is_owner' => $auth['is_owner']
+                    ];
+                }
+            }
+        }
+
+        // Rule C: Compatibility fallback using existing valid (vendor_id, user_id) message relationship
+        $leg_stmt = $pdo->prepare("
+            SELECT conversation_id, vendor_id, user_id FROM messages 
+            WHERE (vendor_id = ? AND user_id = ?) 
+               OR (vendor_id = ? AND user_id = ?) 
+            ORDER BY id DESC LIMIT 1
+        ");
+        $leg_stmt->execute([$target_id, $uid, $uid, $target_id]);
+        $leg = $leg_stmt->fetch(PDO::FETCH_ASSOC);
+        if ($leg) {
+            $vid = intval($leg['vendor_id']);
+            $cuid = intval($leg['user_id']);
+            if ($vid > 0 && $cuid > 0) {
+                $can_id = "v{$vid}_u{$cuid}";
+                $auth = is_authorized_conversation_participant($uid, $can_id, $pdo);
+                if ($auth) {
+                    return [
+                        'vendor_id' => $vid,
+                        'customer_user_id' => $cuid,
+                        'conversation_id' => $can_id,
+                        'role' => $auth['role'],
+                        'is_owner' => $auth['is_owner']
+                    ];
+                }
+            }
+        }
+
+        return false;
+    }
+}
+
 // Bearer Token & Persistent Authentication Middleware
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $auth_header = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
@@ -682,6 +812,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrf_exempt_act
 }
 
 switch ($action) {
+
+case 'app_version_policy':
+    $semver_regex = '/^\d+\.\d+\.\d+$/';
+    $raw_enforced = getSetting('app_update_enforced', '0');
+    $enforcement_enabled = ($raw_enforced === '1' || $raw_enforced === 1 || $raw_enforced === true);
+
+    $min_android = trim(getSetting('app_min_version_android', '1.0.40'));
+    $latest_android = trim(getSetting('app_latest_version_android', '1.0.40'));
+    $min_ios = trim(getSetting('app_min_version_ios', '1.0.40'));
+    $latest_ios = trim(getSetting('app_latest_version_ios', '1.0.40'));
+    $msg = trim(getSetting('app_update_message', 'Please update Ohati to continue using the latest version.'));
+
+    // Server-side defensive validation: If any version is invalid, fail open
+    if (!preg_match($semver_regex, $min_android)) { $min_android = '1.0.40'; $enforcement_enabled = false; }
+    if (!preg_match($semver_regex, $latest_android)) { $latest_android = '1.0.40'; $enforcement_enabled = false; }
+    if (!preg_match($semver_regex, $min_ios)) { $min_ios = '1.0.40'; $enforcement_enabled = false; }
+    if (!preg_match($semver_regex, $latest_ios)) { $latest_ios = '1.0.40'; $enforcement_enabled = false; }
+
+    $android_store_url = 'https://play.google.com/store/apps/details?id=com.ohati.app';
+    $ios_store_url = 'https://apps.apple.com/ng/app/ohati/id6801835847';
+
+    echo json_encode([
+        'status' => 'success',
+        'enforcement_enabled' => $enforcement_enabled,
+        'platforms' => [
+            'android' => [
+                'minimum_version' => $min_android,
+                'latest_version' => $latest_android,
+                'store_url' => $android_store_url,
+                'release_notes' => $msg
+            ],
+            'ios' => [
+                'minimum_version' => $min_ios,
+                'latest_version' => $latest_ios,
+                'store_url' => $ios_store_url,
+                'release_notes' => $msg
+            ]
+        ]
+    ]);
+    break;
 
 case 'register':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
@@ -2846,116 +3016,127 @@ case 'chat_inbox':
         echo json_encode([]);
         exit;
     }
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     $list = [];
 
-    if ($role === 'vendor') {
-        // Find all vendors owned by this user
-        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-        $v_stmt->execute([$uid]);
-        $vendor_ids = $v_stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    // Determine all vendor IDs owned by the authenticated user
+    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_stmt->execute([$uid]);
+    $owned_vendor_ids = $v_stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $owned_vendor_ids = array_map('intval', $owned_vendor_ids);
 
-        if (!empty($vendor_ids)) {
-            $in_placeholders = implode(',', array_fill(0, count($vendor_ids), '?'));
-            $params = array_merge($vendor_ids, $vendor_ids);
-            $stmt = $pdo->prepare("
-                SELECT conversation_id, MAX(id) as max_msg_id 
-                FROM messages 
-                WHERE (sender_type = 'vendor' AND sender_id IN ($in_placeholders))
-                   OR (recipient_type = 'vendor' AND recipient_id IN ($in_placeholders))
-                GROUP BY conversation_id 
-                ORDER BY max_msg_id DESC
+    // Build parameterized query covering customer-side and vendor-side messages
+    $params = [$uid, $uid, $uid];
+    $vendor_clause = "";
+    if (!empty($owned_vendor_ids)) {
+        $in_ph1 = implode(',', array_fill(0, count($owned_vendor_ids), '?'));
+        $in_ph2 = implode(',', array_fill(0, count($owned_vendor_ids), '?'));
+        $in_ph3 = implode(',', array_fill(0, count($owned_vendor_ids), '?'));
+        $vendor_clause = " OR (sender_type = 'vendor' AND sender_id IN ($in_ph1)) OR (recipient_type = 'vendor' AND recipient_id IN ($in_ph2)) OR (vendor_id IN ($in_ph3))";
+        $params = array_merge($params, $owned_vendor_ids, $owned_vendor_ids, $owned_vendor_ids);
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            CASE 
+                WHEN conversation_id IS NOT NULL AND conversation_id != '' THEN conversation_id 
+                ELSE CONCAT('v', vendor_id, '_u', user_id) 
+            END as convo_id, 
+            MAX(id) as max_msg_id 
+        FROM messages 
+        WHERE (
+            (sender_type = 'user' AND sender_id = ?)
+            OR (recipient_type = 'user' AND recipient_id = ?)
+            OR (user_id = ?)
+            $vendor_clause
+        )
+        GROUP BY convo_id 
+        ORDER BY max_msg_id DESC
+    ");
+    $stmt->execute($params);
+    $convos = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    foreach ($convos as $c) {
+        $convo_key = $c['convo_id'];
+        if (!preg_match('/^v(\d+)_u(\d+)$/', $convo_key, $cm)) continue;
+        $c_vid = intval($cm[1]);
+        $c_uid = intval($cm[2]);
+
+        $m_stmt = $pdo->prepare("SELECT * FROM messages WHERE id = ?");
+        $m_stmt->execute([$c['max_msg_id']]);
+        $last_m = $m_stmt->fetch(PDO::FETCH_ASSOC);
+
+        $msg_preview = $last_m ? $last_m['message'] : '';
+        if ($last_m && $last_m['type'] === 'image') $msg_preview = "📷 Photo";
+        else if ($last_m && $last_m['type'] === 'voice') $msg_preview = "🎙️ Voice Note";
+        else if ($last_m && in_array($last_m['type'], ['pdf', 'file', 'video', 'location'])) $msg_preview = "📎 Attachment";
+
+        if (in_array($c_vid, $owned_vendor_ids, true)) {
+            // Vendor owner view: customer is the counterparty
+            $u_stmt = $pdo->prepare("SELECT id, name, avatar, last_active FROM users WHERE id = ?");
+            $u_stmt->execute([$c_uid]);
+            $u_row = $u_stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$u_row) continue;
+
+            $un_stmt = $pdo->prepare("
+                SELECT COUNT(*) FROM messages 
+                WHERE (conversation_id = ? OR (vendor_id = ? AND user_id = ?)) 
+                  AND recipient_type = 'vendor' 
+                  AND recipient_id = ? 
+                  AND is_read = 0
             ");
-            $stmt->execute($params);
-            $convos = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $un_stmt->execute([$convo_key, $c_vid, $c_uid, $c_vid]);
+            $unread = intval($un_stmt->fetchColumn() ?: 0);
 
-            foreach ($convos as $c) {
-                if (!preg_match('/^v(\d+)_u(\d+)$/', $c['conversation_id'], $cm)) continue;
-                $c_vid = intval($cm[1]);
-                $c_uid = intval($cm[2]);
+            $info = get_online_status_info($u_row['last_active'] ?? '');
 
-                $u_stmt = $pdo->prepare("SELECT id, name, avatar, last_active FROM users WHERE id = ?");
-                $u_stmt->execute([$c_uid]);
-                $u_row = $u_stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$u_row) continue;
-
-                $m_stmt = $pdo->prepare("SELECT * FROM messages WHERE id = ?");
-                $m_stmt->execute([$c['max_msg_id']]);
-                $last_m = $m_stmt->fetch(PDO::FETCH_ASSOC);
-
-                $un_stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE conversation_id = ? AND recipient_type = 'vendor' AND recipient_id = ? AND is_read = 0");
-                $un_stmt->execute([$c['conversation_id'], $c_vid]);
-                $unread = intval($un_stmt->fetchColumn() ?: 0);
-
-                $info = get_online_status_info($u_row['last_active'] ?? '');
-
-                $msg_preview = $last_m ? $last_m['message'] : '';
-                if ($last_m && $last_m['type'] === 'image') $msg_preview = "📷 Photo";
-                else if ($last_m && $last_m['type'] === 'voice') $msg_preview = "🎙️ Voice Note";
-                else if ($last_m && in_array($last_m['type'], ['pdf', 'file', 'video', 'location'])) $msg_preview = "📎 Attachment";
-
-                $list[] = [
-                    'id' => $c_uid,
-                    'user_id' => $c_uid,
-                    'customer_id' => $c_uid,
-                    'vendor_id' => $c_vid,
-                    'conversation_id' => $c['conversation_id'],
-                    'name' => $u_row['name'],
-                    'avatar' => $u_row['avatar'],
-                    'logo' => $u_row['avatar'],
-                    'category' => 'Customer',
-                    'last_message' => $msg_preview,
-                    'last_msg_id' => intval($c['max_msg_id']),
-                    'unread_count' => $unread,
-                    'is_online' => $info['is_online'],
-                    'online_status' => $info['online_status'],
-                    'availability' => $info['is_online'] ? 'Online' : $info['online_status']
-                ];
-            }
-        }
-    } else {
-        // Customer view: conversations where current user is customer
-        $stmt = $pdo->prepare("
-            SELECT conversation_id, MAX(id) as max_msg_id 
-            FROM messages 
-            WHERE (sender_type = 'user' AND sender_id = ?)
-               OR (recipient_type = 'user' AND recipient_id = ?)
-            GROUP BY conversation_id 
-            ORDER BY max_msg_id DESC
-        ");
-        $stmt->execute([$uid, $uid]);
-        $convos = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-        foreach ($convos as $c) {
-            if (!preg_match('/^v(\d+)_u(\d+)$/', $c['conversation_id'], $cm)) continue;
-            $c_vid = intval($cm[1]);
-
-            $v_stmt = $pdo->prepare("SELECT v.id, v.user_id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge, v.last_active as vendor_last_active, u.last_active as user_last_active FROM vendors v LEFT JOIN users u ON v.user_id = u.id WHERE v.id = ?");
-            $v_stmt->execute([$c_vid]);
-            $v_row = $v_stmt->fetch(PDO::FETCH_ASSOC);
+            $list[] = [
+                'id' => $c_uid,
+                'user_id' => $c_uid,
+                'customer_id' => $c_uid,
+                'vendor_id' => $c_vid,
+                'conversation_id' => $convo_key,
+                'name' => $u_row['name'],
+                'avatar' => $u_row['avatar'],
+                'logo' => $u_row['avatar'],
+                'category' => 'Customer',
+                'last_message' => $msg_preview,
+                'last_msg_id' => intval($c['max_msg_id']),
+                'unread_count' => $unread,
+                'is_online' => $info['is_online'],
+                'online_status' => $info['online_status'],
+                'availability' => $info['is_online'] ? 'Online' : $info['online_status']
+            ];
+        } elseif ($uid === $c_uid) {
+            // Customer view: vendor is the counterparty
+            $v_row_stmt = $pdo->prepare("
+                SELECT v.id, v.user_id, v.name, v.logo, v.category, v.availability, v.verified, v.verification_badge, 
+                       v.last_active as vendor_last_active, u.last_active as user_last_active 
+                FROM vendors v 
+                LEFT JOIN users u ON v.user_id = u.id 
+                WHERE v.id = ?
+            ");
+            $v_row_stmt->execute([$c_vid]);
+            $v_row = $v_row_stmt->fetch(PDO::FETCH_ASSOC);
             if (!$v_row) continue;
 
-            $m_stmt = $pdo->prepare("SELECT * FROM messages WHERE id = ?");
-            $m_stmt->execute([$c['max_msg_id']]);
-            $last_m = $m_stmt->fetch(PDO::FETCH_ASSOC);
-
-            $un_stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE conversation_id = ? AND recipient_type = 'user' AND recipient_id = ? AND is_read = 0");
-            $un_stmt->execute([$c['conversation_id'], $uid]);
+            $un_stmt = $pdo->prepare("
+                SELECT COUNT(*) FROM messages 
+                WHERE (conversation_id = ? OR (vendor_id = ? AND user_id = ?)) 
+                  AND recipient_type = 'user' 
+                  AND recipient_id = ? 
+                  AND is_read = 0
+            ");
+            $un_stmt->execute([$convo_key, $c_vid, $c_uid, $uid]);
             $unread = intval($un_stmt->fetchColumn() ?: 0);
 
             $last_active = !empty($v_row['user_last_active']) ? $v_row['user_last_active'] : ($v_row['vendor_last_active'] ?? '');
             $info = get_online_status_info($last_active);
 
-            $msg_preview = $last_m ? $last_m['message'] : '';
-            if ($last_m && $last_m['type'] === 'image') $msg_preview = "📷 Photo";
-            else if ($last_m && $last_m['type'] === 'voice') $msg_preview = "🎙️ Voice Note";
-            else if ($last_m && in_array($last_m['type'], ['pdf', 'file', 'video', 'location'])) $msg_preview = "📎 Attachment";
-
             $list[] = [
                 'id' => $c_vid,
                 'vendor_id' => $c_vid,
                 'user_id' => intval($v_row['user_id']),
-                'conversation_id' => $c['conversation_id'],
+                'conversation_id' => $convo_key,
                 'name' => $v_row['name'],
                 'logo' => $v_row['logo'],
                 'avatar' => $v_row['logo'],
@@ -2981,40 +3162,30 @@ case 'get_unread_chats':
         echo json_encode([]);
         exit;
     }
-    $role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
-    if ($role === 'vendor') {
-        $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
-        $v_stmt->execute([$uid]);
-        $vendor_ids = $v_stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        if (!empty($vendor_ids)) {
-            $in_placeholders = implode(',', array_fill(0, count($vendor_ids), '?'));
-            $stmt = $pdo->prepare("
-                SELECT m.*, u.name as sender_name 
-                FROM messages m 
-                JOIN users u ON m.sender_type = 'user' AND m.sender_id = u.id 
-                WHERE m.recipient_type = 'vendor' 
-                  AND m.recipient_id IN ($in_placeholders) 
-                  AND m.is_read = 0 
-                ORDER BY m.id DESC
-            ");
-            $stmt->execute($vendor_ids);
-            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
-        } else {
-            echo json_encode([]);
-        }
-    } else {
-        $stmt = $pdo->prepare("
-            SELECT m.*, v.name as sender_name 
-            FROM messages m 
-            JOIN vendors v ON m.sender_type = 'vendor' AND m.sender_id = v.id 
-            WHERE m.recipient_type = 'user' 
-              AND m.recipient_id = ? 
-              AND m.is_read = 0 
-            ORDER BY m.id DESC
-        ");
-        $stmt->execute([$uid]);
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    $v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
+    $v_stmt->execute([$uid]);
+    $vendor_ids = $v_stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $vendor_ids = array_map('intval', $vendor_ids);
+
+    $params = [$uid];
+    $v_clause = "";
+    if (!empty($vendor_ids)) {
+        $in_placeholders = implode(',', array_fill(0, count($vendor_ids), '?'));
+        $v_clause = " OR (m.recipient_type = 'vendor' AND m.recipient_id IN ($in_placeholders))";
+        $params = array_merge($params, $vendor_ids);
     }
+
+    $stmt = $pdo->prepare("
+        SELECT m.*, COALESCE(u.name, v.name, 'User') as sender_name 
+        FROM messages m 
+        LEFT JOIN users u ON m.sender_type = 'user' AND m.sender_id = u.id 
+        LEFT JOIN vendors v ON m.sender_type = 'vendor' AND m.sender_id = v.id 
+        WHERE ((m.recipient_type = 'user' AND m.recipient_id = ?)$v_clause) 
+          AND m.is_read = 0 
+        ORDER BY m.id DESC
+    ");
+    $stmt->execute($params);
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
     break;
 
 case 'notifications':
@@ -3343,51 +3514,41 @@ case 'chat_history':
             exit;
         }
 
-        $active_role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
         $convo_id = trim($_GET['conversation_id'] ?? $_POST['conversation_id'] ?? '');
+        $vid = intval($_GET['vendor_id'] ?? $_GET['customer_id'] ?? $_GET['user_id'] ?? $_POST['vendor_id'] ?? $_POST['customer_id'] ?? $_POST['user_id'] ?? 0);
+        $explicit_vid = intval($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0);
 
-        // If conversation_id is not passed, derive from legacy parameters
-        if (empty($convo_id)) {
-            $vid = intval($_GET['vendor_id'] ?? $_GET['customer_id'] ?? $_GET['user_id'] ?? $_POST['vendor_id'] ?? $_POST['customer_id'] ?? $_POST['user_id'] ?? 0);
-            if ($vid <= 0) {
-                echo json_encode([]);
-                exit;
-            }
-
-            if ($active_role === 'vendor') {
-                $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ? LIMIT 1");
-                $v_chk->execute([$uid]);
-                $my_v_id = intval($v_chk->fetchColumn() ?: 0);
-                if ($my_v_id <= 0) {
-                    echo json_encode([]);
-                    exit;
-                }
-                $convo_id = "v{$my_v_id}_u{$vid}";
-            } else {
-                $convo_id = "v{$vid}_u{$uid}";
-            }
-        }
-
-        // Centralized participant authorization
-        $auth = is_authorized_conversation_participant($uid, $convo_id, $pdo);
-        if (!$auth) {
+        $resolved = resolve_conversation_entities($uid, $convo_id, $vid, $pdo, $explicit_vid);
+        if (!$resolved) {
             http_response_code(403);
             echo json_encode(['error' => 'Unauthorized conversation access', 'messages' => []]);
             exit;
         }
 
+        $convo_id = $resolved['conversation_id'];
+        $db_vendor_id = $resolved['vendor_id'];
+        $db_user_id = $resolved['customer_user_id'];
+        $auth_role = $resolved['role'];
+
         // Mark incoming messages from partner as read for this participant
-        if ($auth['role'] === 'customer') {
-            $up = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND recipient_type = 'user' AND recipient_id = ? AND is_read = 0");
-            $up->execute([$convo_id, $uid]);
-        } else if ($auth['role'] === 'vendor') {
-            $up = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND recipient_type = 'vendor' AND recipient_id = ? AND is_read = 0");
-            $up->execute([$convo_id, $auth['vendor_id']]);
+        if ($auth_role === 'customer') {
+            $up = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE (conversation_id = ? OR (vendor_id = ? AND user_id = ?)) AND recipient_type = 'user' AND recipient_id = ? AND is_read = 0");
+            $up->execute([$convo_id, $db_vendor_id, $db_user_id, $uid]);
+        } else if ($auth_role === 'vendor') {
+            $up = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE (conversation_id = ? OR (vendor_id = ? AND user_id = ?)) AND recipient_type = 'vendor' AND recipient_id = ? AND is_read = 0");
+            $up->execute([$convo_id, $db_vendor_id, $db_user_id, $db_vendor_id]);
         }
 
-        // Retrieve all messages strictly belonging to this authorized conversation
-        $stmt = $pdo->prepare("SELECT * FROM messages WHERE conversation_id = ? ORDER BY id ASC");
-        $stmt->execute([$convo_id]);
+        // Retrieve all messages supporting both canonical conversation_id and legacy (vendor_id, user_id)
+        $stmt = $pdo->prepare("
+            SELECT * FROM messages 
+            WHERE (
+                conversation_id = ?
+                OR (vendor_id = ? AND user_id = ?)
+            )
+            ORDER BY id ASC
+        ");
+        $stmt->execute([$convo_id, $db_vendor_id, $db_user_id]);
         $msgs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         echo json_encode($msgs);
     } catch (Throwable $eChatHist) {
@@ -3418,56 +3579,35 @@ case 'chat':
         exit;
     }
 
-    $active_role = $_SESSION['user']['active_role'] ?? $_SESSION['user']['role'] ?? $token_user['active_role'] ?? $token_user['role'] ?? 'customer';
     $convo_id = trim($input['conversation_id'] ?? '');
+    $target_id = intval($input['vendor_id'] ?? $input['customer_id'] ?? $input['user_id'] ?? $input['target_id'] ?? 0);
+    $explicit_vid = intval($input['vendor_id'] ?? 0);
 
-    // If conversation_id is not passed, derive from legacy parameters
-    if (empty($convo_id)) {
-        $vid = intval($input['vendor_id'] ?? $input['customer_id'] ?? $input['user_id'] ?? $input['target_id'] ?? 0);
-        if ($vid <= 0) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Recipient target is required']);
-            exit;
-        }
-
-        if ($active_role === 'vendor') {
-            $v_chk = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ? LIMIT 1");
-            $v_chk->execute([$uid]);
-            $my_v_id = intval($v_chk->fetchColumn() ?: 0);
-            if ($my_v_id <= 0) {
-                http_response_code(403);
-                echo json_encode(['error' => 'No vendor profile associated with your account']);
-                exit;
-            }
-            $convo_id = "v{$my_v_id}_u{$vid}";
-        } else {
-            $convo_id = "v{$vid}_u{$uid}";
-        }
-    }
-
-    // Verify conversation participant authorization
-    $auth = is_authorized_conversation_participant($uid, $convo_id, $pdo);
-    if (!$auth || $auth['role'] === 'admin') {
+    $resolved = resolve_conversation_entities($uid, $convo_id, $target_id, $pdo, $explicit_vid);
+    if (!$resolved || $resolved['role'] === 'admin') {
         http_response_code(403);
         echo json_encode(['error' => 'Unauthorized conversation access']);
         exit;
     }
 
+    $convo_id = $resolved['conversation_id'];
+    $db_vendor_id = $resolved['vendor_id'];
+    $db_user_id = $resolved['customer_user_id'];
+    $auth_role = $resolved['role'];
+
     // Derive canonical and legacy fields from trusted server state
-    if ($auth['role'] === 'customer') {
+    if ($auth_role === 'customer') {
         $sender_type = 'user';
         $sender_id = $uid;
         $recipient_type = 'vendor';
-        $recipient_id = $auth['vendor_id'];
+        $recipient_id = $db_vendor_id;
 
         // Legacy compatibility
-        $db_vendor_id = $auth['vendor_id'];
-        $db_user_id = $uid;
         $sender_role = 'user';
 
         // Prevent messaging self-owned vendor
         $owner_chk = $pdo->prepare("SELECT id FROM vendors WHERE id = ? AND user_id = ? LIMIT 1");
-        $owner_chk->execute([$auth['vendor_id'], $uid]);
+        $owner_chk->execute([$db_vendor_id, $uid]);
         if ($owner_chk->fetch()) {
             http_response_code(403);
             echo json_encode(['error' => 'You cannot message your own vendor profile']);
@@ -3475,28 +3615,52 @@ case 'chat':
         }
     } else { // vendor
         $sender_type = 'vendor';
-        $sender_id = $auth['vendor_id'];
+        $sender_id = $db_vendor_id;
         $recipient_type = 'user';
-        $recipient_id = $auth['customer_user_id'];
+        $recipient_id = $db_user_id;
 
         // Legacy compatibility
-        $db_vendor_id = $auth['vendor_id'];
-        $db_user_id = $auth['customer_user_id'];
         $sender_role = 'vendor';
     }
 
     $now_stamp = date('Y-m-d H:i:s');
-    $ins = $pdo->prepare("INSERT INTO messages (
-        conversation_id, vendor_id, user_id, sender,
-        sender_type, sender_id, recipient_type, recipient_id,
-        message, type, file_name, file_size, duration, is_read, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)");
-    $ins->execute([
-        $convo_id, $db_vendor_id, $db_user_id, $sender_role,
-        $sender_type, $sender_id, $recipient_type, $recipient_id,
-        $message, $type, $file_name, $file_size, $duration, $now_stamp
-    ]);
-    $inserted_id = intval($pdo->lastInsertId());
+    $inserted_id = 0;
+
+    try {
+        $ins = $pdo->prepare("INSERT INTO messages (
+            conversation_id, vendor_id, user_id, sender,
+            sender_type, sender_id, recipient_type, recipient_id,
+            message, type, file_name, file_size, duration, is_read, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)");
+        $ins->execute([
+            $convo_id, $db_vendor_id, $db_user_id, $sender_role,
+            $sender_type, $sender_id, $recipient_type, $recipient_id,
+            $message, $type, $file_name, $file_size, $duration, $now_stamp
+        ]);
+        $inserted_id = intval($pdo->lastInsertId());
+    } catch (Throwable $eIns) {
+        $errMsg = $eIns->getMessage();
+        $is_missing_col_error = (
+            (strpos($errMsg, '1054') !== false || stripos($errMsg, 'Unknown column') !== false) &&
+            (stripos($errMsg, 'file_name') !== false || stripos($errMsg, 'file_size') !== false || stripos($errMsg, 'duration') !== false)
+        );
+
+        if ($is_missing_col_error) {
+            $ins_fb = $pdo->prepare("INSERT INTO messages (
+                conversation_id, vendor_id, user_id, sender,
+                sender_type, sender_id, recipient_type, recipient_id,
+                message, type, is_read, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)");
+            $ins_fb->execute([
+                $convo_id, $db_vendor_id, $db_user_id, $sender_role,
+                $sender_type, $sender_id, $recipient_type, $recipient_id,
+                $message, $type, $now_stamp
+            ]);
+            $inserted_id = intval($pdo->lastInsertId());
+        } else {
+            throw $eIns;
+        }
+    }
 
     // Send notification to recipient
     $notif_text = $message;

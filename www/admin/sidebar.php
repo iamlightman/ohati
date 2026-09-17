@@ -89,6 +89,45 @@ $current_page = basename($_SERVER['PHP_SELF']);
         font-weight: 700 !important;
         border-left: 4px solid #E05A47 !important;
     }
+    /* Global Mobile Menu Toggle & Overlay */
+    .admin-menu-toggle {
+        display: none;
+        background: none;
+        border: none;
+        font-size: 1.3rem;
+        color: #111827;
+        cursor: pointer;
+        padding: 8px 10px;
+        border-radius: 8px;
+        transition: background 0.2s;
+        line-height: 1;
+    }
+    .admin-menu-toggle:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+    .admin-sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .admin-sidebar-overlay.open {
+        display: block;
+        opacity: 1;
+    }
+    /* Universal Mobile Table Scroll Guarantee */
+    .admin-table-wrap, .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-width: 100% !important;
+    }
     @media (max-width: 900px) {
         .admin-sidebar {
             transform: translateX(-100%) !important;
@@ -102,6 +141,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
         .admin-main {
             margin-left: 0 !important;
             width: 100% !important;
+        }
+        .admin-menu-toggle {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
         }
     }
 </style>
@@ -192,15 +236,25 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
     </nav>
 </aside>
+<div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="toggleSidebar(false)"></div>
 
 <script>
-    if (typeof window.toggleSidebar !== 'function') {
-        window.toggleSidebar = function(open) {
-            const sidebar = document.getElementById('adminSidebar');
-            if (sidebar) {
-                if (open) sidebar.classList.add('open');
-                else sidebar.classList.remove('open');
+    window.toggleSidebar = function(open) {
+        const sidebar = document.getElementById('adminSidebar');
+        const overlay = document.getElementById('adminSidebarOverlay');
+        if (sidebar) {
+            if (open) {
+                sidebar.classList.add('open');
+                if (overlay) overlay.classList.add('open');
+            } else {
+                sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('open');
             }
-        };
-    }
+        }
+    };
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.toggleSidebar(false);
+        }
+    });
 </script>

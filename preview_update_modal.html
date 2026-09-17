@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ohati Mandatory Update Modal Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0F1923;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="js/modals.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ua = (navigator.userAgent || '').toLowerCase();
+            const isIos = /iphone|ipad|ipod/i.test(ua);
+            const platform = isIos ? 'ios' : 'android';
+
+            window.showMandatoryUpdateLock({
+                platform: platform,
+                installed_version: '1.0.37',
+                minimum_version: '1.0.40',
+                latest_version: '1.0.40',
+                store_url: isIos ? 'https://apps.apple.com/ng/app/ohati/id6801835847' : 'https://play.google.com/store/apps/details?id=com.ohati.app',
+                release_notes: 'A new version of Ohati is available with improvements and new features. Please update your application to continue enjoying the best experience.'
+            });
+        });
+    </script>
+</body>
+
+</html>

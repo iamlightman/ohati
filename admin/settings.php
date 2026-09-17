@@ -31,12 +31,54 @@ function setSetting($key, $value) {
     } catch (Exception $e) {}
 }
 
+if (!function_exists('is_valid_semver')) {
+    function is_valid_semver($v) {
+        return (bool)preg_match('/^\d+\.\d+\.\d+$/', trim((string)$v));
+    }
+}
+if (!function_exists('compare_semver_admin')) {
+    function compare_semver_admin($v1, $v2) {
+        $p1 = array_map('intval', explode('.', trim((string)$v1)));
+        $p2 = array_map('intval', explode('.', trim((string)$v2)));
+        for ($i = 0; $i < 3; $i++) {
+            $n1 = $p1[$i] ?? 0;
+            $n2 = $p2[$i] ?? 0;
+            if ($n1 > $n2) return 1;
+            if ($n1 < $n2) return -1;
+        }
+        return 0;
+    }
+}
+
 $success_msg = '';
 $error_msg = '';
 
 // Handle Settings Submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'save_general') {
+        // Mobile App Version Policy Validation
+        $app_enforced = isset($_POST['app_update_enforced']) ? '1' : '0';
+        $min_android = trim($_POST['app_min_version_android'] ?? '1.0.40');
+        $latest_android = trim($_POST['app_latest_version_android'] ?? '1.0.40');
+        $min_ios = trim($_POST['app_min_version_ios'] ?? '1.0.40');
+        $latest_ios = trim($_POST['app_latest_version_ios'] ?? '1.0.40');
+        $update_msg = trim($_POST['app_update_message'] ?? 'Please update Ohati to continue using the latest version.');
+
+        if (!is_valid_semver($min_android) || !is_valid_semver($latest_android) || !is_valid_semver($min_ios) || !is_valid_semver($latest_ios)) {
+            $error_msg = 'All mobile app versions must strictly follow MAJOR.MINOR.PATCH format (e.g. 1.0.40).';
+        } elseif (compare_semver_admin($min_android, $latest_android) > 0) {
+            $error_msg = 'Android minimum version cannot be higher than latest version.';
+        } elseif (compare_semver_admin($min_ios, $latest_ios) > 0) {
+            $error_msg = 'iOS minimum version cannot be higher than latest version.';
+        } else {
+            setSetting('app_update_enforced', $app_enforced);
+            setSetting('app_min_version_android', $min_android);
+            setSetting('app_latest_version_android', $latest_android);
+            setSetting('app_min_version_ios', $min_ios);
+            setSetting('app_latest_version_ios', $latest_ios);
+            setSetting('app_update_message', $update_msg);
+        }
+
         // Save General System Settings
         setSetting('site_name', trim($_POST['site_name'] ?? 'Ohati'));
         setSetting('site_email', trim($_POST['site_email'] ?? ''));
@@ -59,7 +101,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('bank_3_acc_num', trim($_POST['bank_3_acc_num'] ?? ''));
         setSetting('bank_3_acc_name', trim($_POST['bank_3_acc_name'] ?? ''));
 
-        $success_msg = 'System configurations updated successfully.';
+        if (empty($error_msg)) {
+            $success_msg = 'System configurations updated successfully.';
+        }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'save_smtp') {
         setSetting('smtp_host', trim($_POST['smtp_host'] ?? 'stardust.globaldnsnetwork.com'));
         setSetting('smtp_port', trim($_POST['smtp_port'] ?? '587'));
@@ -165,6 +209,13 @@ $ios_download_url = getSetting('ios_download_url', 'https://apps.apple.com/app/o
 $commission_rate = getSetting('commission_rate', '10.0');
 $maintenance_mode = getSetting('maintenance_mode', '0');
 
+$app_update_enforced = getSetting('app_update_enforced', '0');
+$app_min_version_android = getSetting('app_min_version_android', '1.0.40');
+$app_latest_version_android = getSetting('app_latest_version_android', '1.0.40');
+$app_min_version_ios = getSetting('app_min_version_ios', '1.0.40');
+$app_latest_version_ios = getSetting('app_latest_version_ios', '1.0.40');
+$app_update_message = getSetting('app_update_message', 'Please update Ohati to continue using the latest version.');
+
 $referral_reward_amount = floatval(getSetting('referral_reward_amount', '10.0'));
 $referral_program_active = getSetting('referral_program_active', '1');
 
@@ -229,6 +280,16 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             }
             .admin-stat-grid {
                 grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+        @media(max-width: 768px) {
+            .admin-topbar {
+                flex-wrap: wrap !important;
+                gap: 12px !important;
+            }
+            .admin-topbar > div:last-child {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
             }
         }
         @media(max-width: 600px) {
@@ -417,6 +478,57 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
                         <div class="form-group mb-16">
                             <label class="form-label" style="font-weight:700;"><i class="fa-brands fa-apple" style="color:#000;"></i> iOS / Apple App Store URL</label>
                             <input type="url" name="ios_download_url" class="form-input" placeholder="https://apps.apple.com/app/ohati/id..." value="<?= htmlspecialchars($ios_download_url) ?>">
+                        </div>
+
+                        <div style="background:#FFF9F2; border:1px solid #FCD34D; border-radius:12px; padding:18px; margin-top:24px; margin-bottom:24px;">
+                            <h4 style="font-family:'Fraunces',serif; font-size:1.05rem; color:#92400E; margin-top:0; margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-shield-halved" style="color:#D97706;"></i> Mandatory App Update Policy & Enforcement
+                            </h4>
+                            <p style="font-size:0.8rem; color:#78350F; margin-bottom:14px; line-height:1.4;">
+                                Control version compatibility for native Android & iOS mobile apps. When enforcement is enabled, users on app versions below the minimum supported version will be prompted to update from the official app stores before continuing.
+                            </p>
+
+                            <div class="form-group mb-16" style="background:#fff; border:1px solid #FDE68A; border-radius:8px; padding:12px 14px;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700; color:var(--gray-900); font-size:0.9rem;">
+                                    <input type="checkbox" name="app_update_enforced" value="1" <?= $app_update_enforced === '1' ? 'checked' : '' ?> style="width:18px; height:18px; accent-color:#D97706;">
+                                    <span>Enable Mandatory Update Enforcement</span>
+                                </label>
+                                <div style="font-size:0.75rem; color:<?= $app_update_enforced === '1' ? '#B45309' : '#64748B' ?>; margin-top:6px; margin-left:28px; font-weight:600;">
+                                    <?= $app_update_enforced === '1' ? '⚠️ ON: Versions below the configured minimum will be prompted to update.' : '🛡️ OFF: Users are never forcibly locked by this policy (fail-safe mode).' ?>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-weight:700; font-size:0.8rem;"><i class="fa-brands fa-android" style="color:#34A853;"></i> Android Minimum Version</label>
+                                    <input type="text" name="app_min_version_android" class="form-input" placeholder="e.g. 1.0.40" value="<?= htmlspecialchars($app_min_version_android) ?>" required pattern="\d+\.\d+\.\d+">
+                                    <span style="font-size:0.72rem; color:var(--gray-500);">Must follow MAJOR.MINOR.PATCH format</span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" style="font-weight:700; font-size:0.8rem;"><i class="fa-brands fa-android" style="color:#34A853;"></i> Android Latest Version</label>
+                                    <input type="text" name="app_latest_version_android" class="form-input" placeholder="e.g. 1.0.40" value="<?= htmlspecialchars($app_latest_version_android) ?>" required pattern="\d+\.\d+\.\d+">
+                                    <span style="font-size:0.72rem; color:var(--gray-500);">Current store release</span>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-weight:700; font-size:0.8rem;"><i class="fa-brands fa-apple" style="color:#000;"></i> iOS Minimum Version</label>
+                                    <input type="text" name="app_min_version_ios" class="form-input" placeholder="e.g. 1.0.40" value="<?= htmlspecialchars($app_min_version_ios) ?>" required pattern="\d+\.\d+\.\d+">
+                                    <span style="font-size:0.72rem; color:var(--gray-500);">Must follow MAJOR.MINOR.PATCH format</span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" style="font-weight:700; font-size:0.8rem;"><i class="fa-brands fa-apple" style="color:#000;"></i> iOS Latest Version</label>
+                                    <input type="text" name="app_latest_version_ios" class="form-input" placeholder="e.g. 1.0.40" value="<?= htmlspecialchars($app_latest_version_ios) ?>" required pattern="\d+\.\d+\.\d+">
+                                    <span style="font-size:0.72rem; color:var(--gray-500);">Current store release</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" style="font-weight:700; font-size:0.8rem;">Update Modal Notice / Release Message</label>
+                                <textarea name="app_update_message" class="form-input" rows="2" placeholder="Please update Ohati to continue using the latest version."><?= htmlspecialchars($app_update_message) ?></textarea>
+                                <span style="font-size:0.72rem; color:var(--gray-500);">Plain text message displayed to users requiring an update.</span>
+                            </div>
                         </div>
 
 

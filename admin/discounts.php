@@ -83,8 +83,11 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
     <?php require_once __DIR__ . '/sidebar.php'; ?>
 
     <main class="admin-main">
-        <header class="admin-header">
-            <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Discount Offers & Voucher Codes</h2>
+        <header class="admin-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="admin-menu-toggle" onclick="toggleSidebar(true)"><i class="fa-solid fa-bars"></i></button>
+                <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Discount Offers & Voucher Codes</h2>
+            </div>
             <div style="font-size:0.8rem; font-weight:600; color:var(--gray-600);">System Administrator</div>
         </header>
 
@@ -155,11 +158,11 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             </div>
 
             <!-- Discounts Table -->
-            <div class="admin-table-wrap" style="background:#fff; border:1px solid #E4E7ED; border-radius:16px; overflow:hidden;">
+            <div class="admin-table-wrap" style="background:#fff; border:1px solid #E4E7ED; border-radius:16px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
                 <div style="padding:16px 20px; border-bottom:1px solid #E4E7ED;">
                     <h3 style="margin:0; font-size:1.1rem; color:var(--primary);"><i class="fa-solid fa-ticket"></i> Active & Past Voucher Codes</h3>
                 </div>
-                <table class="admin-table">
+                <table class="admin-table" style="min-width:780px;">
                     <thead>
                         <tr>
                             <th>Code</th>

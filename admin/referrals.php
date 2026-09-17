@@ -77,6 +77,17 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             .admin-sidebar.open { transform: translateX(0); }
             .admin-main { margin-left: 0 !important; }
         }
+        .settings-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+        @media(max-width: 768px) {
+            .settings-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body class="admin-layout">
@@ -85,8 +96,11 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
     <?php require_once __DIR__ . '/sidebar.php'; ?>
 
     <main class="admin-main">
-        <header class="admin-header">
-            <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Refer & Earn Management</h2>
+        <header class="admin-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="admin-menu-toggle" onclick="toggleSidebar(true)"><i class="fa-solid fa-bars"></i></button>
+                <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Refer & Earn Management</h2>
+            </div>
             <div style="font-size:0.8rem; font-weight:600; color:var(--gray-600);">System Administrator</div>
         </header>
 
@@ -122,7 +136,7 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             <!-- Program Settings Control Card -->
             <div class="card mb-20" style="background:#fff; border:1px solid #E4E7ED; border-radius:16px; padding:20px;">
                 <h3 style="margin-top:0; font-size:1.1rem; color:var(--primary);"><i class="fa-solid fa-sliders"></i> Referral Program Settings</h3>
-                <form method="POST" action="referrals.php" style="display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:end;">
+                <form method="POST" action="referrals.php" class="settings-form-grid">
                     <input type="hidden" name="action" value="update_settings">
                     <div>
                         <label class="form-label" style="font-weight:700;">Reward Amount Per Referral (GH₵)</label>
@@ -137,11 +151,11 @@ $pending_kyc = $pdo->query("SELECT COUNT(*) FROM users WHERE kyc_status = 'pendi
             </div>
 
             <!-- Referrals History Table -->
-            <div class="admin-table-wrap" style="background:#fff; border:1px solid #E4E7ED; border-radius:16px; overflow:hidden;">
+            <div class="admin-table-wrap" style="background:#fff; border:1px solid #E4E7ED; border-radius:16px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
                 <div style="padding:16px 20px; border-bottom:1px solid #E4E7ED;">
                     <h3 style="margin:0; font-size:1.1rem; color:var(--primary);"><i class="fa-solid fa-list"></i> Referrals Audit History</h3>
                 </div>
-                <table class="admin-table">
+                <table class="admin-table" style="min-width:750px;">
                     <thead>
                         <tr>
                             <th>ID</th>

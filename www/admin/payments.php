@@ -28,8 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'admin_payment_instructions' => trim($_POST['payment_instructions'] ?? '')
         ];
         foreach ($settings as $k => $v) {
-            $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE val_value = VALUES(val_value)");
-            $stmt->execute([$k, $v]);
+            $chk_pm = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE key_name = ?");
+            $chk_pm->execute([$k]);
+            if ($chk_pm->fetchColumn() > 0) {
+                $stmt = $pdo->prepare("UPDATE system_settings SET val_value = ? WHERE key_name = ?");
+                $stmt->execute([$v, $k]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO system_settings (key_name, val_value) VALUES (?, ?)");
+                $stmt->execute([$k, $v]);
+            }
         }
         $message = "Admin payment details updated successfully!";
     } elseif ($action === 'approve_manual_payment') {
@@ -236,11 +243,24 @@ $audit_trail = $pdo->query("SELECT * FROM financial_audit_log ORDER BY id DESC L
         .action-btn-group { display: flex; gap: 6px; }
         .modal-action { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-action-box { background: #fff; padding: 24px; border-radius: 8px; max-width: 400px; width: 90%; }
+        .admin-table-wrap {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            max-width: 100% !important;
+        }
+        .admin-table {
+            min-width: 750px;
+        }
         @media(max-width: 900px) {
             .admin-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; display: flex !important; }
             .admin-sidebar.open { transform: translateX(0); }
             .admin-main { margin-left: 0 !important; }
             .admin-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media(max-width: 600px) {
+            .admin-stat-grid { grid-template-columns: 1fr !important; }
+            .admin-topbar { flex-wrap: wrap; gap: 12px; }
+            .admin-content { padding: 14px !important; }
         }
     </style>
 </head>

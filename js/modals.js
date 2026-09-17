@@ -1566,3 +1566,181 @@ window.openDesktopPopupModal = function(screenId, params = {}) {
         }
     }, 50);
 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SAFE MANDATORY APP UPDATE SUBSYSTEM (ISOLATED & FAIL-OPEN)
+// ══════════════════════════════════════════════════════════════════════════════
+
+window.isStrictSemVer = function(version) {
+    if (typeof version !== 'string') return false;
+    return /^\d+\.\d+\.\d+$/.test(version.trim());
+};
+
+window.compareSemVer = function(v1, v2) {
+    if (!window.isStrictSemVer(v1) || !window.isStrictSemVer(v2)) return 0;
+    const p1 = v1.trim().split('.').map(n => parseInt(n, 10));
+    const p2 = v2.trim().split('.').map(n => parseInt(n, 10));
+    for (let i = 0; i < 3; i++) {
+        if (p1[i] > p2[i]) return 1;
+        if (p1[i] < p2[i]) return -1;
+    }
+    return 0;
+};
+
+window.getSafePlatformStoreUrl = function(rawUrl, platform) {
+    const OFFICIAL_STORES = {
+        android: 'https://play.google.com/store/apps/details?id=com.ohati.app',
+        ios: 'https://apps.apple.com/ng/app/ohati/id6801835847'
+    };
+    const fallback = OFFICIAL_STORES[platform] || OFFICIAL_STORES.android;
+    if (!rawUrl || typeof rawUrl !== 'string') return fallback;
+
+    try {
+        const parsed = new URL(rawUrl.trim());
+        const hostname = parsed.hostname.toLowerCase();
+        if (platform === 'ios') {
+            if (hostname === 'apps.apple.com' || hostname === 'itunes.apple.com') {
+                return parsed.href;
+            }
+        } else if (platform === 'android') {
+            if (hostname === 'play.google.com') {
+                return parsed.href;
+            }
+        }
+    } catch (e) {}
+
+    return fallback;
+};
+
+window.openOfficialPlatformStore = async function(rawUrl, platform) {
+    const safeUrl = window.getSafePlatformStoreUrl(rawUrl, platform);
+    try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser && typeof window.Capacitor.Plugins.Browser.open === 'function') {
+            await window.Capacitor.Plugins.Browser.open({ url: safeUrl });
+            return;
+        }
+    } catch (pluginErr) {
+        console.warn("[AppUpdate] Capacitor Browser plugin failed, falling back to window.open", pluginErr);
+    }
+
+    try {
+        window.open(safeUrl, '_system') || window.open(safeUrl, '_blank');
+    } catch (openErr) {
+        console.error("[AppUpdate] Window open fallback error", openErr);
+        try { window.location.href = safeUrl; } catch (locErr) {}
+    }
+};
+
+window.showMandatoryUpdateLock = function(policy) {
+    if (!policy || typeof policy !== 'object') return;
+
+    // Safety: Dismiss splash / loading screen first so user is never stuck
+    const loadingScreen = document.getElementById('screen-loading');
+    if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        loadingScreen.style.display = 'none';
+        try { loadingScreen.remove(); } catch (e) {}
+    }
+
+    // Single instance: if already visible, do not recreate
+    let overlay = document.getElementById('mandatory-update-overlay');
+    if (overlay) return;
+
+    const isIos = (policy.platform === 'ios');
+    const storeName = isIos ? 'Apple App Store' : 'Google Play Store';
+    const storeBtnText = isIos ? 'Update on App Store' : 'Update on Google Play';
+    const storeBtnBg = isIos ? '#000000' : '#34A853';
+    const storeBtnIcon = isIos ? 'fa-brands fa-apple' : 'fa-brands fa-google-play';
+
+    overlay = document.createElement('div');
+    overlay.id = 'mandatory-update-overlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 25, 35, 0.85); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:9999999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; overflow-y:auto; font-family:"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#FFFFFF; border:1px solid #E2E8F0; border-radius:24px; padding:36px 24px 28px; max-width:420px; width:100%; text-align:center; box-shadow:0 25px 60px rgba(0,0,0,0.3); color:#1E293B; box-sizing:border-box; animation:modalFadeIn 0.25s ease;';
+
+    // Ohati Branded Icon: Primary Navy (#1B2B4B) + Accent Gold (#F2A735)
+    const iconWrap = document.createElement('div');
+    iconWrap.style.cssText = 'width:70px; height:70px; background:linear-gradient(135deg, #1B2B4B, #0F1923); border-radius:22px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; box-shadow:0 10px 25px rgba(27,43,75,0.25); font-size:1.85rem; color:#F2A735;';
+    const icon = document.createElement('i');
+    icon.className = 'fa-solid fa-mobile-screen-button';
+    iconWrap.appendChild(icon);
+    card.appendChild(iconWrap);
+
+    // Title
+    const title = document.createElement('h2');
+    title.style.cssText = 'font-family:"Fraunces",serif; font-size:1.45rem; font-weight:800; color:#1B2B4B; margin:0 0 10px 0; line-height:1.25;';
+    title.textContent = 'App Update Required';
+    card.appendChild(title);
+
+    // Universal update message
+    const message = document.createElement('p');
+    message.style.cssText = 'font-size:0.92rem; color:#475569; line-height:1.55; margin:0 0 22px 0;';
+    message.textContent = policy.release_notes || policy.message || 'A new version of Ohati is available. Please update your application to continue enjoying the latest features and improvements.';
+    card.appendChild(message);
+
+    // Version Pill
+    const versionPill = document.createElement('div');
+    versionPill.style.cssText = 'background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px; padding:12px 16px; margin-bottom:24px; display:flex; justify-content:space-around; align-items:center; font-size:0.8rem;';
+    
+    const curVerBox = document.createElement('div');
+    curVerBox.innerHTML = '<span style="color:#64748B; display:block; margin-bottom:3px; font-weight:600; font-size:0.75rem;">Your Version</span>';
+    const curVerVal = document.createElement('strong');
+    curVerVal.style.color = '#E05A47';
+    curVerVal.style.fontSize = '0.9rem';
+    curVerVal.textContent = policy.installed_version || '1.0.37';
+    curVerBox.appendChild(curVerVal);
+    versionPill.appendChild(curVerBox);
+
+    const sep = document.createElement('div');
+    sep.style.cssText = 'width:1px; height:28px; background:#CBD5E1;';
+    versionPill.appendChild(sep);
+
+    const minVerBox = document.createElement('div');
+    minVerBox.innerHTML = '<span style="color:#64748B; display:block; margin-bottom:3px; font-weight:600; font-size:0.75rem;">Latest Version</span>';
+    const minVerVal = document.createElement('strong');
+    minVerVal.style.color = '#1B2B4B';
+    minVerVal.style.fontSize = '0.9rem';
+    minVerVal.textContent = policy.latest_version || policy.minimum_version || '1.0.40';
+    minVerBox.appendChild(minVerVal);
+    versionPill.appendChild(minVerBox);
+
+    card.appendChild(versionPill);
+
+    // Primary Action Button
+    const updateBtn = document.createElement('button');
+    updateBtn.style.cssText = `width:100%; height:50px; background:${storeBtnBg}; border:none; border-radius:12px; color:#FFFFFF; font-weight:700; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 6px 18px rgba(0,0,0,0.18); transition:transform 0.15s ease;`;
+    
+    const btnIcon = document.createElement('i');
+    btnIcon.className = storeBtnIcon;
+    btnIcon.style.fontSize = '1.2rem';
+    updateBtn.appendChild(btnIcon);
+
+    const btnText = document.createElement('span');
+    btnText.textContent = storeBtnText;
+    updateBtn.appendChild(btnText);
+
+    updateBtn.onclick = function() {
+        window.openOfficialPlatformStore(policy.store_url, policy.platform);
+    };
+    card.appendChild(updateBtn);
+
+    // Dynamic Store Footer
+    const footerNotice = document.createElement('div');
+    footerNotice.style.cssText = 'font-size:0.75rem; color:#64748B; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:500;';
+    footerNotice.innerHTML = `<i class="fa-solid fa-lock" style="font-size:0.7rem; color:#94A3B8;"></i> Handled securely by ${storeName}`;
+    card.appendChild(footerNotice);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    window._ohatiMandatoryUpdateVisible = true;
+};
+
+window.dismissMandatoryUpdateLock = function() {
+    const overlay = document.getElementById('mandatory-update-overlay');
+    if (overlay) {
+        try { overlay.remove(); } catch (e) {}
+    }
+    window._ohatiMandatoryUpdateVisible = false;
+};

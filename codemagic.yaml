@@ -57,9 +57,9 @@ workflows:
           xcode-project use-profiles --project "ios/App/App.xcodeproj"
       - name: Auto-increment iOS Build Number from App Store Connect
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 66)
-          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 66 ]; then
-            LATEST_BUILD_NUMBER=66
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "$BUNDLE_ID" 2>/dev/null || echo 67)
+          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" -lt 67 ]; then
+            LATEST_BUILD_NUMBER=67
           fi
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
           
@@ -75,7 +75,7 @@ workflows:
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_BUILD_NUMBER" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $NEW_BUILD_NUMBER" ios/App/App/Info.plist
           
           # Set CFBundleShortVersionString from package.json in Info.plist
-          PACKAGE_VER=$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.42")
+          PACKAGE_VER=$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.43")
           echo "Setting iOS CFBundleShortVersionString to: $PACKAGE_VER"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $PACKAGE_VER" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $PACKAGE_VER" ios/App/App/Info.plist
 

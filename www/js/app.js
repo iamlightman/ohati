@@ -720,7 +720,14 @@ function pollUnreadChats() {
 
                 if (state.currentScreen !== 'chat' || !isCurrentPartner) {
                     const senderName = msg.sender_name || 'New Message';
-                    showPushNotification(senderName, msg.message);
+                    const targetId = (msg.sender === 'user' || msg.sender_type === 'user') ? parseInt(msg.user_id) : parseInt(msg.vendor_id);
+                    showPushNotification(senderName, msg.message, 'info', () => {
+                        if (typeof startVendorChat === 'function') {
+                            startVendorChat(targetId);
+                        } else if (typeof openChatWithVendor === 'function') {
+                            openChatWithVendor(targetId);
+                        }
+                    });
                 }
             }
         });

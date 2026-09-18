@@ -1,6 +1,10 @@
 window.getOhatiApiBaseUrl = function() {
     const customUrl = localStorage.getItem('ohati_custom_server_url');
-    if (customUrl) return customUrl.endsWith('/') ? customUrl + 'api.php' : customUrl + '/api.php';
+    if (customUrl) {
+        const trimmed = customUrl.trim();
+        if (trimmed.endsWith('/api.php') || trimmed.endsWith('api.php')) return trimmed;
+        return trimmed.endsWith('/') ? trimmed + 'api.php' : trimmed + '/api.php';
+    }
     if (window.OHATI_API_BASE_URL) return window.OHATI_API_BASE_URL;
 
     const isNativeApp = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
@@ -9,7 +13,11 @@ window.getOhatiApiBaseUrl = function() {
                         (navigator.userAgent && navigator.userAgent.includes('OhatiApp'));
 
     if (isNativeApp) {
-        if (window.location.origin && window.location.origin.startsWith('http') && !window.location.origin.includes('capacitor://')) {
+        if (window.location.origin && 
+            window.location.origin.startsWith('http') && 
+            !window.location.origin.includes('capacitor://') &&
+            !window.location.origin.includes('localhost') &&
+            !window.location.origin.includes('127.0.0.1')) {
             const pathName = window.location.pathname || '';
             const appDir = pathName.substring(0, pathName.lastIndexOf('/'));
             return window.location.origin + (appDir ? appDir + '/api.php' : '/api.php');
@@ -193,8 +201,16 @@ const API = {
     getUserStatus(params = {}) { return this.get('get_user_status', params); },
     getChatInbox() { return this.get('chat_inbox'); },
     getUnreadChats() { return this.get('get_unread_chats'); },
-    getChatHistory(vendorId) { return this.get('chat_history', { vendor_id: vendorId }); },
-    sendMessage(vendorId, message, type = 'text', fileName = '', fileSize = 0, duration = 0) { return this.post('chat', { vendor_id: vendorId, message, type, file_name: fileName, file_size: fileSize, duration: duration }); },
+    getChatHistory(vendorId, extra = {}) {
+        const params = (typeof vendorId === 'object' && vendorId !== null) ? { ...vendorId } : { vendor_id: vendorId, ...extra };
+        return this.get('chat_history', params);
+    },
+    sendMessage(vendorId, message, type = 'text', fileName = '', fileSize = 0, duration = 0, extra = {}) {
+        const body = (typeof vendorId === 'object' && vendorId !== null)
+            ? { ...vendorId, message, type, file_name: fileName, file_size: fileSize, duration }
+            : { vendor_id: vendorId, message, type, file_name: fileName, file_size: fileSize, duration, ...extra };
+        return this.post('chat', body);
+    },
     blockUser(targetUserId, reason = '') { return this.post('block_user', { target_user_id: targetUserId, reason }); },
     unblockUser(targetUserId) { return this.post('unblock_user', { target_user_id: targetUserId }); },
     reportUser(targetUserId, reason, details = '') { return this.post('report_user', { target_user_id: targetUserId, reason, details }); },

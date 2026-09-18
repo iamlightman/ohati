@@ -160,7 +160,7 @@ if (!function_exists('is_authorized_conversation_participant')) {
 }
 
 if (!function_exists('resolve_conversation_entities')) {
-    function resolve_conversation_entities($uid, $convo_id, $target_id, $pdo, $explicit_vendor_id = 0) {
+    function resolve_conversation_entities($uid, $convo_id, $target_id, $pdo, $explicit_vendor_id = 0, $is_customer_target = false) {
         $uid = intval($uid);
         if ($uid <= 0) return false;
 
@@ -190,60 +190,23 @@ if (!function_exists('resolve_conversation_entities')) {
         // 2. Derive from target_id and entity relationships
         if ($target_id <= 0) return false;
 
-        // Rule A: Is target_id a vendor, and authenticated user is NOT the owner of this vendor?
-        // Authenticated user is customer, target is vendor.
-        $v_stmt = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? LIMIT 1");
-        $v_stmt->execute([$target_id]);
-        $target_vendor = $v_stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($target_vendor && intval($target_vendor['user_id']) !== $uid) {
-            $vid = intval($target_vendor['id']);
-            $cuid = $uid;
-            $can_id = "v{$vid}_u{$cuid}";
-            $auth = is_authorized_conversation_participant($uid, $can_id, $pdo);
-            if ($auth) {
-                return [
-                    'vendor_id' => $vid,
-                    'customer_user_id' => $cuid,
-                    'conversation_id' => $can_id,
-                    'role' => $auth['role'],
-                    'is_owner' => $auth['is_owner']
-                ];
-            }
-        }
-
-        // Rule B: Does authenticated user own vendor profile(s), and target_id is the customer?
+        // Determine all vendor IDs owned by the authenticated user
         $my_v_stmt = $pdo->prepare("SELECT id FROM vendors WHERE user_id = ?");
         $my_v_stmt->execute([$uid]);
         $owned_vids = $my_v_stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
         $owned_vids = array_map('intval', $owned_vids);
 
-        if (!empty($owned_vids)) {
-            $selected_vid = 0;
+        // Rule A: Is target_id a vendor, and authenticated user is NOT the owner of this vendor?
+        // Authenticated user is customer, target is vendor.
+        // Skip Rule A if target is explicitly designated as a customer to avoid numeric collision
+        if (!$is_customer_target) {
+            $v_stmt = $pdo->prepare("SELECT id, user_id FROM vendors WHERE id = ? LIMIT 1");
+            $v_stmt->execute([$target_id]);
+            $target_vendor = $v_stmt->fetch(PDO::FETCH_ASSOC);
 
-            // If an explicit vendor_id was passed and it's owned by this user, use it
-            if ($explicit_vendor_id > 0 && in_array($explicit_vendor_id, $owned_vids, true)) {
-                $selected_vid = $explicit_vendor_id;
-            } elseif (count($owned_vids) === 1) {
-                $selected_vid = $owned_vids[0];
-            } else {
-                // Multiple owned vendors: check existing messages with this target user to uniquely identify
-                $in_ph = implode(',', array_fill(0, count($owned_vids), '?'));
-                $chk_m = $pdo->prepare("
-                    SELECT vendor_id FROM messages 
-                    WHERE user_id = ? AND vendor_id IN ($in_ph) 
-                    ORDER BY id DESC LIMIT 1
-                ");
-                $chk_m->execute(array_merge([$target_id], $owned_vids));
-                $found_vid = intval($chk_m->fetchColumn() ?: 0);
-                if ($found_vid > 0 && in_array($found_vid, $owned_vids, true)) {
-                    $selected_vid = $found_vid;
-                }
-            }
-
-            if ($selected_vid > 0) {
-                $vid = $selected_vid;
-                $cuid = $target_id;
+            if ($target_vendor && intval($target_vendor['user_id']) !== $uid) {
+                $vid = intval($target_vendor['id']);
+                $cuid = $uid;
                 $can_id = "v{$vid}_u{$cuid}";
                 $auth = is_authorized_conversation_participant($uid, $can_id, $pdo);
                 if ($auth) {
@@ -254,6 +217,59 @@ if (!function_exists('resolve_conversation_entities')) {
                         'role' => $auth['role'],
                         'is_owner' => $auth['is_owner']
                     ];
+                }
+            }
+        }
+
+        // Rule B: Does authenticated user own vendor profile(s), and target_id is the customer?
+        if (!empty($owned_vids)) {
+            // Ensure target user legitimately exists in the users table and is not self
+            $u_chk = $pdo->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
+            $u_chk->execute([$target_id]);
+            $target_user_exists = intval($u_chk->fetchColumn() ?: 0);
+
+            if ($target_user_exists > 0 && $target_id !== $uid) {
+                $selected_vid = 0;
+
+                // If an explicit vendor_id was passed and it's owned by this user, use it
+                if ($explicit_vendor_id > 0 && in_array($explicit_vendor_id, $owned_vids, true)) {
+                    $selected_vid = $explicit_vendor_id;
+                } elseif (count($owned_vids) === 1) {
+                    $selected_vid = $owned_vids[0];
+                } else {
+                    // Multiple owned vendors: check existing messages with this target customer
+                    $in_ph = implode(',', array_fill(0, count($owned_vids), '?'));
+                    $chk_m = $pdo->prepare("
+                        SELECT vendor_id FROM messages 
+                        WHERE user_id = ? AND vendor_id IN ($in_ph) 
+                        ORDER BY id DESC LIMIT 1
+                    ");
+                    $chk_m->execute(array_merge([$target_id], $owned_vids));
+                    $found_vid = intval($chk_m->fetchColumn() ?: 0);
+                    if ($found_vid > 0 && in_array($found_vid, $owned_vids, true)) {
+                        $selected_vid = $found_vid;
+                    } elseif (!empty($_SESSION['user']['vendor_id']) && in_array(intval($_SESSION['user']['vendor_id']), $owned_vids, true)) {
+                        $selected_vid = intval($_SESSION['user']['vendor_id']);
+                    } else {
+                        // Brand-new conversation with zero messages: default to the first owned vendor profile
+                        $selected_vid = $owned_vids[0];
+                    }
+                }
+
+                if ($selected_vid > 0) {
+                    $vid = $selected_vid;
+                    $cuid = $target_id;
+                    $can_id = "v{$vid}_u{$cuid}";
+                    $auth = is_authorized_conversation_participant($uid, $can_id, $pdo);
+                    if ($auth) {
+                        return [
+                            'vendor_id' => $vid,
+                            'customer_user_id' => $cuid,
+                            'conversation_id' => $can_id,
+                            'role' => $auth['role'],
+                            'is_owner' => $auth['is_owner']
+                        ];
+                    }
                 }
             }
         }
@@ -3515,10 +3531,21 @@ case 'chat_history':
         }
 
         $convo_id = trim($_GET['conversation_id'] ?? $_POST['conversation_id'] ?? '');
-        $vid = intval($_GET['vendor_id'] ?? $_GET['customer_id'] ?? $_GET['user_id'] ?? $_POST['vendor_id'] ?? $_POST['customer_id'] ?? $_POST['user_id'] ?? 0);
-        $explicit_vid = intval($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0);
+        $is_customer_target = !empty($_GET['is_customer']) || !empty($_POST['is_customer']) || !empty($_GET['customer_id']) || !empty($_POST['customer_id']);
+        $vid = intval(
+            $is_customer_target
+                ? ($_GET['customer_id'] ?? $_POST['customer_id'] ?? $_GET['user_id'] ?? $_POST['user_id'] ?? $_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0)
+                : ($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? $_GET['customer_id'] ?? $_POST['customer_id'] ?? $_GET['user_id'] ?? $_POST['user_id'] ?? 0)
+        );
+        $explicit_vid = intval($_GET['my_vendor_id'] ?? $_GET['active_vendor_id'] ?? $_GET['sender_vendor_id'] ?? $_POST['my_vendor_id'] ?? $_POST['active_vendor_id'] ?? $_POST['sender_vendor_id'] ?? 0);
+        if ($explicit_vid <= 0) {
+            $candidate_vid = intval($_GET['vendor_id'] ?? $_POST['vendor_id'] ?? 0);
+            if (!$is_customer_target || $candidate_vid !== $vid) {
+                $explicit_vid = $candidate_vid;
+            }
+        }
 
-        $resolved = resolve_conversation_entities($uid, $convo_id, $vid, $pdo, $explicit_vid);
+        $resolved = resolve_conversation_entities($uid, $convo_id, $vid, $pdo, $explicit_vid, $is_customer_target);
         if (!$resolved) {
             http_response_code(403);
             echo json_encode(['error' => 'Unauthorized conversation access', 'messages' => []]);
@@ -3580,10 +3607,21 @@ case 'chat':
     }
 
     $convo_id = trim($input['conversation_id'] ?? '');
-    $target_id = intval($input['vendor_id'] ?? $input['customer_id'] ?? $input['user_id'] ?? $input['target_id'] ?? 0);
-    $explicit_vid = intval($input['vendor_id'] ?? 0);
+    $is_customer_target = !empty($input['is_customer']) || !empty($input['customer_id']) || (($input['recipient_type'] ?? '') === 'user');
+    $target_id = intval(
+        $is_customer_target
+            ? ($input['customer_id'] ?? $input['user_id'] ?? $input['vendor_id'] ?? $input['target_id'] ?? 0)
+            : ($input['vendor_id'] ?? $input['customer_id'] ?? $input['user_id'] ?? $input['target_id'] ?? 0)
+    );
+    $explicit_vid = intval($input['my_vendor_id'] ?? $input['active_vendor_id'] ?? $input['sender_vendor_id'] ?? $input['sender_id'] ?? 0);
+    if ($explicit_vid <= 0) {
+        $candidate_vid = intval($input['vendor_id'] ?? 0);
+        if (!$is_customer_target || $candidate_vid !== $target_id) {
+            $explicit_vid = $candidate_vid;
+        }
+    }
 
-    $resolved = resolve_conversation_entities($uid, $convo_id, $target_id, $pdo, $explicit_vid);
+    $resolved = resolve_conversation_entities($uid, $convo_id, $target_id, $pdo, $explicit_vid, $is_customer_target);
     if (!$resolved || $resolved['role'] === 'admin') {
         http_response_code(403);
         echo json_encode(['error' => 'Unauthorized conversation access']);

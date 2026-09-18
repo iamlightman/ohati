@@ -4,15 +4,19 @@ window.initChatModule = function(partnerId) {
     if (state.chatInterval) clearInterval(state.chatInterval);
     state.activeChatVendorId = partnerId;
 
+    const role = state.user?.active_role || state.user?.role || 'customer';
+    const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+    const extra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
+
     // Fetch initial chat history
-    API.getChatHistory(partnerId).then(history => {
+    API.getChatHistory(partnerId, extra).then(history => {
         if (typeof updateChatMessages === 'function') updateChatMessages(history);
     });
 
     // Poll for new messages every 3 seconds
     state.chatInterval = setInterval(() => {
         if (!state.activeChatVendorId) return;
-        API.getChatHistory(state.activeChatVendorId).then(history => {
+        API.getChatHistory(state.activeChatVendorId, extra).then(history => {
             if (typeof updateChatMessages === 'function') updateChatMessages(history);
         });
     }, 3000);
@@ -199,12 +203,16 @@ window.startChatFileUpload = function(tempId) {
                         const fileSize = res.size || item.fileSize || 0;
                         const duration = item.duration || 0;
 
-                        API.sendMessage(item.vendorId, res.url, messageType, fileName, fileSize, duration)
+                        const role = state.user?.active_role || state.user?.role || 'customer';
+                        const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+                        const extra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
+
+                        API.sendMessage(item.vendorId, res.url, messageType, fileName, fileSize, duration, extra)
                             .then(() => {
                                 delete window._pendingChatUploads[tempId];
                                 const pendingEl = document.getElementById(tempId);
                                 if (pendingEl) pendingEl.remove();
-                                API.getChatHistory(item.vendorId).then(history => {
+                                API.getChatHistory(item.vendorId, extra).then(history => {
                                     if (typeof updateChatMessages === 'function') updateChatMessages(history);
                                 });
                             })

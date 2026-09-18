@@ -5,7 +5,7 @@ let notifTimeout = null;
 let notifTouchStartY = 0;
 let notifTouchStartX = 0;
 
-function showPushNotification(title, desc, type = 'info') {
+function showPushNotification(title, desc, type = 'info', onClickHandler = null) {
     const el = document.getElementById('in-app-push-notif');
     const t = document.getElementById('notif-title');
     const d = document.getElementById('notif-desc');
@@ -18,6 +18,21 @@ function showPushNotification(title, desc, type = 'info') {
     // Apply type styles and icons
     el.classList.remove('notif-error', 'notif-success', 'notif-warning', 'notif-info');
     el.classList.add('notif-' + type);
+
+    if (typeof onClickHandler === 'function') {
+        el.style.cursor = 'pointer';
+        el.onclick = function(e) {
+            if (el.dataset.wasSwiped === 'true') {
+                el.dataset.wasSwiped = 'false';
+                return;
+            }
+            onClickHandler();
+            dismissPushNotification();
+        };
+    } else {
+        el.style.cursor = 'default';
+        el.onclick = null;
+    }
 
     if (iconEl) {
         let iconClass = 'fa-solid fa-bell';

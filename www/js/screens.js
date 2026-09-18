@@ -1747,12 +1747,24 @@ function initChatScreen(params) {
     }
 
     if (state.activeChatVendorId) {
-            screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
+            const existingChat = screen.querySelector('.chat-screen');
             const role = state.user?.active_role || state.user?.role || 'customer';
+            const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+            const histExtra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
+
+            if (!existingChat) {
+                screen.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
+            } else {
+                const msgBox = document.getElementById('chat-messages-container');
+                if (msgBox && existingChat.getAttribute('data-vendor-id') != state.activeChatVendorId) {
+                    msgBox.innerHTML = `<div class="full-spinner-wrap" style="height:120px;"><div class="spinner"></div></div>`;
+                }
+            }
+
             API.getVendorDetails(state.activeChatVendorId, role === 'vendor').then(v => {
                 state.activeChatPartner = v;
                 renderChatShell(v);
-                API.getChatHistory(state.activeChatVendorId).then(history => {
+                API.getChatHistory(state.activeChatVendorId, histExtra).then(history => {
                     updateChatMessages(history);
                     
                     if (state.chatInterval) clearInterval(state.chatInterval);
@@ -1760,7 +1772,7 @@ function initChatScreen(params) {
                         if (state.currentScreen === 'chat' && state.activeChatVendorId && window.innerWidth < 768) {
                             if (!state.pollingHistoryInProgress) {
                                 state.pollingHistoryInProgress = true;
-                                API.getChatHistory(state.activeChatVendorId).then(hist => {
+                                API.getChatHistory(state.activeChatVendorId, histExtra).then(hist => {
                                     state.pollingHistoryInProgress = false;
                                     updateChatMessages(hist);
                                 }).catch(err => {
@@ -1890,8 +1902,9 @@ function renderChatInbox(inbox) {
         let nameWithBadge = targetName;
 
         const isOnline = window.isUserOnline ? window.isUserOnline(item) : (!!item.is_online);
+        const isActive = (state.activeChatVendorId === targetId);
         return `
-            <div class="chat-inbox-item" onclick="openChatWithVendor(${targetId})">
+            <div class="chat-inbox-item ${isActive ? 'active' : ''}" data-target-id="${targetId}" onclick="openChatWithVendor(${targetId})">
                 <div class="chat-inbox-avatar">
                     <img src="${window.resolveImageUrl(targetLogo, 'avatar')}" alt="" class="header-logo-img">
                     ${isOnline ? `<div class="chat-inbox-online" title="Online now"></div>` : ''}
@@ -1920,6 +1933,8 @@ function loadDesktopChatPartner(vid) {
     contentPanel.innerHTML = `<div class="full-spinner-wrap"><div class="spinner"></div></div>`;
 
     const role = state.user?.active_role || state.user?.role || 'customer';
+    const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+    const histExtra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
     API.getVendorDetails(vid, role === 'vendor').then(v => {
         if (!v || (!v.id && !v.name)) {
             contentPanel.innerHTML = `
@@ -1970,7 +1985,7 @@ function loadDesktopChatPartner(vid) {
             </div>
         `;
 
-        API.getChatHistory(vid).then(history => {
+        API.getChatHistory(vid, histExtra).then(history => {
             updateChatMessages(history);
         }).catch(err => {
             console.error("Chat history load error:", err);
@@ -2006,11 +2021,30 @@ function openDesktopChatModal(vendorId) {
         return;
     }
 
-    if (vendorId) {
-        state.activeChatVendorId = parseInt(vendorId);
+    const numVid = vendorId ? parseInt(vendorId) : null;
+    if (numVid) {
+        state.activeChatVendorId = numVid;
     }
 
     let overlay = document.getElementById('desktop-chat-modal-overlay');
+    const contentPanel = document.getElementById('chat-desktop-content-panel');
+
+    // Desktop modal surgical update — do not destroy/rebuild an already-open modal
+    if (overlay && overlay.style.display !== 'none' && contentPanel) {
+        if (numVid) {
+            document.querySelectorAll('#chat-inbox-list .chat-inbox-item').forEach(item => {
+                const targetId = parseInt(item.getAttribute('data-target-id') || item.getAttribute('data-vendor-id') || 0);
+                if (targetId === numVid) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            loadDesktopChatPartner(numVid);
+        }
+        return;
+    }
+
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'desktop-chat-modal-overlay';
@@ -2082,14 +2116,16 @@ function openDesktopChatModal(vendorId) {
             }
             if (state.activeChatVendorId && !state.pollingHistoryInProgress) {
                 state.pollingHistoryInProgress = true;
-                API.getChatHistory(state.activeChatVendorId).then(hist => {
+                const role = state.user?.active_role || state.user?.role || 'customer';
+                const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+                const histExtra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
+                API.getChatHistory(state.activeChatVendorId, histExtra).then(hist => {
                     state.pollingHistoryInProgress = false;
                     updateChatMessages(hist);
                 }).catch(() => {
                     state.pollingHistoryInProgress = false;
                 });
 
-                const role = state.user?.active_role || state.user?.role || 'customer';
                 const params = (role === 'vendor') ? { user_id: state.activeChatVendorId } : { vendor_id: state.activeChatVendorId };
                 API.getUserStatus(params).then(st => {
                     const statusEl = document.getElementById('chat-partner-status');
@@ -2127,11 +2163,10 @@ function openChatWithVendor(vid) {
         return;
     }
     const numVid = parseInt(vid);
-    state.activeChatVendorId = numVid;
     if (window.innerWidth >= 768) {
         openDesktopChatModal(numVid);
     } else {
-        navigateTo('chat', { vendor_id: numVid }, { force: true });
+        navigateTo('chat', { vendor_id: numVid });
     }
 }
 
@@ -2165,7 +2200,6 @@ window.startVendorChat = function(vid) {
         showPushNotification('Invalid Action', 'You cannot message your own vendor profile.');
         return;
     }
-    state.activeChatVendorId = numVid;
     if (window.innerWidth >= 768) {
         openDesktopChatModal(numVid);
     } else if (typeof navigateTo === 'function') {
@@ -2389,10 +2423,14 @@ function sendChatMessage() {
     const textToSend = msg;
     input.value = '';
 
-    API.sendMessage(state.activeChatVendorId, textToSend)
+    const role = state.user?.active_role || state.user?.role || 'customer';
+    const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+    const extra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
+
+    API.sendMessage(state.activeChatVendorId, textToSend, 'text', '', 0, 0, extra)
         .then(() => {
             state.isSendingChatMessage = false;
-            API.getChatHistory(state.activeChatVendorId).then(history => {
+            API.getChatHistory(state.activeChatVendorId, extra).then(history => {
                 updateChatMessages(history);
             });
         })
@@ -2706,8 +2744,11 @@ function sendVoiceRecording() {
     .then(r => r.json())
     .then(res => {
         if (res.success && state.activeChatVendorId) {
-            API.sendMessage(state.activeChatVendorId, res.url, 'voice').then(() => {
-                API.getChatHistory(state.activeChatVendorId).then(history => {
+            const role = state.user?.active_role || state.user?.role || 'customer';
+            const activeVid = parseInt(state.user?.vendor_id || (state.vendor ? state.vendor.id : 0)) || 0;
+            const extra = (role === 'vendor') ? { is_customer: 1, ...(activeVid > 0 ? { my_vendor_id: activeVid } : {}) } : {};
+            API.sendMessage(state.activeChatVendorId, res.url, 'voice', '', 0, recordedAudioDuration || 0, extra).then(() => {
+                API.getChatHistory(state.activeChatVendorId, extra).then(history => {
                     updateChatMessages(history);
                 });
             });

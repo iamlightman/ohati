@@ -201,8 +201,16 @@ const API = {
     getUserStatus(params = {}) { return this.get('get_user_status', params); },
     getChatInbox() { return this.get('chat_inbox'); },
     getUnreadChats() { return this.get('get_unread_chats'); },
-    getChatHistory(vendorId) { return this.get('chat_history', { vendor_id: vendorId }); },
-    sendMessage(vendorId, message, type = 'text', fileName = '', fileSize = 0, duration = 0) { return this.post('chat', { vendor_id: vendorId, message, type, file_name: fileName, file_size: fileSize, duration: duration }); },
+    getChatHistory(vendorId, extra = {}) {
+        const params = (typeof vendorId === 'object' && vendorId !== null) ? { ...vendorId } : { vendor_id: vendorId, ...extra };
+        return this.get('chat_history', params);
+    },
+    sendMessage(vendorId, message, type = 'text', fileName = '', fileSize = 0, duration = 0, extra = {}) {
+        const body = (typeof vendorId === 'object' && vendorId !== null)
+            ? { ...vendorId, message, type, file_name: fileName, file_size: fileSize, duration }
+            : { vendor_id: vendorId, message, type, file_name: fileName, file_size: fileSize, duration, ...extra };
+        return this.post('chat', body);
+    },
     blockUser(targetUserId, reason = '') { return this.post('block_user', { target_user_id: targetUserId, reason }); },
     unblockUser(targetUserId) { return this.post('unblock_user', { target_user_id: targetUserId }); },
     reportUser(targetUserId, reason, details = '') { return this.post('report_user', { target_user_id: targetUserId, reason, details }); },

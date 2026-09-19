@@ -2713,6 +2713,41 @@ case 'book':
         
         // Also dispatch Admin Email Notification to ohatiwebsite@gmail.com
         send_admin_activity_notification("New Booking Request (Ref: $ref_formatted)", $email_body);
+
+        // 3. Customer Confirmation Dual Notification (Email + SMS + In-App)
+        $cust_stmt = $pdo->prepare("SELECT email, phone, name FROM users WHERE id = ?");
+        $cust_stmt->execute([$uid]);
+        $cust_user = $cust_stmt->fetch();
+        $cust_recipient_email = !empty($cust_user['email']) ? $cust_user['email'] : clean($_SESSION['user']['email'] ?? '');
+        $cust_recipient_phone = !empty($cust_user['phone']) ? $cust_user['phone'] : $user_phone;
+
+        if (!empty($cust_recipient_email) || !empty($cust_recipient_phone)) {
+            $cust_subject = "🎉 Booking Request Submitted $ref_formatted for " . htmlspecialchars($v_data['name']);
+            $cust_email_body = "
+                <div style='font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; border:1px solid #e0e0e0; border-radius:10px;'>
+                    <h2 style='color:#0E8345;'>Booking Request Submitted!</h2>
+                    <p>Dear <strong>" . htmlspecialchars($user_name) . "</strong>,</p>
+                    <p>Your booking inquiry for <strong>" . htmlspecialchars($v_data['name']) . "</strong> has been submitted successfully on <strong>Ohati</strong>.</p>
+                    <div style='background:#f9f9f9; padding:15px; border-radius:8px; margin:15px 0;'>
+                        <p><strong>Booking Ref:</strong> $ref_formatted</p>
+                        <p><strong>Vendor:</strong> " . htmlspecialchars($v_data['name']) . " (" . htmlspecialchars($v_data['category']) . ")</p>
+                        <p><strong>Event Date:</strong> " . htmlspecialchars($event_date) . "</p>
+                        <p><strong>Event Type:</strong> " . htmlspecialchars($event_type) . "</p>
+                        <p><strong>Package / Service:</strong> " . htmlspecialchars($package_name) . "</p>
+                        <p><strong>Offered / Agreed Price:</strong> " . ($negotiated_price > 0 ? "GH₵ " . number_format($negotiated_price, 2) : "GH₵ " . number_format($price, 2)) . "</p>
+                        <p><strong>Status:</strong> Inquiry Submitted (Awaiting Vendor Confirmation)</p>
+                    </div>
+                    <p>The vendor has been alerted and will respond shortly. You can track this booking and message the vendor directly in your Ohati App.</p>
+                </div>
+            ";
+            $cust_sms_body = "OHATI: Your booking request $ref_formatted for {$v_data['name']} ($event_date) was submitted. Check app for updates!";
+            try {
+                send_dual_notification($cust_recipient_phone, $cust_recipient_email, "Booking Request Submitted", $cust_sms_body, $cust_subject, $cust_email_body);
+            } catch (Exception $eCustMail) {
+                error_log("[Ohati Booking] Customer booking creation notification failed: " . $eCustMail->getMessage());
+            }
+        }
+        add_notification($pdo, $uid, "Booking Request Placed", "Your booking inquiry ($ref_formatted) for {$v_data['name']} has been placed.", 'calendar-check', 'bookings', $booking_id);
     }
     echo json_encode(['success'=>true,'booking_id'=>$booking_id]);
     break;
@@ -2806,33 +2841,131 @@ case 'update_booking':
         $recipient_id = ($current_user_id === $customer_user_id) ? $vendor_user_id : $customer_user_id;
         $sender_name = ($current_user_id === $customer_user_id) ? $booking_info['user_name'] : $booking_info['vendor_name'];
         
-        if (isset($input['status'])) {
-            add_notification($pdo, $recipient_id, "Booking Status Update", "Your booking (Ref: #{$bid}) with {$sender_name} has been updated to '{$input['status']}'.");
-            
-            if (in_array(strtolower($input['status']), ['confirmed', 'approved'])) {
-                $c_stmt = $pdo->prepare("SELECT phone, email FROM users WHERE id = ?");
-                $c_stmt->execute([$customer_user_id]);
-                $c_info = $c_stmt->fetch();
-                $c_phone = $c_info['phone'] ?? $booking_info['user_phone'];
-                $c_email = $c_info['email'] ?? '';
+        $status_changed = isset($input['status']) && ($booking['status'] !== $input['status']);
+        $new_status_clean = isset($input['status']) ? trim((string)$input['status']) : '';
+        $new_status_lower = strtolower($new_status_clean);
 
-                $approve_subject = "🎉 Booking Inquiry Approved for " . $booking_info['event_date'];
+        if ($status_changed && !empty($new_status_clean)) {
+            add_notification($pdo, $recipient_id, "Booking Status Update", "Your booking (Ref: #{$bid}) with {$sender_name} has been updated to '{$new_status_clean}'.");
+
+            // Customer contacts
+            $c_stmt = $pdo->prepare("SELECT phone, email, name FROM users WHERE id = ?");
+            $c_stmt->execute([$customer_user_id]);
+            $c_info = $c_stmt->fetch();
+            $c_phone = !empty($c_info['phone']) ? $c_info['phone'] : $booking_info['user_phone'];
+            $c_email = !empty($c_info['email']) ? $c_info['email'] : '';
+
+            // Vendor contacts
+            $v_usr_stmt = $pdo->prepare("SELECT phone, email FROM users WHERE id = ?");
+            $v_usr_stmt->execute([$vendor_user_id]);
+            $v_usr_info = $v_usr_stmt->fetch();
+            $v_phone = !empty($booking_info['vendor_phone']) ? $booking_info['vendor_phone'] : ($v_usr_info['phone'] ?? '');
+            $v_email = !empty($booking_info['vendor_email']) ? $booking_info['vendor_email'] : ($v_usr_info['email'] ?? '');
+
+            $ref_formatted = "#OHT-B" . str_pad($bid, 5, '0', STR_PAD_LEFT);
+
+            // 1. Confirmed / Approved
+            if (in_array($new_status_lower, ['confirmed', 'approved'])) {
+                $approve_subject = "🎉 Booking $ref_formatted Confirmed for " . $booking_info['event_date'];
                 $approve_html = "
                     <div style='font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; border:1px solid #e0e0e0; border-radius:10px;'>
-                        <h2 style='color:#0E8345;'>Booking Request Accepted!</h2>
+                        <h2 style='color:#0E8345;'>Booking Request Confirmed!</h2>
                         <p>Dear <strong>" . htmlspecialchars($booking_info['user_name']) . "</strong>,</p>
-                        <p>Vendor <strong>" . htmlspecialchars($booking_info['vendor_name']) . "</strong> has accepted your booking request for <strong>" . htmlspecialchars($booking_info['event_date']) . "</strong>.</p>
-                        <p><strong>Package / Service:</strong> " . htmlspecialchars($booking_info['package_name']) . "</p>
+                        <p>Vendor <strong>" . htmlspecialchars($booking_info['vendor_name']) . "</strong> has accepted and confirmed your booking request for <strong>" . htmlspecialchars($booking_info['event_date']) . "</strong>.</p>
+                        <div style='background:#f9f9f9; padding:15px; border-radius:8px; margin:15px 0;'>
+                            <p><strong>Booking Ref:</strong> $ref_formatted</p>
+                            <p><strong>Vendor:</strong> " . htmlspecialchars($booking_info['vendor_name']) . "</p>
+                            <p><strong>Service / Package:</strong> " . htmlspecialchars($booking_info['package_name']) . "</p>
+                            <p><strong>Event Date:</strong> " . htmlspecialchars($booking_info['event_date']) . "</p>
+                            <p><strong>Agreed Price:</strong> " . ($booking_info['negotiated_price'] > 0 ? "GH₵ " . number_format($booking_info['negotiated_price'], 2) : "GH₵ " . number_format($booking_info['price'], 2)) . "</p>
+                        </div>
                         <p>You can now view confirmed booking details in your Ohati App and make payment arrangements.</p>
                     </div>
                 ";
-                $approve_sms = "Great news! Vendor {$booking_info['vendor_name']} has accepted your booking request for {$booking_info['event_date']}. Check app to view details.";
-
-                send_dual_notification($c_phone, $c_email, "Booking Accepted!", $approve_sms, $approve_subject, $approve_html);
+                $approve_sms = "Great news! Vendor {$booking_info['vendor_name']} has accepted your booking request $ref_formatted for {$booking_info['event_date']}. Check app to view details.";
+                try {
+                    send_dual_notification($c_phone, $c_email, "Booking Accepted!", $approve_sms, $approve_subject, $approve_html);
+                } catch (Exception $eMail) {
+                    error_log("[Ohati Booking] Confirmed email dispatch failed: " . $eMail->getMessage());
+                }
+            } 
+            // 2. Cancelled / Declined
+            else if (in_array($new_status_lower, ['cancelled', 'declined'])) {
+                $is_declined_by_vendor = ($current_user_id === $vendor_user_id || $is_vendor);
+                if ($is_declined_by_vendor) {
+                    // Vendor declined booking inquiry -> notify Customer
+                    $decl_subject = "Booking Request Update: $ref_formatted Declined";
+                    $decl_html = "
+                        <div style='font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; border:1px solid #e0e0e0; border-radius:10px;'>
+                            <h2 style='color:#C0392B;'>Booking Request Declined</h2>
+                            <p>Dear <strong>" . htmlspecialchars($booking_info['user_name']) . "</strong>,</p>
+                            <p>Vendor <strong>" . htmlspecialchars($booking_info['vendor_name']) . "</strong> is unfortunately unavailable or unable to accept booking request <strong>$ref_formatted</strong> for <strong>" . htmlspecialchars($booking_info['event_date']) . "</strong>.</p>
+                            <p>You can browse other verified event professionals on Ohati to find an available vendor for your event.</p>
+                        </div>
+                    ";
+                    $decl_sms = "OHATI: Vendor {$booking_info['vendor_name']} is unavailable for booking $ref_formatted ({$booking_info['event_date']}). Please visit Ohati to explore alternative vendors.";
+                    try {
+                        send_dual_notification($c_phone, $c_email, "Booking Declined", $decl_sms, $decl_subject, $decl_html);
+                    } catch (Exception $eMail) {
+                        error_log("[Ohati Booking] Declined email dispatch failed: " . $eMail->getMessage());
+                    }
+                } else {
+                    // Customer cancelled booking -> notify Vendor
+                    $canc_subject = "Booking Cancellation: $ref_formatted by Client";
+                    $canc_html = "
+                        <div style='font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; border:1px solid #e0e0e0; border-radius:10px;'>
+                            <h2 style='color:#C0392B;'>Booking Cancelled</h2>
+                            <p>Dear <strong>" . htmlspecialchars($booking_info['vendor_name']) . "</strong>,</p>
+                            <p>Client <strong>" . htmlspecialchars($booking_info['user_name']) . "</strong> has cancelled booking request <strong>$ref_formatted</strong> for <strong>" . htmlspecialchars($booking_info['event_date']) . "</strong>.</p>
+                            <p>No further action is required. Your calendar slot is now reopened.</p>
+                        </div>
+                    ";
+                    $canc_sms = "OHATI: Client {$booking_info['user_name']} has cancelled booking $ref_formatted for {$booking_info['event_date']}. Your calendar slot is now reopened.";
+                    try {
+                        send_dual_notification($v_phone, $v_email, "Booking Cancelled", $canc_sms, $canc_subject, $canc_html);
+                    } catch (Exception $eMail) {
+                        error_log("[Ohati Booking] Cancelled email dispatch failed: " . $eMail->getMessage());
+                    }
+                }
+            } 
+            // 3. Completed
+            else if ($new_status_lower === 'completed') {
+                $comp_subject = "🎉 Event Completed: Booking $ref_formatted with " . htmlspecialchars($booking_info['vendor_name']);
+                $comp_html = "
+                    <div style='font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; border:1px solid #e0e0e0; border-radius:10px;'>
+                        <h2 style='color:#0E8345;'>Booking Marked Completed!</h2>
+                        <p>Dear <strong>" . htmlspecialchars($booking_info['user_name']) . "</strong>,</p>
+                        <p>Vendor <strong>" . htmlspecialchars($booking_info['vendor_name']) . "</strong> has marked booking <strong>$ref_formatted</strong> as completed.</p>
+                        <p>We hope you had an amazing celebration! Please take a moment to leave a review and rating for this vendor on Ohati.</p>
+                    </div>
+                ";
+                $comp_sms = "OHATI: Vendor {$booking_info['vendor_name']} marked booking $ref_formatted as completed. We hope your event was wonderful! Please leave a review on Ohati.";
+                try {
+                    send_dual_notification($c_phone, $c_email, "Booking Completed 🎉", $comp_sms, $comp_subject, $comp_html);
+                } catch (Exception $eMail) {
+                    error_log("[Ohati Booking] Completed email dispatch failed: " . $eMail->getMessage());
+                }
+            } 
+            // 4. In Progress
+            else if ($new_status_lower === 'in progress') {
+                $inp_subject = "Booking $ref_formatted is Now In Progress";
+                $inp_html = "
+                    <div style='font-family:sans-serif; max-width:600px; margin:0 auto; padding:20px; border:1px solid #e0e0e0; border-radius:10px;'>
+                        <h2 style='color:#0E8345;'>Service In Progress</h2>
+                        <p>Dear <strong>" . htmlspecialchars($booking_info['user_name']) . "</strong>,</p>
+                        <p>Vendor <strong>" . htmlspecialchars($booking_info['vendor_name']) . "</strong> has marked booking <strong>$ref_formatted</strong> as In Progress for event date <strong>" . htmlspecialchars($booking_info['event_date']) . "</strong>.</p>
+                    </div>
+                ";
+                $inp_sms = "OHATI: Vendor {$booking_info['vendor_name']} marked booking $ref_formatted as In Progress for {$booking_info['event_date']}.";
+                try {
+                    send_dual_notification($c_phone, $c_email, "Booking In Progress", $inp_sms, $inp_subject, $inp_html);
+                } catch (Exception $eMail) {
+                    error_log("[Ohati Booking] In Progress email dispatch failed: " . $eMail->getMessage());
+                }
             }
-            
+
             // Also notify Admin at ohatiwebsite@gmail.com on booking status updates
-            send_admin_activity_notification("Booking Status Update (Ref: #OHT-B" . str_pad($bid, 5, '0', STR_PAD_LEFT) . ")", "<p>Booking <strong>#OHT-B" . str_pad($bid, 5, '0', STR_PAD_LEFT) . "</strong> (Client: " . htmlspecialchars($booking_info['user_name']) . ", Vendor: " . htmlspecialchars($booking_info['vendor_name']) . ") status has been updated to <strong>" . htmlspecialchars($input['status']) . "</strong> by {$sender_name}.</p>");
+            send_admin_activity_notification("Booking Status Update (Ref: $ref_formatted)", "<p>Booking <strong>$ref_formatted</strong> (Client: " . htmlspecialchars($booking_info['user_name']) . ", Vendor: " . htmlspecialchars($booking_info['vendor_name']) . ") status has been updated to <strong>" . htmlspecialchars($new_status_clean) . "</strong> by {$sender_name}.</p>");
         }
         if (isset($input['payment_status'])) {
             add_notification($pdo, $recipient_id, "Payment Status Update", "Payment status for booking #{$bid} is now '{$input['payment_status']}'.");
@@ -3065,7 +3198,9 @@ case 'chat_inbox':
         $last_m = $m_stmt->fetch(PDO::FETCH_ASSOC);
 
         $msg_preview = $last_m ? $last_m['message'] : '';
-        if ($last_m && $last_m['type'] === 'image') $msg_preview = "📷 Photo";
+        if ($last_m && in_array($last_m['type'] ?? 'text', ['text', 'system', ''], true)) {
+            $msg_preview = html_entity_decode((string)$msg_preview, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } else if ($last_m && $last_m['type'] === 'image') $msg_preview = "📷 Photo";
         else if ($last_m && $last_m['type'] === 'voice') $msg_preview = "🎙️ Voice Note";
         else if ($last_m && in_array($last_m['type'], ['pdf', 'file', 'video', 'location'])) $msg_preview = "📎 Attachment";
 
@@ -3088,6 +3223,8 @@ case 'chat_inbox':
 
             $info = get_online_status_info($u_row['last_active'] ?? '');
 
+            $cust_avatar = !empty($u_row['avatar']) ? $u_row['avatar'] : 'img/default-avatar.png';
+
             $list[] = [
                 'id' => $c_uid,
                 'user_id' => $c_uid,
@@ -3095,8 +3232,8 @@ case 'chat_inbox':
                 'vendor_id' => $c_vid,
                 'conversation_id' => $convo_key,
                 'name' => $u_row['name'],
-                'avatar' => $u_row['avatar'],
-                'logo' => $u_row['avatar'],
+                'avatar' => $cust_avatar,
+                'logo' => $cust_avatar,
                 'category' => 'Customer',
                 'last_message' => $msg_preview,
                 'last_msg_id' => intval($c['max_msg_id']),
@@ -3130,6 +3267,7 @@ case 'chat_inbox':
 
             $last_active = !empty($v_row['user_last_active']) ? $v_row['user_last_active'] : ($v_row['vendor_last_active'] ?? '');
             $info = get_online_status_info($last_active);
+            $resolved_v_logo = resolve_vendor_logo($v_row['category'] ?? '', $v_row['logo'] ?? '');
 
             $list[] = [
                 'id' => $c_vid,
@@ -3137,8 +3275,8 @@ case 'chat_inbox':
                 'user_id' => intval($v_row['user_id']),
                 'conversation_id' => $convo_key,
                 'name' => $v_row['name'],
-                'logo' => $v_row['logo'],
-                'avatar' => $v_row['logo'],
+                'logo' => $resolved_v_logo,
+                'avatar' => $resolved_v_logo,
                 'category' => $v_row['category'],
                 'last_message' => $msg_preview,
                 'last_msg_id' => intval($c['max_msg_id']),
@@ -3549,6 +3687,19 @@ case 'chat_history':
         ");
         $stmt->execute([$convo_id, $db_vendor_id, $db_user_id]);
         $msgs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($msgs as &$m) {
+            if (
+                isset($m['message']) &&
+                in_array($m['type'] ?? 'text', ['text', 'system', ''], true)
+            ) {
+                $m['message'] = html_entity_decode(
+                    (string)$m['message'],
+                    ENT_QUOTES | ENT_HTML5,
+                    'UTF-8'
+                );
+            }
+        }
+        unset($m);
         echo json_encode($msgs);
     } catch (Throwable $eChatHist) {
         http_response_code(500);
@@ -3559,7 +3710,7 @@ case 'chat_history':
 case 'chat':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
-    $message = clean($input['message'] ?? '');
+    $message = trim((string)($input['message'] ?? ''));
     $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','file','video','location']) ? $input['type'] : 'text';
     $file_name = clean($input['file_name'] ?? '');
     $file_size = intval($input['file_size'] ?? 0);
@@ -3572,7 +3723,7 @@ case 'chat':
         exit;
     }
 
-    if (empty($message)) {
+    if ($message === '') {
         http_response_code(400);
         echo json_encode(['error' => 'Message content is required']);
         exit;
@@ -4758,6 +4909,151 @@ case 'get_trusted_vendors':
 case 'get_popular_vendors':
     $stmt = $pdo->query("SELECT * FROM vendors WHERE is_active = 1 AND (verification_status = 'verified' OR verification_status IS NULL OR verification_status = '') ORDER BY views_count DESC, rating DESC, id DESC LIMIT 6");
     echo json_encode($stmt->fetchAll());
+    break;
+
+case 'get_homepage_vendors':
+    $format_vendor = function(&$v) use ($pdo) {
+        if (!$v) return null;
+        $v['logo'] = resolve_vendor_logo($v['category'] ?? '', $v['logo'] ?? '');
+        $v['cover_photo'] = resolve_vendor_cover($v['category'] ?? '', $v['cover_photo'] ?? '');
+        $v['img'] = !empty($v['cover_photo']) ? $v['cover_photo'] : (!empty($v['logo']) ? $v['logo'] : 'img/default-cover.jpg');
+        $v['city'] = !empty($v['city']) ? $v['city'] : (!empty($v['location']) ? $v['location'] : 'Accra, Ghana');
+        
+        try {
+            $rev_stmt = $pdo->prepare("SELECT COUNT(*) as rc, AVG(rating) as ar FROM reviews WHERE vendor_id = ?");
+            $rev_stmt->execute([$v['id']]);
+            $rev_row = $rev_stmt->fetch();
+            $v_rc = intval($rev_row['rc'] ?? 0);
+            $v['reviews_count'] = $v_rc;
+            $v['rating'] = $v_rc > 0 ? round(floatval($rev_row['ar']), 1) : floatval($v['rating'] ?? 0.0);
+        } catch (Exception $eRev) {}
+        
+        return $v;
+    };
+
+    // 1. Handpicked
+    $hp_raw = getSetting('homepage_handpicked_ids', '[]');
+    $hp_ids = json_decode($hp_raw, true);
+    $handpicked = [];
+
+    $has_custom_hp = false;
+    if (is_array($hp_ids) && !empty($hp_ids)) {
+        foreach ($hp_ids as $val) {
+            if (intval($val) > 0) { $has_custom_hp = true; break; }
+        }
+    }
+
+    if ($has_custom_hp) {
+        $slot_count = min(4, count($hp_ids));
+        for ($i = 0; $i < $slot_count; $i++) {
+            $vid = intval($hp_ids[$i] ?? 0);
+            if ($vid > 0) {
+                $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id = ? AND is_active = 1");
+                $stmt->execute([$vid]);
+                $v = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($v) {
+                    $handpicked[] = $format_vendor($v);
+                } else {
+                    $handpicked[] = null;
+                }
+            } else {
+                $handpicked[] = null;
+            }
+        }
+    } else {
+        $hp_stmt = $pdo->query("SELECT * FROM vendors WHERE is_active = 1 AND (featured = 1 OR rating >= 4.0) ORDER BY featured DESC, rating DESC, reviews_count DESC, id DESC LIMIT 4");
+        $hp_rows = $hp_stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (count($hp_rows) < 4) {
+            $existing_ids = array_column($hp_rows, 'id');
+            $ph = !empty($existing_ids) ? " AND id NOT IN (" . implode(',', array_fill(0, count($existing_ids), '?')) . ")" : "";
+            $hp_fill = $pdo->prepare("SELECT * FROM vendors WHERE is_active = 1 $ph ORDER BY rating DESC, reviews_count DESC, id DESC LIMIT " . (4 - count($hp_rows)));
+            $hp_fill->execute($existing_ids);
+            $hp_rows = array_merge($hp_rows, $hp_fill->fetchAll(PDO::FETCH_ASSOC));
+        }
+        foreach ($hp_rows as $hr) {
+            $handpicked[] = $format_vendor($hr);
+        }
+    }
+
+    // 2. Featured
+    $feat_raw = getSetting('homepage_featured_ids', '[]');
+    $feat_ids = json_decode($feat_raw, true);
+    $featured = [];
+
+    $clean_feat_ids = [];
+    if (is_array($feat_ids)) {
+        foreach ($feat_ids as $fid) {
+            $ival = intval($fid);
+            if ($ival > 0) $clean_feat_ids[] = $ival;
+        }
+    }
+
+    if (!empty($clean_feat_ids)) {
+        $in_ph = implode(',', array_fill(0, count($clean_feat_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id IN ($in_ph) AND is_active = 1");
+        $stmt->execute($clean_feat_ids);
+        $v_map = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $vr) {
+            $v_map[$vr['id']] = $format_vendor($vr);
+        }
+        foreach ($clean_feat_ids as $cfid) {
+            if (isset($v_map[$cfid])) {
+                $featured[] = $v_map[$cfid];
+            }
+        }
+    }
+
+    if (empty($featured)) {
+        $stmt = $pdo->query("SELECT * FROM vendors WHERE is_active = 1 AND premium = 1 ORDER BY featured DESC, premium DESC, verified DESC, rating DESC, reviews_count DESC, completed_jobs DESC LIMIT 12");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $fr) {
+            $featured[] = $format_vendor($fr);
+        }
+    }
+
+    // 3. Recommended
+    $rec_mode = getSetting('homepage_recommended_mode', 'automatic');
+    $recommended = [];
+
+    if ($rec_mode === 'curated') {
+        $rec_raw = getSetting('homepage_recommended_ids', '[]');
+        $rec_ids = json_decode($rec_raw, true);
+        $clean_rec_ids = [];
+        if (is_array($rec_ids)) {
+            foreach ($rec_ids as $rid) {
+                $ival = intval($rid);
+                if ($ival > 0) $clean_rec_ids[] = $ival;
+            }
+        }
+        if (!empty($clean_rec_ids)) {
+            $in_ph = implode(',', array_fill(0, count($clean_rec_ids), '?'));
+            $stmt = $pdo->prepare("SELECT * FROM vendors WHERE id IN ($in_ph) AND is_active = 1");
+            $stmt->execute($clean_rec_ids);
+            $v_map = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $vr) {
+                $v_map[$vr['id']] = $format_vendor($vr);
+            }
+            foreach ($clean_rec_ids as $crid) {
+                if (isset($v_map[$crid])) {
+                    $recommended[] = $v_map[$crid];
+                }
+            }
+        }
+    }
+
+    if (empty($recommended)) {
+        $stmt = $pdo->query("SELECT * FROM vendors WHERE is_active = 1 AND (verification_status = 'verified' OR verification_status IS NULL OR verification_status = '') ORDER BY views_count DESC, rating DESC, id DESC LIMIT 6");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $rr) {
+            $recommended[] = $format_vendor($rr);
+        }
+    }
+
+    echo json_encode([
+        'status' => 'success',
+        'handpicked' => $handpicked,
+        'featured' => $featured,
+        'recommended' => $recommended,
+        'recommended_mode' => $rec_mode
+    ]);
     break;
 
 case 'renew_ad_campaign':

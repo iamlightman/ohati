@@ -184,6 +184,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <a href="categories.php" class="admin-nav-item <?= $current_page === 'categories.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-layer-group"></i> Vendor Categories
         </a>
+        <a href="homepage_vendors.php" class="admin-nav-item <?= $current_page === 'homepage_vendors.php' ? 'active' : '' ?>">
+            <i class="fa-solid fa-sliders"></i> Homepage Vendors
+        </a>
         <a href="users.php" class="admin-nav-item <?= $current_page === 'users.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-users"></i> Users
         </a>

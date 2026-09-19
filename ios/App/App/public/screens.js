@@ -1,5 +1,12 @@
 // js/screens.js — Ohati View / Screen Renderers
 
+if (typeof escapeHtml !== 'function') {
+    window.escapeHtml = function(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    };
+}
+
 // ── Skeleton Loader Generator Component Helpers ───────────────────────
 function renderSkeletonCardsHTML(count = 6) {
     let cards = '';
@@ -2337,7 +2344,7 @@ function updateChatMessages(history) {
                 </a>
             `;
         } else {
-            bodyHtml = `<div class="msg-text">${escapeHtml(m.message).replace(/\n/g, '<br>')}</div>`;
+            bodyHtml = `<div class="msg-text">${escapeHtml(m.message || '').replace(/\n/g, '<br>')}</div>`;
         }
 
         const bubbleClass = isOutgoing ? 'msg-user' : 'msg-vendor';

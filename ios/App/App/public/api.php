@@ -3251,7 +3251,9 @@ case 'chat_inbox':
         $info = get_online_status_info($last_active);
 
         $msg_preview = $m['message'];
-        if ($m['type'] === 'image') $msg_preview = "📷 Photo";
+        if (in_array($m['type'] ?? 'text', ['text', 'system', ''], true)) {
+            $msg_preview = html_entity_decode((string)$msg_preview, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } else if ($m['type'] === 'image') $msg_preview = "📷 Photo";
         else if ($m['type'] === 'voice') $msg_preview = "🎙️ Voice Note";
         else if ($m['type'] === 'video') $msg_preview = "🎥 Video";
         else if (in_array($m['type'], ['pdf', 'file', 'location'])) $msg_preview = "📎 Attachment";
@@ -3371,6 +3373,19 @@ case 'chat_history':
             'my_v_id' => $my_v_id
         ]);
         $msgs = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        foreach ($msgs as &$m) {
+            if (
+                isset($m['message']) &&
+                in_array($m['type'] ?? 'text', ['text', 'system', ''], true)
+            ) {
+                $m['message'] = html_entity_decode(
+                    (string)$m['message'],
+                    ENT_QUOTES | ENT_HTML5,
+                    'UTF-8'
+                );
+            }
+        }
+        unset($m);
         echo json_encode($msgs ?: []);
     } catch (Throwable $eChatHist) {
         echo json_encode([]);
@@ -3381,7 +3396,7 @@ case 'chat':
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("POST required");
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
     $vid = intval($input['vendor_id'] ?? $input['customer_id'] ?? $input['user_id'] ?? $input['target_id'] ?? 0);
-    $message = clean($input['message'] ?? '');
+    $message = trim((string)($input['message'] ?? ''));
     $type = in_array($input['type'] ?? '', ['text','image','voice','pdf','file','video','location']) ? $input['type'] : 'text';
     $file_name = clean($input['file_name'] ?? '');
     $file_size = intval($input['file_size'] ?? 0);
@@ -3394,7 +3409,7 @@ case 'chat':
         exit;
     }
 
-    if ($vid <= 0 || empty($message)) {
+    if ($vid <= 0 || $message === '') {
         http_response_code(400);
         echo json_encode(['error' => 'Message and recipient target are required']);
         exit;

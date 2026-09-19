@@ -201,7 +201,9 @@ function handle_payment_action($action, $pdo) {
 
                 audit_log($pdo, 'payment_verified_admin', 'escrow_transactions', $escrow['id'], $escrow['amount'], 'pending_verification', 'held', "Admin approved manual payment (TxID: $provider_ref).");
 
-                // Notify customer & vendor
+                $status_actually_changed = (($booking['status'] ?? '') !== 'Confirmed');
+
+                // Notify customer & vendor (in-app)
                 $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, body, icon) VALUES (?, 'Payment Verified & Confirmed! 🎉', ?, 'circle-check')");
                 $stmt->execute([$escrow['customer_id'], "Admin has verified your payment of GH₵ " . number_format($escrow['amount'], 2) . " for booking #" . $escrow['booking_id'] . ". Funds are held securely in escrow."]);
 
@@ -214,6 +216,64 @@ function handle_payment_action($action, $pdo) {
                 }
 
                 $pdo->commit();
+
+                // Send external notifications only if status actually changed to Confirmed (prevent duplicates)
+                if ($status_actually_changed) {
+                    try {
+                        require_once __DIR__ . '/sms_helper.php';
+
+                        $c_stmt = $pdo->prepare("SELECT id, name, email, phone FROM users WHERE id = ?");
+                        $c_stmt->execute([$escrow['customer_id']]);
+                        $cust_row = $c_stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $v_stmt = $pdo->prepare("SELECT v.name, v.email, v.phone, v.user_id as vendor_user_id FROM vendors v WHERE v.id = ?");
+                        $v_stmt->execute([$escrow['vendor_id']]);
+                        $vend_row = $v_stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $ref = !empty($booking['booking_reference']) ? $booking['booking_reference'] : ('#' . $escrow['booking_id']);
+                        $svc_name = !empty($booking['service_name']) ? $booking['service_name'] : (!empty($booking['package_name']) ? $booking['package_name'] : 'Event Service');
+                        $c_name = !empty($cust_row['name']) ? $cust_row['name'] : (!empty($booking['user_name']) ? $booking['user_name'] : 'Customer');
+                        $c_email = trim(!empty($cust_row['email']) ? $cust_row['email'] : ($booking['user_email'] ?? ''));
+                        $c_phone = trim(!empty($cust_row['phone']) ? $cust_row['phone'] : ($booking['user_phone'] ?? ''));
+
+                        $v_name = !empty($vend_row['name']) ? $vend_row['name'] : 'Vendor';
+                        $v_email = trim($vend_row['email'] ?? '');
+                        $v_phone = trim($vend_row['phone'] ?? '');
+
+                        // Dual notification for customer
+                        if ($c_email !== '' || $c_phone !== '') {
+                            $c_sms = "Payment of GH₵ " . number_format($escrow['amount'], 2) . " verified! Booking #{$ref} with {$v_name} is Confirmed.";
+                            $c_subj = "Payment Verified & Booking Confirmed: #{$ref}";
+                            $c_html = "<div style='font-family:sans-serif; padding:20px; color:#1B2B4B;'>
+                                <h2 style='color:#10B981;'>Payment Verified & Booking Confirmed!</h2>
+                                <p>Hello " . htmlspecialchars($c_name) . ",</p>
+                                <p>Your manual payment of <strong>GH₵ " . number_format($escrow['amount'], 2) . "</strong> for booking <strong>#{$ref}</strong> (" . htmlspecialchars($svc_name) . ") with <strong>" . htmlspecialchars($v_name) . "</strong> has been approved by administration.</p>
+                                <p>Your booking is now officially <strong>Confirmed</strong> and the funds are held securely in escrow.</p>
+                                <hr style='border:none; border-top:1px solid #eee; margin:20px 0;'>
+                                <p style='font-size:12px; color:#666;'>Ohati Ghana &bull; Trusted Event Marketplace</p>
+                            </div>";
+                            send_dual_notification($c_phone, $c_email, "Payment Verified & Booking Confirmed", $c_sms, $c_subj, $c_html);
+                        }
+
+                        // Dual notification for vendor
+                        if ($v_email !== '' || $v_phone !== '') {
+                            $v_sms = "Payment verified for booking #{$ref} ({$c_name}). Booking is Confirmed and GH₵ " . number_format($escrow['vendor_amount'], 2) . " held in escrow.";
+                            $v_subj = "Booking Payment Confirmed: #{$ref}";
+                            $v_html = "<div style='font-family:sans-serif; padding:20px; color:#1B2B4B;'>
+                                <h2 style='color:#10B981;'>Booking Payment Confirmed</h2>
+                                <p>Hello " . htmlspecialchars($v_name) . ",</p>
+                                <p>Payment of <strong>GH₵ " . number_format($escrow['amount'], 2) . "</strong> for booking <strong>#{$ref}</strong> with <strong>" . htmlspecialchars($c_name) . "</strong> has been verified by administration.</p>
+                                <p>The booking is now officially <strong>Confirmed</strong>. Your earnings of <strong>GH₵ " . number_format($escrow['vendor_amount'], 2) . "</strong> are secured in your escrow balance.</p>
+                                <hr style='border:none; border-top:1px solid #eee; margin:20px 0;'>
+                                <p style='font-size:12px; color:#666;'>Ohati Ghana &bull; Trusted Event Marketplace</p>
+                            </div>";
+                            send_dual_notification($v_phone, $v_email, "Booking Payment Confirmed", $v_sms, $v_subj, $v_html);
+                        }
+                    } catch (Exception $notifEx) {
+                        error_log("[Payment API Notification Error] " . $notifEx->getMessage());
+                    }
+                }
+
                 echo json_encode(['success' => true, 'message' => 'Payment approved and verified successfully. Booking is now Confirmed!']);
             } catch (Exception $e) {
                 $pdo->rollBack();

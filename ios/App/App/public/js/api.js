@@ -269,6 +269,7 @@ const API = {
     getRecommendedVendors(categoryId, excludeId) { return this.get('get_recommended_vendors', { category: categoryId || '', exclude_id: excludeId || 0 }); },
     getTrustedVendors() { return this.get('get_trusted_vendors'); },
     getPopularVendors() { return this.get('get_popular_vendors'); },
+    getHomepageVendors() { return this.get('get_homepage_vendors'); },
 
     // ── Profile Updates ──
     updateProfile(data) { return this.post('update_profile', data); },

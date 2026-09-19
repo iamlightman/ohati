@@ -1,5 +1,12 @@
 // components.js - Ohati App Frontend Controller & Components
 
+if (typeof escapeHtml !== 'function') {
+    window.escapeHtml = function(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    };
+}
+
 const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "profile-icon.jpg";
 
 // 1. Application State
@@ -2520,7 +2527,7 @@ async function renderChatScreen() {
                     <div class="inbox-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
                         ${inbox.length > 0 ? inbox.map(item => `
                             <div class="inbox-item" onclick="startVendorChat(${item.id})" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--white); border: 1px solid var(--gray-light); cursor: pointer; transition: transform 0.2s, background 0.2s;">
-                                <img src="${item.logo}" alt="${item.name}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sage-green);">
+                                <img src="${window.resolveImageUrl(item.logo || item.avatar, 'avatar')}" alt="${item.name}" onerror="window.handleImageError(this, 'avatar')" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sage-green);">
                                 <div style="flex: 1;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--forest-green); font-weight: 700;">${item.name}</h4>
@@ -2555,7 +2562,7 @@ async function renderChatScreen() {
             <div class="chat-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button class="btn-icon back-btn" style="width: 32px; height: 32px; box-shadow: none; border: 1px solid var(--gray-light);"><i class="fa-solid fa-arrow-left"></i></button>
-                    <img src="${v.logo}" alt="${v.name}" class="chat-avatar" style="width: 36px; height: 36px; border-radius: 50%;">
+                    <img src="${window.resolveImageUrl(v.logo || v.avatar, 'avatar')}" alt="${v.name}" class="chat-avatar" onerror="window.handleImageError(this, 'avatar')" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
                     <div class="chat-vendor-info">
                         <h4 style="font-size: 0.85rem; margin: 0; line-height: 1.2;">${v.name}</h4>
                         <span style="font-size: 0.65rem; color: var(--sage-green);">${v.availability} • Active</span>
@@ -2592,6 +2599,70 @@ async function renderChatScreen() {
     if (input) {
         input.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') sendChatMessage(vendorId);
+        });
+    }
+    
+    if (sendBtn) {
+        sendBtn.addEventListener('click', () => {
+            sendChatMessage(vendorId);
+        });
+    }
+    
+    // Set up real-time simulation interval (every 18 seconds, send vendor tip/reply)
+    if (state.chatInterval) clearInterval(state.chatInterval);
+    
+    const simulatedTips = [
+        "Just wanted to check if you have finalized your ceremony venue location details yet? 🏰",
+        "Let me know if you would like me to draft a custom contract options file for you! 📝",
+        "Hello! I am checking my calendar slot. Are we looking at a morning or afternoon start time? ☀️",
+        "Don't forget to add our booking costs into your Smart Budget planner so we keep you on track! 💰",
+        "Ohati tells me you completed another planning milestone! Keep up the good momentum! 🎉"
+    ];
+    
+    state.chatInterval = setInterval(async () => {
+        if (state.currentScreen !== 'chat' || state.activeChatVendorId !== vendorId) {
+            clearInterval(state.chatInterval);
+            return;
+        }
+        
+        const randomTip = simulatedTips[Math.floor(Math.random() * simulatedTips.length)];
+        
+        // Show typing indicator
+        const area = document.getElementById('chat-msg-area');
+        if (!area) return;
+        
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.id = 'chat-typing-indicator';
+        typingIndicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        area.appendChild(typingIndicator);
+        scrollToBottom('chat-msg-area');
+        
+        setTimeout(async () => {
+            const indicator = document.getElementById('chat-typing-indicator');
+            if (indicator) indicator.remove();
+            
+            // Post message via API so it persists in database
+            await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vendor_id: vendorId, message: randomTip, simulate_vendor: true })
+            });
+            
+            const vendorMsgEl = document.createElement('div');
+            vendorMsgEl.className = 'msg-bubble msg-vendor';
+            vendorMsgEl.innerHTML = randomTip;
+            area.appendChild(vendorMsgEl);
+            scrollToBottom('chat-msg-area');
+        }, 1500);
+        
+    }, 18000);
+}
+
 async function loadChatHistory(vendorId) {
     try {
         const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_history&vendor_id=' + vendorId);
@@ -2602,7 +2673,7 @@ async function loadChatHistory(vendorId) {
         
         area.innerHTML = history.map(msg => `
             <div class="msg-bubble msg-${msg.sender === 'user' ? 'user' : 'vendor'}">
-                ${msg.message.replace(/\n/g, '<br>')}
+                ${escapeHtml(msg.message || '').replace(/\n/g, '<br>')}
             </div>
         `).join('');
         
@@ -2623,7 +2694,7 @@ async function sendChatMessage(vendorId) {
     const area = document.getElementById('chat-msg-area');
     const userMsgEl = document.createElement('div');
     userMsgEl.className = 'msg-bubble msg-user';
-    userMsgEl.innerHTML = msg;
+    userMsgEl.innerHTML = escapeHtml(msg).replace(/\n/g, '<br>');
     area.appendChild(userMsgEl);
     scrollToBottom('chat-msg-area');
     
@@ -2654,14 +2725,12 @@ async function sendChatMessage(vendorId) {
             const indicator = document.getElementById('chat-typing-indicator');
             if (indicator) indicator.remove();
             
-            // Render vendor reply if available
-            if (data && data.vendor_reply && data.vendor_reply.message) {
-                const vendorMsgEl = document.createElement('div');
-                vendorMsgEl.className = 'msg-bubble msg-vendor';
-                vendorMsgEl.innerHTML = data.vendor_reply.message.replace(/\n/g, '<br>');
-                area.appendChild(vendorMsgEl);
-                scrollToBottom('chat-msg-area');
-            }
+            // Render vendor reply
+            const vendorMsgEl = document.createElement('div');
+            vendorMsgEl.className = 'msg-bubble msg-vendor';
+            vendorMsgEl.innerHTML = escapeHtml(data.vendor_reply?.message || '').replace(/\n/g, '<br>');
+            area.appendChild(vendorMsgEl);
+            scrollToBottom('chat-msg-area');
         }, 1200);
         
     } catch (e) {

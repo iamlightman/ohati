@@ -1,4 +1,4 @@
-window.DEFAULT_USER_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='avatarGrad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%231B2B4B'/><stop offset='100%' stop-color='%230F172A'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23avatarGrad)'/><circle cx='50' cy='38' r='18' fill='%23F2A735'/><path d='M 20 84 C 20 64, 32 58, 50 58 C 68 58, 80 64, 80 84 Z' fill='%23F2A735'/></svg>";
+window.DEFAULT_USER_AVATAR = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22avatarGrad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%231B2B4B%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230F172A%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2250%22%20fill%3D%22url(%23avatarGrad)%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2238%22%20r%3D%2218%22%20fill%3D%22%23F2A735%22%2F%3E%3Cpath%20d%3D%22M%2020%2084%20C%2020%2064%2C%2032%2058%2C%2050%2058%20C%2068%2058%2C%2080%2064%2C%2080%2084%20Z%22%20fill%3D%22%23F2A735%22%2F%3E%3C%2Fsvg%3E";
 window.DEFAULT_BUSINESS_COVER = "img/default-cover.jpg";
 window.DEFAULT_VENDOR_COVER = "img/default-cover.jpg";
 window.LOCAL_FALLBACK_SVG = window.DEFAULT_USER_AVATAR;
@@ -21,7 +21,16 @@ window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
     
     let trimmed = url.trim();
 
-    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+        // Safely encode unencoded SVG data URI if present
+        if (trimmed.startsWith('data:image/svg+xml') && trimmed.includes('<svg')) {
+            const parts = trimmed.split(',');
+            const meta = parts[0];
+            const rawContent = parts.slice(1).join(',');
+            return meta + ',' + encodeURIComponent(rawContent);
+        }
+        return trimmed;
+    }
 
     // Handle full HTTP / HTTPS URLs directly
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -40,38 +49,32 @@ window.resolveImageUrl = function(url, typeOrFallback = 'avatar') {
         trimmed = trimmed.replace('capacitor://localhost/', '');
     }
 
+    // Detect native Capacitor / file protocol environment
+    const isNativeCapacitor = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || 
+                              (window.location && (window.location.protocol === 'capacitor:' || window.location.protocol === 'file:'));
+
     let domainPrefix = '';
     let appDir = '';
-    if (window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
+    if (!isNativeCapacitor && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
         const rawPathName = window.location.pathname || '';
         let pathName = rawPathName;
         try { pathName = decodeURIComponent(rawPathName); } catch (e) {}
         appDir = pathName.substring(0, pathName.lastIndexOf('/')).replace(/\/$/, '');
         domainPrefix = window.location.origin + appDir;
-    } else if (typeof window.getOhatiApiBaseUrl === 'function') {
+    } else if (!isNativeCapacitor && typeof window.getOhatiApiBaseUrl === 'function') {
         const apiBase = window.getOhatiApiBaseUrl();
         if (apiBase && apiBase.includes('://')) {
             domainPrefix = apiBase.split('/api.php')[0].replace(/\/$/, '');
         }
     }
-    
-    const hostname = (() => {
-        try {
-            return new URL(domainPrefix).hostname;
-        } catch (e) {
-            return '';
-        }
-    })();
 
+    // If native Capacitor / file protocol or no domain prefix could be determined, route to public production host
     if (!domainPrefix || 
+        isNativeCapacitor ||
         domainPrefix.startsWith('capacitor://') || 
         domainPrefix.startsWith('file://') ||
         domainPrefix.includes('capacitor://') || 
-        domainPrefix.includes('file://') ||
-        hostname === 'localhost' || 
-        hostname === '127.0.0.1' ||
-        domainPrefix.includes('localhost') || 
-        domainPrefix.includes('127.0.0.1')) {
+        domainPrefix.includes('file://')) {
         domainPrefix = 'https://ohati.com';
     }
 

@@ -1,5 +1,12 @@
 // components.js - Ohati App Frontend Controller & Components
 
+if (typeof escapeHtml !== 'function') {
+    window.escapeHtml = function(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    };
+}
+
 const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "profile-icon.jpg";
 
 // 1. Application State
@@ -2666,7 +2673,7 @@ async function loadChatHistory(vendorId) {
         
         area.innerHTML = history.map(msg => `
             <div class="msg-bubble msg-${msg.sender === 'user' ? 'user' : 'vendor'}">
-                ${msg.message.replace(/\n/g, '<br>')}
+                ${escapeHtml(msg.message || '').replace(/\n/g, '<br>')}
             </div>
         `).join('');
         
@@ -2687,7 +2694,7 @@ async function sendChatMessage(vendorId) {
     const area = document.getElementById('chat-msg-area');
     const userMsgEl = document.createElement('div');
     userMsgEl.className = 'msg-bubble msg-user';
-    userMsgEl.innerHTML = msg;
+    userMsgEl.innerHTML = escapeHtml(msg).replace(/\n/g, '<br>');
     area.appendChild(userMsgEl);
     scrollToBottom('chat-msg-area');
     
@@ -2721,7 +2728,7 @@ async function sendChatMessage(vendorId) {
             // Render vendor reply
             const vendorMsgEl = document.createElement('div');
             vendorMsgEl.className = 'msg-bubble msg-vendor';
-            vendorMsgEl.innerHTML = data.vendor_reply.message.replace(/\n/g, '<br>');
+            vendorMsgEl.innerHTML = escapeHtml(data.vendor_reply?.message || '').replace(/\n/g, '<br>');
             area.appendChild(vendorMsgEl);
             scrollToBottom('chat-msg-area');
         }, 1200);

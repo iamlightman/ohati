@@ -1,5 +1,12 @@
 // js/screens.js — Ohati View / Screen Renderers
 
+if (typeof escapeHtml !== 'function') {
+    window.escapeHtml = function(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    };
+}
+
 // ── Skeleton Loader Generator Component Helpers ───────────────────────
 function renderSkeletonCardsHTML(count = 6) {
     let cards = '';
@@ -449,9 +456,17 @@ function navigateBack() {
 }
 
 // ── 1. HOME SCREEN ──────────────────────────────────────────────────────
-function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors) {
+function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors, homepageVendors) {
     const screen = document.getElementById('screen-home');
     if (!screen) return;
+
+    const featuredVendors = (homepageVendors && Array.isArray(homepageVendors.featured) && homepageVendors.featured.length > 0)
+        ? homepageVendors.featured
+        : (premiumVendors || []);
+
+    const recommendedVendors = (homepageVendors && homepageVendors.recommended_mode === 'curated' && Array.isArray(homepageVendors.recommended) && homepageVendors.recommended.length > 0)
+        ? homepageVendors.recommended
+        : (popularVendors && popularVendors.length > 0 ? popularVendors : ((homepageVendors && Array.isArray(homepageVendors.recommended)) ? homepageVendors.recommended : []));
 
     let greetingText = 'Welcome!';
     let roleBadge = '';
@@ -500,7 +515,9 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
 
     // ── Personalized Recommendation System ──
     let recHtml = '';
-    const allVendors = state.vendors && state.vendors.length > 0 ? state.vendors : premiumVendors;
+    const allVendors = (homepageVendors && Array.isArray(homepageVendors.handpicked) && homepageVendors.handpicked.filter(Boolean).length > 0)
+        ? [...homepageVendors.handpicked.filter(Boolean), ...featuredVendors, ...(state.vendors || [])]
+        : (state.vendors && state.vendors.length > 0 ? state.vendors : featuredVendors);
     if (allVendors.length > 0) {
         const userInterestCat = localStorage.getItem('ohati_user_interest_category') || '';
         let recVendor = null;
@@ -573,21 +590,31 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
     const heroBg = (state.settings && state.settings.hero_banner_image) ? state.settings.hero_banner_image : 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1200';
     const heroTitle = (state.settings && state.settings.hero_title) ? state.settings.hero_title : 'Extraordinary<br>events <span class="start-italic">start</span><br>with the right people.';
 
-    let topVendors = (state.vendors || []).filter(v => parseInt(v.featured) === 1 || parseFloat(v.rating || 0) >= 4.0);
-    if (topVendors.length < 4) {
-        topVendors = state.vendors || [];
+    let handpickedRaw = [];
+    if (homepageVendors && Array.isArray(homepageVendors.handpicked) && homepageVendors.handpicked.filter(Boolean).length > 0) {
+        handpickedRaw = homepageVendors.handpicked.filter(Boolean);
+    } else {
+        let topVendors = (state.vendors || []).filter(v => parseInt(v.featured) === 1 || parseFloat(v.rating || 0) >= 4.0);
+        if (topVendors.length < 4) {
+            topVendors = state.vendors || [];
+        }
+        if (topVendors.length < 4 && featuredVendors.length > 0) {
+            topVendors = featuredVendors;
+        }
+        handpickedRaw = topVendors.slice(0, 4);
     }
     
-    let handpickedList = topVendors.slice(0, 4).map((v, i) => {
+    let handpickedList = handpickedRaw.map((v, i) => {
         const initials = v.name ? v.name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase() : 'V';
         return {
             id: v.id,
             name: v.name,
             category: v.category_name || v.category || 'Vendor',
-            rating: (parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0',
+            rating: (parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : (v.rating ? parseFloat(v.rating).toFixed(1) : '0.0'),
             reviews: parseInt(v.reviews_count || 0, 10),
-            city: v.city || v.location || 'Accra, Ghana',
-            img: window.resolveImageUrl(v.cover_photo || v.logo, 'cover'),
+            city: v.city || (v.location ? v.location.split(',')[0] : 'Accra, Ghana'),
+            img: window.resolveImageUrl(v.cover_photo || v.logo || v.img, 'cover'),
+            logo: v.logo || '',
             initials: initials,
             badgeClass: '',
             verification_badge: v.verification_badge || 'grey',
@@ -597,7 +624,9 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
 
     const handpickedCardsHtml = handpickedList.map(v => {
         const isFav = state.favorites && state.favorites.includes(v.id);
-        const badgeContent = v.icon ? `<i class="fa-solid ${v.icon}"></i>` : `<span>${v.initials}</span>`;
+        const badgeContent = v.logo && !v.logo.includes('default-avatar')
+            ? `<img src="${window.resolveImageUrl(v.logo, 'avatar')}" onerror="window.handleImageError(this, 'avatar')" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
+            : (v.icon ? `<i class="fa-solid ${v.icon}"></i>` : `<span>${v.initials}</span>`);
         const clickAction = typeof v.id === 'number' ? `viewVendorDetails(${v.id})` : `viewHandpickedVendor('${v.name}')`;
         
         let verifyBadgeHtml = '';
@@ -610,21 +639,21 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
         return `
             <div class="handpicked-card" onclick="${clickAction}">
                 <div class="handpicked-img-wrapper">
-                    <img src="${v.img}" onerror="this.onerror=null; this.src='img/default-cover.jpg';" alt="${v.name}" class="handpicked-cover">
+                    <img src="${v.img}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)}" class="handpicked-cover">
                     <div class="handpicked-logo-badge ${v.badgeClass || ''}">
                         ${badgeContent}
                     </div>
                 </div>
                 <div class="handpicked-details">
-                    <h4 class="handpicked-card-title">${v.name}${verifyBadgeHtml}</h4>
-                    <span class="handpicked-card-category">${v.category}</span>
+                    <h4 class="handpicked-card-title">${escapeHtml(v.name)}${verifyBadgeHtml}</h4>
+                    <span class="handpicked-card-category">${escapeHtml(v.category)}</span>
                     <div class="handpicked-card-rating">
                         <i class="fa-solid fa-star"></i>
                         <span>${v.rating} <span class="reviews-count">(${v.reviews} reviews)</span></span>
                     </div>
                     <div class="handpicked-card-location">
                         <i class="fa-solid fa-location-dot"></i>
-                        <span>${v.city}</span>
+                        <span>${escapeHtml(v.city)}</span>
                     </div>
                 </div>
             </div>
@@ -701,7 +730,7 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 <a href="javascript:void(0)" class="section-link" onclick="navigateTo('search'); event.preventDefault();">View All</a>
             </div>
             <div class="vendor-cards-scroll featured-vendors-container" id="featured-vendors-scroll">
-                ${premiumVendors.length > 0 ? premiumVendors.map(v => `
+                ${featuredVendors.length > 0 ? featuredVendors.map(v => `
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})">
                         <div class="vendor-card-cover">
                             <img src="${window.resolveImageUrl(v.cover_photo || v.logo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)}">
@@ -712,21 +741,21 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                             </div>
                         </div>
                         <div class="vendor-card-body">
-                            <div class="vendor-card-name">${v.name}</div>
-                            <div class="vendor-card-cat">${v.category}</div>
+                            <div class="vendor-card-name">${escapeHtml(v.name)}</div>
+                            <div class="vendor-card-cat">${escapeHtml(v.category)}</div>
                             <div class="vendor-card-meta">
                                 <div class="vendor-card-rating">
                                     <i class="fa-solid fa-star"></i>
-                                    <span>${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0'}</span>
+                                    <span>${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : (v.rating ? parseFloat(v.rating).toFixed(1) : '0.0')}</span>
                                 </div>
-                                <span style="font-size:0.65rem;font-weight:700;color:var(--primary);">${v.location.split(',')[0]}</span>
+                                <span style="font-size:0.65rem;font-weight:700;color:var(--primary);">${escapeHtml(v.location ? v.location.split(',')[0] : (v.city || 'Ghana'))}</span>
                             </div>
                         </div>
                     </div>
                 `).join('') : '<p class="text-sm text-muted">No featured vendors found</p>'}
             </div>
             ${(() => {
-                const numCols = Math.ceil(premiumVendors.length / 2);
+                const numCols = Math.ceil(featuredVendors.length / 2);
                 if (numCols > 1) {
                     return `
                         <div class="scroll-dots">
@@ -750,18 +779,18 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors)
                 <a href="#" class="section-link" onclick="navigateTo('search'); event.preventDefault();">View All</a>
             </div>
             <div class="vendor-cards-scroll recommended-cards-container" style="display:flex; gap:16px; overflow-x:auto; padding-bottom:8px;">
-                ${popularVendors.length > 0 ? popularVendors.map(v => `
+                ${recommendedVendors.length > 0 ? recommendedVendors.map(v => `
                     <div class="vendor-card-h" onclick="viewVendorDetails(${v.id})" style="flex:0 0 160px; min-height:165px; margin-bottom:8px;">
                         <div class="vendor-card-cover" style="height:90px;">
                             <img src="${window.resolveImageUrl(v.cover_photo || v.logo, 'cover')}" onerror="window.handleImageError(this, 'cover')" alt="${escapeHtml(v.name)}">
                         </div>
                         <div class="vendor-card-body" style="padding:6px 8px;">
-                            <div class="vendor-card-name" style="font-size:0.75rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.name}</div>
-                            <div class="vendor-card-cat" style="font-size:0.6rem; color:var(--gray-500);">${v.category}</div>
+                            <div class="vendor-card-name" style="font-size:0.75rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.name)}</div>
+                            <div class="vendor-card-cat" style="font-size:0.6rem; color:var(--gray-500);">${escapeHtml(v.category)}</div>
                             <div class="vendor-card-meta" style="margin-top:4px;">
                                 <div class="vendor-card-rating" style="font-size:0.65rem;">
                                     <i class="fa-solid fa-star"></i>
-                                    <span>${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : '0.0'}</span>
+                                    <span>${(parseInt(v.reviews_count || 0, 10) > 0) ? parseFloat(v.rating || 0).toFixed(1) : (v.rating ? parseFloat(v.rating).toFixed(1) : '0.0')}</span>
                                 </div>
                                 <span style="font-size:0.6rem; color:var(--gray-400);"><i class="fa-solid fa-eye"></i> ${v.views_count || 0}</span>
                             </div>
@@ -830,7 +859,8 @@ function initHomeScreen() {
             state.homeCache.premiumVendors,
             state.homeCache.categories,
             state.homeCache.activeAds,
-            state.homeCache.popularVendors
+            state.homeCache.popularVendors,
+            state.homeCache.homepageVendors
         );
     } else {
         screen.innerHTML = `
@@ -845,17 +875,19 @@ function initHomeScreen() {
         API.getVendors({ premium_only: 1 }),
         API.getCategories(),
         API.get('get_advertisements'),
-        API.getPopularVendors()
+        API.getPopularVendors(),
+        API.getHomepageVendors()
     ]).then((results) => {
         const premiumVendors = results[0].status === 'fulfilled' ? results[0].value : [];
         const categories = results[1].status === 'fulfilled' ? results[1].value : (state.categories || []);
         const activeAds = results[2].status === 'fulfilled' ? results[2].value : [];
         const popularVendors = results[3].status === 'fulfilled' ? results[3].value : [];
+        const homepageVendors = results[4].status === 'fulfilled' ? results[4].value : null;
 
-        state.homeCache = { premiumVendors, categories, activeAds, popularVendors };
+        state.homeCache = { premiumVendors, categories, activeAds, popularVendors, homepageVendors };
         state.categories = categories;
 
-        renderHomeScreen(premiumVendors, categories, activeAds, popularVendors);
+        renderHomeScreen(premiumVendors, categories, activeAds, popularVendors, homepageVendors);
     }).catch(err => {
         if (!state.homeCache) {
             screen.innerHTML = `<div class="p-section text-center"><p class="text-error">${err.message}</p></div>`;
@@ -1906,7 +1938,7 @@ function renderChatInbox(inbox) {
         return `
             <div class="chat-inbox-item ${isActive ? 'active' : ''}" data-target-id="${targetId}" onclick="openChatWithVendor(${targetId})">
                 <div class="chat-inbox-avatar">
-                    <img src="${window.resolveImageUrl(targetLogo, 'avatar')}" alt="" class="header-logo-img">
+                    <img src="${window.resolveImageUrl(targetLogo, 'avatar')}" alt="" class="chat-inbox-avatar-img" onerror="window.handleImageError(this, 'avatar')">
                     ${isOnline ? `<div class="chat-inbox-online" title="Online now"></div>` : ''}
                 </div>
                 <div class="chat-inbox-info">
@@ -2337,7 +2369,7 @@ function updateChatMessages(history) {
                 </a>
             `;
         } else {
-            bodyHtml = `<div class="msg-text">${escapeHtml(m.message).replace(/\n/g, '<br>')}</div>`;
+            bodyHtml = `<div class="msg-text">${escapeHtml(m.message || '').replace(/\n/g, '<br>')}</div>`;
         }
 
         const bubbleClass = isOutgoing ? 'msg-user' : 'msg-vendor';

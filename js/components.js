@@ -1,5 +1,12 @@
 // components.js - Ohati App Frontend Controller & Components
 
+if (typeof escapeHtml !== 'function') {
+    window.escapeHtml = function(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    };
+}
+
 const DEFAULT_USER_AVATAR = window.DEFAULT_USER_AVATAR || "profile-icon.jpg";
 
 // 1. Application State
@@ -610,7 +617,7 @@ function renderHomeScreen() {
             <!-- Recommended list in two columns -->
             <div class="section-header" style="margin-top: 25px;">
                 <h3>Recommended for you</h3>
-                <a href="#" class="see-all-link" id="home-see-all-recs">See all</a>
+                <a href="javascript:void(0)" class="see-all-link" id="home-see-all-recs">See all</a>
             </div>
             <div class="recommended-grid">
                 ${state.vendors.slice(0, 4).map(v => {
@@ -2170,10 +2177,6 @@ function renderPaymentSection(b) {
                     <button class="btn btn-outline" onclick="submitSimulatedPayment(${b.id}, ${b.price}, 'Fully Paid')" style="padding: 8px 12px; font-size: 0.7rem; height: auto; flex: 1;">Pay Full (${formatGHS(b.price)})</button>
                 </div>
             </div>
-        `;
-    }
-    
-    if (b.payment_status === 'Deposit Paid') {
         return `
             <div style="border: 1.5px solid var(--forest-green); padding: 12px; border-radius: 10px; background: rgba(45,90,60,0.02); text-align: center;">
                 <span style="font-size: 1.3rem; color: var(--forest-green);"><i class="fa-solid fa-circle-check"></i></span>
@@ -2524,7 +2527,7 @@ async function renderChatScreen() {
                     <div class="inbox-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
                         ${inbox.length > 0 ? inbox.map(item => `
                             <div class="inbox-item" onclick="startVendorChat(${item.id})" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--white); border: 1px solid var(--gray-light); cursor: pointer; transition: transform 0.2s, background 0.2s;">
-                                <img src="${item.logo}" alt="${item.name}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sage-green);">
+                                <img src="${window.resolveImageUrl(item.logo || item.avatar, 'avatar')}" alt="${item.name}" onerror="window.handleImageError(this, 'avatar')" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sage-green);">
                                 <div style="flex: 1;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--forest-green); font-weight: 700;">${item.name}</h4>
@@ -2559,7 +2562,7 @@ async function renderChatScreen() {
             <div class="chat-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button class="btn-icon back-btn" style="width: 32px; height: 32px; box-shadow: none; border: 1px solid var(--gray-light);"><i class="fa-solid fa-arrow-left"></i></button>
-                    <img src="${v.logo}" alt="${v.name}" class="chat-avatar" style="width: 36px; height: 36px; border-radius: 50%;">
+                    <img src="${window.resolveImageUrl(v.logo || v.avatar, 'avatar')}" alt="${v.name}" class="chat-avatar" onerror="window.handleImageError(this, 'avatar')" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
                     <div class="chat-vendor-info">
                         <h4 style="font-size: 0.85rem; margin: 0; line-height: 1.2;">${v.name}</h4>
                         <span style="font-size: 0.65rem; color: var(--sage-green);">${v.availability} • Active</span>
@@ -2661,25 +2664,18 @@ async function renderChatScreen() {
 }
 
 async function loadChatHistory(vendorId) {
-    window._chatGenToken = (window._chatGenToken || 0) + 1;
-    const currentGen = window._chatGenToken;
     try {
         const res = await fetch((window.getOhatiApiBaseUrl ? window.getOhatiApiBaseUrl() : 'api.php') + '?action=chat_history&vendor_id=' + vendorId);
         const history = await res.json();
         
-        // Prevent race condition: discard if chat was switched while request was in flight
-        if (currentGen !== window._chatGenToken || state.activeChatVendorId !== vendorId) {
-            return;
-        }
-
         const area = document.getElementById('chat-msg-area');
         if (!area) return;
         
-        area.innerHTML = Array.isArray(history) ? history.map(msg => `
+        area.innerHTML = history.map(msg => `
             <div class="msg-bubble msg-${msg.sender === 'user' ? 'user' : 'vendor'}">
-                ${(msg.message || '').replace(/\n/g, '<br>')}
+                ${escapeHtml(msg.message || '').replace(/\n/g, '<br>')}
             </div>
-        `).join('') : '';
+        `).join('');
         
         scrollToBottom('chat-msg-area');
     } catch (e) {
@@ -2698,7 +2694,7 @@ async function sendChatMessage(vendorId) {
     const area = document.getElementById('chat-msg-area');
     const userMsgEl = document.createElement('div');
     userMsgEl.className = 'msg-bubble msg-user';
-    userMsgEl.innerHTML = msg;
+    userMsgEl.innerHTML = escapeHtml(msg).replace(/\n/g, '<br>');
     area.appendChild(userMsgEl);
     scrollToBottom('chat-msg-area');
     
@@ -2729,14 +2725,12 @@ async function sendChatMessage(vendorId) {
             const indicator = document.getElementById('chat-typing-indicator');
             if (indicator) indicator.remove();
             
-            // Render vendor reply if available
-            if (data && data.vendor_reply && data.vendor_reply.message) {
-                const vendorMsgEl = document.createElement('div');
-                vendorMsgEl.className = 'msg-bubble msg-vendor';
-                vendorMsgEl.innerHTML = data.vendor_reply.message.replace(/\n/g, '<br>');
-                area.appendChild(vendorMsgEl);
-                scrollToBottom('chat-msg-area');
-            }
+            // Render vendor reply
+            const vendorMsgEl = document.createElement('div');
+            vendorMsgEl.className = 'msg-bubble msg-vendor';
+            vendorMsgEl.innerHTML = escapeHtml(data.vendor_reply?.message || '').replace(/\n/g, '<br>');
+            area.appendChild(vendorMsgEl);
+            scrollToBottom('chat-msg-area');
         }, 1200);
         
     } catch (e) {
@@ -3075,15 +3069,13 @@ function updateUserSessionUI() {
     const homeGreeting = document.querySelector('.greeting-text h2');
     const homeAvatar = document.querySelector('.greeting-row img');
     
-    const currentUser = state.currentUser || state.user;
-    if (currentUser) {
-        if (nameEl) nameEl.innerText = currentUser.name;
-        if (emailEl) emailEl.innerText = currentUser.email || '';
-        const resolvedAv = (typeof window.resolveImageUrl === 'function') ? window.resolveImageUrl(currentUser.avatar) : (currentUser.avatar || DEFAULT_USER_AVATAR);
-        if (avatarEl) avatarEl.src = resolvedAv;
+    if (state.currentUser) {
+        if (nameEl) nameEl.innerText = state.currentUser.name;
+        if (emailEl) emailEl.innerText = state.currentUser.email || '';
+        if (avatarEl) avatarEl.src = state.currentUser.avatar || DEFAULT_USER_AVATAR;
         
-        if (homeGreeting) homeGreeting.innerHTML = `Maba, ${(currentUser.name || '').split(' ')[0]} ✨`;
-        if (homeAvatar) homeAvatar.src = resolvedAv;
+        if (homeGreeting) homeGreeting.innerHTML = `Maba, ${state.currentUser.name.split(' ')[0]} ✨`;
+        if (homeAvatar) homeAvatar.src = state.currentUser.avatar || DEFAULT_USER_AVATAR;
         
         const signInItem = document.getElementById('sidebar-signin-item');
         if (signInItem) {
@@ -3210,53 +3202,28 @@ function openProfileModal() {
 
 function saveProfileSettings(e) {
     e.preventDefault();
-    const name = document.getElementById('profile-name')?.value;
-    const email = document.getElementById('profile-email')?.value;
-    const theme = document.getElementById('profile-theme')?.value;
-    const guests = document.getElementById('profile-guests')?.value;
-    const avatar = document.getElementById('profile-avatar-input')?.value;
+    const name = document.getElementById('profile-name').value;
+    const email = document.getElementById('profile-email').value;
+    const theme = document.getElementById('profile-theme').value;
+    const guests = document.getElementById('profile-guests').value;
+    const avatar = document.getElementById('profile-avatar-input').value;
     
-    if (!state.user) state.user = {};
-    if (name) state.user.name = name;
-    if (email) state.user.email = email;
-    if (avatar) state.user.avatar = avatar;
-    state.currentUser = state.user;
-    
-    try {
-        localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
-    } catch (eErr) {}
+    if (!state.currentUser) {
+        state.currentUser = {};
+    }
+    state.currentUser.name = name;
+    state.currentUser.email = email;
+    state.currentUser.avatar = avatar;
+    localStorage.setItem('ohati_user_session', JSON.stringify(state.currentUser));
     
     if (state.event) {
         state.event.theme = theme;
         state.event.guest_count = guests;
     }
-
-    const payload = {};
-    if (name) payload.name = name;
-    if (email) payload.email = email;
-    if (avatar) payload.avatar = avatar;
-
-    if (window.API && typeof window.API.updateProfile === 'function' && Object.keys(payload).length > 0) {
-        window.API.updateProfile(payload).then(res => {
-            if (res && res.user) {
-                state.user = Object.assign(state.user || {}, res.user);
-                try {
-                    localStorage.setItem('ohati_user_session', JSON.stringify(state.user));
-                } catch (eErr) {}
-            }
-            closeBookingModal();
-            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-            if (typeof showPushNotification === 'function') showPushNotification("Profile Updated", "Your profile settings have been updated successfully.");
-        }).catch(err => {
-            closeBookingModal();
-            if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-            if (typeof showPushNotification === 'function') showPushNotification("Profile Saved", "Settings saved locally.");
-        });
-    } else {
-        closeBookingModal();
-        if (typeof updateUserSessionUI === 'function') updateUserSessionUI();
-        if (typeof showPushNotification === 'function') showPushNotification("Profile Updated", "Profile settings saved.");
-    }
+    
+    closeBookingModal();
+    updateUserSessionUI();
+    showPushNotification("Profile Updated", "Local storage and theme configurations updated successfully.");
 }
 
 function openSignUpModal() {

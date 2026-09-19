@@ -12,14 +12,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $input['action'] ?? '';
     
     if ($bid > 0) {
-        if ($action === 'confirm') {
-            $pdo->prepare("UPDATE bookings SET status = 'Confirmed' WHERE id = ?")->execute([$bid]);
-            echo json_encode(['success' => true]);
-            exit;
-        } elseif ($action === 'cancel') {
-            $pdo->prepare("UPDATE bookings SET status = 'Cancelled' WHERE id = ?")->execute([$bid]);
-            echo json_encode(['success' => true]);
-            exit;
+        if ($action === 'confirm' || $action === 'cancel') {
+            $new_status = ($action === 'confirm') ? 'Confirmed' : 'Cancelled';
+
+            // Safe database retrieval of authoritative booking, user, and vendor records
+            $stmt = $pdo->prepare("
+                SELECT b.*, 
+                       u.id as customer_user_id, u.name as customer_real_name, u.email as customer_real_email, u.phone as customer_real_phone,
+                       v.id as vendor_id_val, v.name as vendor_real_name, v.email as vendor_real_email, v.phone as vendor_real_phone, v.user_id as vendor_owner_user_id
+                FROM bookings b
+                LEFT JOIN users u ON b.user_id = u.id
+                LEFT JOIN vendors v ON b.vendor_id = v.id
+                WHERE b.id = ?
+            ");
+            $stmt->execute([$bid]);
+            $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($booking) {
+                $status_changed = ($booking['status'] !== $new_status);
+                if ($status_changed) {
+                    $pdo->prepare("UPDATE bookings SET status = ? WHERE id = ?")->execute([$new_status, $bid]);
+
+                    // Send notifications only if status actually changed (prevent duplicates)
+                    try {
+                        require_once __DIR__ . '/../sms_helper.php';
+
+                        if (!function_exists('add_notification')) {
+                            function add_notification($pdo, $user_id, $title, $message) {
+                                $uid = intval($user_id);
+                                if ($uid <= 0 || !$pdo) return;
+                                $now_stamp = date('Y-m-d H:i:s');
+                                $pdo->prepare("INSERT INTO notifications (user_id, title, body, created_at) VALUES (?, ?, ?, ?)")->execute([$uid, $title, $message, $now_stamp]);
+                            }
+                        }
+
+                        $ref = !empty($booking['booking_reference']) ? $booking['booking_reference'] : ('#' . $booking['id']);
+                        $svc_name = !empty($booking['service_name']) ? $booking['service_name'] : (!empty($booking['package_name']) ? $booking['package_name'] : 'Event Service');
+                        $c_name = !empty($booking['customer_real_name']) ? $booking['customer_real_name'] : (!empty($booking['user_name']) ? $booking['user_name'] : 'Customer');
+                        $c_email = trim(!empty($booking['customer_real_email']) ? $booking['customer_real_email'] : ($booking['user_email'] ?? ''));
+                        $c_phone = trim(!empty($booking['customer_real_phone']) ? $booking['customer_real_phone'] : ($booking['user_phone'] ?? ''));
+                        $c_uid = intval(!empty($booking['customer_user_id']) ? $booking['customer_user_id'] : ($booking['user_id'] ?? 0));
+
+                        $v_name = !empty($booking['vendor_real_name']) ? $booking['vendor_real_name'] : 'Vendor';
+                        $v_email = trim($booking['vendor_real_email'] ?? '');
+                        $v_phone = trim($booking['vendor_real_phone'] ?? '');
+                        $v_uid = intval($booking['vendor_owner_user_id'] ?? 0);
+                        $event_date = !empty($booking['event_date']) ? date('M d, Y', strtotime($booking['event_date'])) : 'Scheduled Date';
+
+                        if ($action === 'confirm') {
+                            // In-app notifications
+                            if ($c_uid > 0) {
+                                add_notification($pdo, $c_uid, "Booking Confirmed by Admin", "Your booking #{$ref} with {$v_name} has been officially confirmed by Ohati administration.");
+                            }
+                            if ($v_uid > 0) {
+                                add_notification($pdo, $v_uid, "Booking Confirmed by Admin", "Booking #{$ref} for {$c_name} has been officially confirmed by Ohati administration.");
+                            }
+
+                            // Dual notification to Customer
+                            if ($c_email !== '' || $c_phone !== '') {
+                                $c_sms = "Booking #{$ref} with {$v_name} has been officially confirmed by Ohati Admin.";
+                                $c_subj = "Booking Confirmed: #{$ref}";
+                                $c_html = "<div style='font-family:sans-serif; padding:20px; color:#1B2B4B;'>
+                                    <h2 style='color:#10B981;'>Booking Confirmed!</h2>
+                                    <p>Hello " . htmlspecialchars($c_name) . ",</p>
+                                    <p>Your booking (Reference: <strong>#{$ref}</strong>) for <strong>" . htmlspecialchars($svc_name) . "</strong> with <strong>" . htmlspecialchars($v_name) . "</strong> has been officially confirmed by Ohati Administration.</p>
+                                    <p><strong>Event Date:</strong> {$event_date}</p>
+                                    <p>Log in to your account to review details or chat with your vendor.</p>
+                                    <hr style='border:none; border-top:1px solid #eee; margin:20px 0;'>
+                                    <p style='font-size:12px; color:#666;'>Ohati Ghana &bull; Trusted Event Marketplace</p>
+                                </div>";
+                                send_dual_notification($c_phone, $c_email, "Booking Confirmed", $c_sms, $c_subj, $c_html);
+                            }
+
+                            // Dual notification to Vendor
+                            if ($v_email !== '' || $v_phone !== '') {
+                                $v_sms = "Booking #{$ref} for {$c_name} has been confirmed by Ohati Admin.";
+                                $v_subj = "Booking Confirmed: #{$ref}";
+                                $v_html = "<div style='font-family:sans-serif; padding:20px; color:#1B2B4B;'>
+                                    <h2 style='color:#10B981;'>Booking Confirmed by Admin</h2>
+                                    <p>Hello " . htmlspecialchars($v_name) . ",</p>
+                                    <p>Booking (Reference: <strong>#{$ref}</strong>) with <strong>" . htmlspecialchars($c_name) . "</strong> has been officially confirmed by Ohati Administration.</p>
+                                    <p><strong>Event Date:</strong> {$event_date}</p>
+                                    <hr style='border:none; border-top:1px solid #eee; margin:20px 0;'>
+                                    <p style='font-size:12px; color:#666;'>Ohati Ghana &bull; Trusted Event Marketplace</p>
+                                </div>";
+                                send_dual_notification($v_phone, $v_email, "Booking Confirmed", $v_sms, $v_subj, $v_html);
+                            }
+                        } else { // cancel
+                            // In-app notifications
+                            if ($c_uid > 0) {
+                                add_notification($pdo, $c_uid, "Booking Cancelled by Admin", "Your booking #{$ref} with {$v_name} has been cancelled by administration.");
+                            }
+                            if ($v_uid > 0) {
+                                add_notification($pdo, $v_uid, "Booking Cancelled by Admin", "Booking #{$ref} for {$c_name} has been cancelled by administration.");
+                            }
+
+                            // Dual notification to Customer
+                            if ($c_email !== '' || $c_phone !== '') {
+                                $c_sms = "Booking #{$ref} with {$v_name} has been cancelled by Ohati Admin.";
+                                $c_subj = "Booking Cancelled: #{$ref}";
+                                $c_html = "<div style='font-family:sans-serif; padding:20px; color:#1B2B4B;'>
+                                    <h2 style='color:#EF4444;'>Booking Cancelled</h2>
+                                    <p>Hello " . htmlspecialchars($c_name) . ",</p>
+                                    <p>Your booking (Reference: <strong>#{$ref}</strong>) for <strong>" . htmlspecialchars($svc_name) . "</strong> with <strong>" . htmlspecialchars($v_name) . "</strong> has been cancelled by Ohati Administration.</p>
+                                    <p>If you have questions, please contact our support team at contact@ohati.com.</p>
+                                    <hr style='border:none; border-top:1px solid #eee; margin:20px 0;'>
+                                    <p style='font-size:12px; color:#666;'>Ohati Ghana &bull; Trusted Event Marketplace</p>
+                                </div>";
+                                send_dual_notification($c_phone, $c_email, "Booking Cancelled", $c_sms, $c_subj, $c_html);
+                            }
+
+                            // Dual notification to Vendor
+                            if ($v_email !== '' || $v_phone !== '') {
+                                $v_sms = "Booking #{$ref} for {$c_name} has been cancelled by Ohati Admin.";
+                                $v_subj = "Booking Cancelled: #{$ref}";
+                                $v_html = "<div style='font-family:sans-serif; padding:20px; color:#1B2B4B;'>
+                                    <h2 style='color:#EF4444;'>Booking Cancelled by Admin</h2>
+                                    <p>Hello " . htmlspecialchars($v_name) . ",</p>
+                                    <p>Booking (Reference: <strong>#{$ref}</strong>) with <strong>" . htmlspecialchars($c_name) . "</strong> has been cancelled by Ohati Administration.</p>
+                                    <hr style='border:none; border-top:1px solid #eee; margin:20px 0;'>
+                                    <p style='font-size:12px; color:#666;'>Ohati Ghana &bull; Trusted Event Marketplace</p>
+                                </div>";
+                                send_dual_notification($v_phone, $v_email, "Booking Cancelled", $v_sms, $v_subj, $v_html);
+                            }
+                        }
+                    } catch (Exception $notifEx) {
+                        error_log("[Admin Booking Notification Error] " . $notifEx->getMessage());
+                    }
+                }
+                echo json_encode(['success' => true]);
+                exit;
+            }
         }
     }
     echo json_encode(['success' => false, 'message' => 'Invalid request']);

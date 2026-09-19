@@ -5004,9 +5004,29 @@ case 'get_homepage_vendors':
     }
 
     if (empty($featured)) {
+        // 1. Query active Premium vendors first
         $stmt = $pdo->query("SELECT * FROM vendors WHERE is_active = 1 AND premium = 1 ORDER BY featured DESC, premium DESC, verified DESC, rating DESC, reviews_count DESC, completed_jobs DESC LIMIT 12");
+        $selected_feat_ids = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $fr) {
-            $featured[] = $format_vendor($fr);
+            $fv = $format_vendor($fr);
+            $fv['is_fallback'] = false;
+            $fv['is_premium_selection'] = true;
+            $featured[] = $fv;
+            $selected_feat_ids[] = intval($fr['id']);
+        }
+
+        // 2. Safe automatic display fallback if fewer than 12 Premium vendors exist
+        $needed_feat = 12 - count($featured);
+        if ($needed_feat > 0) {
+            $exclude_sql = !empty($selected_feat_ids) ? " AND id NOT IN (" . implode(',', array_fill(0, count($selected_feat_ids), '?')) . ")" : "";
+            $fb_stmt = $pdo->prepare("SELECT * FROM vendors WHERE is_active = 1 $exclude_sql ORDER BY featured DESC, verified DESC, rating DESC, reviews_count DESC, completed_jobs DESC, id DESC LIMIT $needed_feat");
+            $fb_stmt->execute($selected_feat_ids);
+            foreach ($fb_stmt->fetchAll(PDO::FETCH_ASSOC) as $fbr) {
+                $fbv = $format_vendor($fbr);
+                $fbv['is_fallback'] = true;
+                $fbv['is_premium_selection'] = false;
+                $featured[] = $fbv;
+            }
         }
     }
 

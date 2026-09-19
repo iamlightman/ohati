@@ -141,16 +141,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $handpicked = array_pad($hp_rows, 4, null);
             }
 
-            // 2. Featured (Premium Selection): If not explicitly saved, load live active premium vendors
+            // 2. Featured (Premium Selection): If not explicitly saved, load live active premium vendors with safe automatic fallback
             $has_feat = false;
             foreach ($featured_ids as $val) { if (intval($val) > 0) { $has_feat = true; break; } }
             if ($has_feat) {
                 $featured = $hydrate($featured_ids, false);
+                foreach ($featured as &$f_item) {
+                    if ($f_item) {
+                        $f_item['is_fallback'] = false;
+                        $f_item['is_premium_selection'] = (intval($f_item['premium'] ?? 0) === 1);
+                    }
+                }
             } else {
+                // Query active Premium vendors first
                 $feat_stmt = $pdo->query("SELECT id, name, category, location, rating, reviews_count, logo, cover_photo, is_active, verified, premium FROM vendors WHERE is_active = 1 AND premium = 1 ORDER BY featured DESC, premium DESC, verified DESC, rating DESC, reviews_count DESC, completed_jobs DESC LIMIT 12");
                 $feat_rows = $feat_stmt->fetchAll(PDO::FETCH_ASSOC);
+                $selected_feat_ids = [];
                 foreach ($feat_rows as &$fr) {
                     $fr['city'] = !empty($fr['location']) ? explode(',', $fr['location'])[0] : 'Ghana';
+                    $fr['is_fallback'] = false;
+                    $fr['is_premium_selection'] = true;
+                    $selected_feat_ids[] = intval($fr['id']);
+                }
+
+                // If fewer than 12 Premium vendors exist, safely fill remaining slots with top eligible active vendors
+                $needed_feat = 12 - count($feat_rows);
+                if ($needed_feat > 0) {
+                    $ex_ph = !empty($selected_feat_ids) ? " AND id NOT IN (" . implode(',', array_fill(0, count($selected_feat_ids), '?')) . ")" : "";
+                    $fb_stmt = $pdo->prepare("SELECT id, name, category, location, rating, reviews_count, logo, cover_photo, is_active, verified, premium FROM vendors WHERE is_active = 1 $ex_ph ORDER BY featured DESC, verified DESC, rating DESC, reviews_count DESC, completed_jobs DESC, id DESC LIMIT $needed_feat");
+                    $fb_stmt->execute($selected_feat_ids);
+                    $fb_rows = $fb_stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($fb_rows as &$fbr) {
+                        $fbr['city'] = !empty($fbr['location']) ? explode(',', $fbr['location'])[0] : 'Ghana';
+                        $fbr['is_fallback'] = true;
+                        $fbr['is_premium_selection'] = false;
+                    }
+                    $feat_rows = array_merge($feat_rows, $fb_rows);
                 }
                 $featured = $feat_rows;
             }
@@ -699,20 +725,60 @@ $page_title = "Homepage Vendors";
 
             if (state.featured.length === 0) {
                 notice.style.display = 'block';
+                notice.style.background = '#FEF2F2';
+                notice.style.color = '#B91C1C';
+                notice.style.border = '1px solid #FECACA';
+                notice.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> No active vendors found in the database to display in the Featured carousel.';
                 container.innerHTML = '';
                 return;
             }
-            notice.style.display = 'none';
+
+            if (!state.featured_is_custom) {
+                notice.style.display = 'block';
+                const actualPremiumInList = state.featured.filter(v => v && parseInt(v.premium) === 1).length;
+                if (actualPremiumInList === 0) {
+                    notice.style.background = '#FFFBEB';
+                    notice.style.color = '#B45309';
+                    notice.style.border = '1px solid #FDE68A';
+                    notice.innerHTML = '<i class="fa-solid fa-circle-info"></i> <strong>Automatic Fallback Mode:</strong> No vendors currently have Premium status enabled. Showing eligible top vendors as an automatic fallback. These vendors have not been upgraded to Premium.';
+                } else if (actualPremiumInList < state.featured.length) {
+                    notice.style.background = '#EFF6FF';
+                    notice.style.color = '#1D4ED8';
+                    notice.style.border = '1px solid #BFDBFE';
+                    notice.innerHTML = `<i class="fa-solid fa-circle-info"></i> <strong>Automatic Mode with Fallback:</strong> Displaying ${actualPremiumInList} active Premium vendor(s), with ${state.featured.length - actualPremiumInList} eligible top vendor(s) filling remaining slots.`;
+                } else {
+                    notice.style.background = '#F1F5F9';
+                    notice.style.color = '#64748B';
+                    notice.style.border = '1px solid #E2E8F0';
+                    notice.innerHTML = '<i class="fa-solid fa-circle-info"></i> Currently in automatic mode: displaying all active vendors with Premium status enabled.';
+                }
+            } else {
+                notice.style.display = 'none';
+            }
 
             container.innerHTML = state.featured.map((v, idx) => {
                 const logoUrl = formatAdminMediaUrl(v.logo || v.cover_photo, '../img/default-avatar.png');
                 const isActive = parseInt(v.is_active) === 1;
+                const isPrem = parseInt(v.premium) === 1;
+                const isFb = !!v.is_fallback;
+
+                let tierBadge = '';
+                if (isPrem) {
+                    tierBadge = '<span class="slot-badge" style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; margin-left:4px;"><i class="fa-solid fa-crown" style="font-size:0.65rem;"></i> Premium</span>';
+                } else if (!state.featured_is_custom || isFb) {
+                    tierBadge = '<span class="slot-badge" style="background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; margin-left:4px;">Display Fallback</span>';
+                }
+
                 return `
                     <div class="vendor-list-row">
                         <span class="row-order-idx">${idx + 1}</span>
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='../img/default-avatar.png';" class="row-avatar" alt="">
                         <div class="row-info">
-                            <div class="row-name">${escapeHtml(v.name)} ${!isActive ? '<span class="slot-badge inactive-badge">Inactive</span>' : ''}</div>
+                            <div class="row-name">
+                                ${escapeHtml(v.name)}
+                                ${tierBadge}
+                                ${!isActive ? '<span class="slot-badge inactive-badge">Inactive</span>' : ''}
+                            </div>
                             <div class="row-meta">
                                 <span>${escapeHtml(v.category)}</span>
                                 <span>•</span>

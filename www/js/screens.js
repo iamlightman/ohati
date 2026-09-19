@@ -462,7 +462,11 @@ function renderHomeScreen(premiumVendors, categories, activeAds, popularVendors,
 
     const featuredVendors = (homepageVendors && Array.isArray(homepageVendors.featured) && homepageVendors.featured.length > 0)
         ? homepageVendors.featured
-        : (premiumVendors || []);
+        : (premiumVendors && premiumVendors.length > 0
+            ? premiumVendors
+            : (popularVendors && popularVendors.length > 0
+                ? popularVendors.slice(0, 8)
+                : ((state.vendors && state.vendors.length > 0) ? state.vendors.filter(v => v && v.is_active !== 0).slice(0, 8) : [])));
 
     const recommendedVendors = (homepageVendors && homepageVendors.recommended_mode === 'curated' && Array.isArray(homepageVendors.recommended) && homepageVendors.recommended.length > 0)
         ? homepageVendors.recommended
